@@ -5,6 +5,7 @@ addpath('../ROUTINES/FEM')
 addpath('../ROUTINES/CONTACTMODELS')
 addpath('../ROUTINES/QUASISTATIC')
 addpath('../ROUTINES/TRANSIENT')
+addpath('../ROUTINES/HARMONIC')
 addpath('../ROUTINES/SOLVERS')
 
 model = 'BRB';
@@ -14,9 +15,11 @@ load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'K', 'M', 'R', 'L', 'Fv', '
 %% Load Mesh
 Nds = dlmread(sprintf('../MODELS/%s/Nodes.dat', model));
 Quad = dlmread(sprintf('../MODELS/%s/Elements.dat', model));
+Ne = size(Quad,1);
 
-MESH = MESH2D(Nds, 3, [], Quad, 2);
-MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0));  % Contact Function
+Nq = 1;
+MESH = MESH2D(Nds, 3, [], Quad, Nq);
+MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0), zeros(2, Ne*Nq^2));  % Contact Function
 
 % Parameterization
 Pars = [1e12; 1e12; 1e12; 0.25];
@@ -54,34 +57,20 @@ zts = [0.002; 0.003];
 ab = [1./(2*2*pi*Ws([1 3])) 2*pi*Ws([1 3])/2]\zts;
 C = ab(1)*M+ab(2)*J0;
 
-% SET DYNAMIC EXCITATION
-freq = 500;
-famp = 100;
-fdyn = @(t) famp*sin(2*pi*freq*t).^2.*(t<0.5/freq);
-fex = @(t) R(3, :)'*(fdyn(t))+Fv*Prestress;
+%% HARMONIC BALANCE
+Nt = 128;
+h = [0 1];  Nhc = sum(h==0)+2*sum(h~=0);
+Nd = size(K, 1);
 
-% Initial Conditions
-U0 = Ustat;
-Ud0 = Ustat*0;
-Z0 = Z;
-disp('INITIAL CONDITIONS SET');
+% Linear Forcing
+fa = 2;
+Fl = kron([0 fa 0 zeros(1,Nhc-3)]', R(3,:));
+Fl(1:Nd) = Fv*Prestress;
 
-%% HHTA Hysteretic
-ABG = [0, 1/4, 1/2];  % Unconditionally Stable Newmark-Alpha
-%% ABG = [0, 1/6, 1/2];  % Implicit linear acceleration
-%% ABG = [-0.1, 1/6, 1/2];  % HHT-Alpha
+wfrc = 2*pi*140;
 
-T0 = 0;
-T1 = 2.5;
-dT = 1e-4;  % 5000 Hz Nyquist
+U0 = [Ustat; zeros(Nd*(Nhc-1),1)];
 
-opts = struct('reletol', 1e-12, 'etol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'Display', true, 'ITMAX', 100);
-[Th, Xh, zh, Xdh, Xddh] = HHTA_NONLIN_HYST(M, C, K, fex,
-					   @(t, x, z, xd) MESH.CONTACTEVAL(x, z, xd, Pars, pA, L),
-					   U0, Z0, Ud0, T0, T1, dT, ABG(1), ABG(2), ABG(3), opts);
-clf()
-plot(Th, R(3, :)*Xddh, '.-', 'LineWidth', 2)
-Fh = fex(Th);
-Finput = fdyn(Th);
-
-save('./DATS/RUN3.mat', 'Th', 'Xh', 'zh', 'Xdh', 'Xddh', 'Fh', 'Finput', 'famp', 'freq', '-v6')
+opts = struct('reletol', 1e-10, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
+              1e-6, 'ITMAX', 100, 'Display', true);
+[R0, dR0] = MDOF_NLHYST_HBRESFUN([U0; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
