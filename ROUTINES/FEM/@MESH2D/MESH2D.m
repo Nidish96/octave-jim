@@ -17,6 +17,7 @@ classdef MESH2D
     Tm		% Quadrature point integration matrix
 
     fcont 	% Contact Function
+    z       % Slider States for fcont
   end
 
   methods
@@ -60,8 +61,9 @@ classdef MESH2D
       [m.Qm, m.Tm] = m.ND2QP();
     end
 
-    function m = SETCFUN(m, fcont)
+    function m = SETCFUN(m, fcont, z)
       m.fcont = fcont;
+      m.z = z;
     end
   end
 end
