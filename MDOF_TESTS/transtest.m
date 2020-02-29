@@ -16,7 +16,7 @@ Nds = dlmread(sprintf('../MODELS/%s/Nodes.dat', model));
 Quad = dlmread(sprintf('../MODELS/%s/Elements.dat', model));
 
 MESH = MESH2D(Nds, 3, [], Quad, 2);
-MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0));  % Contact Function
+MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0), sparse(2, MESH.Ne*MESH.Nq^2));  % Contact Function
 
 % Parameterization
 Pars = [1e12; 1e12; 1e12; 0.25];
@@ -36,6 +36,7 @@ Kstuck = K + L'*Kstuck*L;
 U0 = Kstuck\(Fv*Prestress);
 Z0 = zeros(2, MESH.Ne*MESH.Nq^2);
 %% Nonlinear Prestress Simulation
+disp('STATIC PRESTRESS ANALYSIS')
 opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
               1e-6, 'ITMAX', 100, 'Display', true);
 [Ustat, ~, eflag, ~, J0] = NSOLVE(@(U) QS_RESFUN([U; 0], Z0, Pars, L, pA, ...
