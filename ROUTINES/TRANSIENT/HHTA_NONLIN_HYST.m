@@ -145,7 +145,7 @@ function [T,X,Z,Xd,Xdd] = HHTA_NONLIN_HYST(M,C,K,FN,Fhys,X0,Z0,Xd0,t0,t1,dt,a,b,
       fprintf('%.4e/%.4e %.4e\n', T(i), t1, dt);
       fprintf('---------------------------------------------------\n');
     end
-    waitbar(T(i)/t1, wb, sprintf('Progress: %.e/%.e', T(i), t1));
+    waitbar(T(i)/t1, wb, sprintf('Progress: %e/%e', T(i), t1));
     if (! ishandle(wb))
       break;
     elseif getappdata(wb, 'interrupt')

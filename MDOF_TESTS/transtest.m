@@ -58,7 +58,7 @@ C = ab(1)*M+ab(2)*J0;
 
 % Excitation
 freq = 500;
-fex = @(t) R(3, :)'*(400*sin(2*pi*freq*t)^2*(t<0.5/freq))+Fv*Prestress;
+fex = @(t) R(3, :)'*(800*sin(2*pi*freq*t)^2*(t<0.5/freq))+Fv*Prestress;
 
 % Initial Conditions
 U0 = Ustat;
@@ -75,12 +75,14 @@ T0 = 0;
 T1 = 2.5;
 dT = 1e-4;  % 2000 Hz Nyquist
 
-opts = struct('reletol', 1e-12, 'etol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'Display', true, 'ITMAX', 100);
+opts = struct('reletol', 1e-12, 'etol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'Display', false, 'ITMAX', 100);
+% profile on 
 [Th, Xh, zh, Xdh, Xddh] = HHTA_NONLIN_HYST(M, C, K, fex,
 					   @(t, x, z, xd) MESH.CONTACTEVAL(x, z, xd, Pars, pA, L),
 					   U0, Z0, Ud0, T0, T1, dT, ABG(1), ABG(2), ABG(3), opts);
+% profile off
 
-plot(Th, R(3, :)*Xh, 'o-', 'LineWidth', 2)
+plot(Th, R(3, :)*Xddh, 'o-', 'LineWidth', 2)
 
 save('./DATS/RUN1.mat', 'Th', 'Xh', 'zh', 'Xdh', 'Xddh', '-v7')
 
