@@ -97,9 +97,21 @@ end
 
 [Uws, ~, eflag] = NSOLVE(@(U) MDOF_NLHYST_HBRESFUN([U; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), U0, opts);
 
-[Rws, dRws, z] = MDOF_NLHYST_HBRESFUN([Uws; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
+				% Sweep
+Nsweep = 10;
+Wsweep = 2*pi*linspace(150, 170, Nsweep);
+Xsweep = zeros(Nhc, Nsweep);
+Xsweep(:, 1) = (R(3,:)*reshape(Uws, Nd, Nhc))';
 
-				% CONTINUATION
-Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-2);
-Ubws = CONTINUE(@(Uw) MDOF_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Uws, 2*pi*150, 2*pi*170, 2*pi*2, Copt);
+opts.ITMAX = 20;
+for iw=2:Nsweep
+  [Uws, ~, eflag] = NSOLVE(@(U) MDOF_NLHYST_HBRESFUN([U; Wsweep(iw)], Pars, L, pA, MESH, ...
+						     M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), ...
+			   U0, opts);
+  fprintf('Done %d/%d W=%f\n', Wsweep(iw)/2/pi);
+end
+
+% 				% CONTINUATION
+% Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-2);
+% Ubws = CONTINUE(@(Uw) MDOF_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Uws, 2*pi*150, 2*pi*170, 2*pi*2, Copt);
 

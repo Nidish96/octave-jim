@@ -48,7 +48,7 @@ function [R, dRdU, dRdw, z] = MDOF_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, 
       [ft(:,i), MESH.z, dfdxt(:, :, i), dfdxdt(:, :, i)] = CONTACTEVAL(MESH, ut(:,i), ...
 								       MESH.z, udt(:, i), Pars, pA);
     end
-    fprintf('%d %e\n', it, max(max(abs(MESH.z-zprev))));
+    % fprintf('%d %e\n', it, max(max(abs(MESH.z-zprev))));
     it = it+1;
 
     % fprintf('%d %e\n', it, max(abs(ftprev(:)-ft(:))));
