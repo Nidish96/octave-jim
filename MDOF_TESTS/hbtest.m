@@ -108,8 +108,11 @@ for iw=2:Nsweep
   [Uws, ~, eflag] = NSOLVE(@(U) MDOF_NLHYST_HBRESFUN([U; Wsweep(iw)], Pars, L, pA, MESH, ...
 						     M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), ...
 			   U0, opts);
+  Xsweep(:, iw) = (R(3,:)*reshape(Uws, Nd, Nhc))';
   fprintf('Done %d/%d W=%f\n', Wsweep(iw)/2/pi);
 end
+
+save('./DATS/RUN1_HB.mat', 'Xsweep', 'Wsweep', 'fa');
 
 % 				% CONTINUATION
 % Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-2);
