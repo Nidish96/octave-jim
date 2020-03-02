@@ -9,7 +9,9 @@ function [U, R, J] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
   Copt = struct('Nmax', 100, 'dsmax', ds*5, 'dsmin', ds/5, ...
                 'angopt', pi/6, 'startdir', 1,...
                 'Display', 1, 'nev', 1, 'adj', 1,...
-                'opt', optimset('fsolve'));
+                'opt', struct('reletol', 1e-10, 'rto', 1e-6, 'etol', ...
+                              1e-6, 'ITMAX', 100, 'Display', false, ...
+                              'Dscale', ones(size(u0))));
   if nargin==6
     nflds = fieldnames(varargin{1});
     for i=1:length(nflds)
@@ -24,9 +26,9 @@ function [U, R, J] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
   Jtmp = zeros(length(u0)+1);
   Rtmp = zeros(length(u0)+1, 1);
   
-				% Correct initial solution
-  [u0s, R(:, 1), eflag] = fsolve(@(u) func([u; lam0]), u0, Copt.opt);
- %     [u0s, R(:, 1), eflag] = NSOLVE(@(u) func([u; lam0]), u0, Copt);
+ % Correct initial solution
+ % [u0s, R(:, 1), eflag] = fsolve(@(u) func([u; lam0]), u0, Copt.opt);
+  [u0s, R(:, 1), eflag] = NSOLVE(@(u) func([u; lam0]), u0, Copt.opt);
   if eflag < 0
     error('Initial point non-convergent!');
   elseif Copt.Display
@@ -52,8 +54,8 @@ function [U, R, J] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
   duds   = al*[z; 1];
   uguess = U(:, 1) + ds*duds;
   while ( (lam-lam1)*(lamp-lam1) >= 0 && n<Copt.Nmax )
-    [U(:, n+1), Rtmp, eflag, out, Jtmp] = fsolve(@(u) EXRES(func, u, U(:, n), duds, ds), uguess, Copt.opt);
-%         [U(:, n+1), Rtmp, eflag, out, Jtmp] = NSOLVE(@(u) EXRES(func, u, U(:, n), duds, ds), uguess, Copt);
+% [U(:, n+1), Rtmp, eflag, out, Jtmp] = fsolve(@(u) EXRES(func, u, U(:, n), duds, ds), uguess, Copt.opt);
+    [U(:, n+1), Rtmp, eflag, out, Jtmp] = NSOLVE(@(u) EXRES(func, u, U(:, n), duds, ds), uguess, Copt);
     if eflag<=0
       if ds == Copt.dsmin
         if max(abs(uguess))<eps
@@ -107,9 +109,9 @@ function [U, R, J] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
   J = J(:, :, 1:n);
   
   if (lam-lam1)*(lamp-lam1) < 0
-      disp('Continuation completed successfully');
+    disp('Continuation completed successfully');
   else 
-      disp('Premature Termination');
+    disp('Premature Termination');
   end
 end
 

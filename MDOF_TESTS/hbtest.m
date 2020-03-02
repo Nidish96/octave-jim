@@ -40,10 +40,13 @@ U0 = Kstuck\(Fv*Prestress);
 Z0 = zeros(2, MESH.Ne*MESH.Nq^2);
 %% Nonlinear Prestress Simulation
 opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
-              1e-6, 'ITMAX', 100, 'Display', true);
+              1e-6, 'ITMAX', 100, 'Display', true, 'Dscale', ones(size(U0)));
+opts.Dscale = ones(size(U0))*max(abs(U0));
+
 [Ustat, ~, eflag, ~, J0] = NSOLVE(@(U) QS_RESFUN([U; 0], Z0, Pars, L, pA, ...
 						 MESH, M, K, Fv*Prestress, Fv*0), U0, opts);
 [~, Z, ~, ~, ~, Txyn_p] = MESH.CONTACTEVAL(Ustat, Z0, Ustat*0, Pars, pA, L);  % Evaluate Slider
+MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, Txyn_p(3,:)), zeros(2, Ne*Nq^2));  % Contact Function
 
 %% Linearized Modal Analysis
 [V, D] = eigs(J0, M, 10, 'SM');
@@ -59,18 +62,44 @@ C = ab(1)*M+ab(2)*J0;
 
 %% HARMONIC BALANCE
 Nt = 128;
-h = [0 1];  Nhc = sum(h==0)+2*sum(h~=0);
+h = [1];  Nhc = sum(h==0)+2*sum(h~=0);
 Nd = size(K, 1);
 
 % Linear Forcing
-fa = 2;
-Fl = kron([0 fa 0 zeros(1,Nhc-3)]', R(3,:));
-Fl(1:Nd) = Fv*Prestress;
+fa = 10;
+Fl = kron([0 fa 0 zeros(1,Nhc-3)], R(3,:))';
+if h(1)~=0
+  Fl(1:Nd) = [];
+else
+  Fl(1:Nd) = Fv*Prestress;
+end
 
-wfrc = 2*pi*140;
+wfrc = 2*pi*150;
 
-U0 = [Ustat; zeros(Nd*(Nhc-1),1)];
+Elin = HARMONICSTIFFNESS(M, C, J0, wfrc, h(h~=0));
+if h(1)~=0
+  U0 = Elin\Fl;
+else
+  U0 = [Ustat; Elin\Fl(Nd+1:end)];
+end
 
 opts = struct('reletol', 1e-10, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
-              1e-6, 'ITMAX', 100, 'Display', true);
-[R0, dR0] = MDOF_NLHYST_HBRESFUN([U0; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
+              1e-6, 'ITMAX', 100, 'Display', true, 'Dscale', ones(size(U0)));
+
+% [R0, dR0] = MDOF_NLHYST_HBRESFUN([U0; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
+
+if h(1)==0
+  opts.Dscale(1:Nd) = ones(Nd,1)*max(abs(Ustat));
+  opts.Dscale(Nd+1:end) = ones(Nd*(Nhc-1),1)*max(abs(U0(Nd+1:end)));
+
+  U0 = U0./opts.Dscale;
+end
+
+[Uws, ~, eflag] = NSOLVE(@(U) MDOF_NLHYST_HBRESFUN([U; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), U0, opts);
+
+[Rws, dRws, z] = MDOF_NLHYST_HBRESFUN([Uws; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
+
+				% CONTINUATION
+Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-2);
+Ubws = CONTINUE(@(Uw) MDOF_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Uws, 2*pi*150, 2*pi*170, 2*pi*2, Copt);
+

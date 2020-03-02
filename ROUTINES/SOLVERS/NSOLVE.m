@@ -18,10 +18,16 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
 %  eflag	:
 %  it		:
 %  Jc		:
+
+  if ~isfield(opts, 'Dscale')
+    opts.Dscale = ones(size(U0));
+  end
+  Nu = length(U0);
   
-  [R0, J0] = func(U0);
-  dU0 = -J0\R0;
+  [R0, J0] = func(opts.Dscale.*U0);
+  dU0 = (-J0\R0)./opts.Dscale;
   e0  = abs(R0'*dU0);
+  
   if (e0 < eps)
     e0 = 1.0;
     R0 = ones(size(R0));
@@ -46,8 +52,8 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
     U  = U + dU;
     it = it+1;
     
-    [R, Jc] = func(U);
-    dU = -Jc\R;
+    [R, Jc] = func(opts.Dscale.*U);
+    dU = (-Jc\R)./opts.Dscale;
     
     e = abs(R'*dU);
     r = sqrt(mean(R.^2));
@@ -63,6 +69,9 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
       break;
     end
   end
+
+  % Rescale Solution
+  U = opts.Dscale.*U;
   
   if eflag == 0
     disp('No Convergence : Returning')

@@ -14,10 +14,11 @@ load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'K', 'M', 'R', 'L', 'Fv', '
 Nds = dlmread(sprintf('../MODELS/%s/Nodes.dat', model));
 Quad = dlmread(sprintf('../MODELS/%s/Elements.dat', model));
 
-MESH = MESH2D(Nds, 3, [], Quad, 2);
+Nq = 2;
+MESH = MESH2D(Nds, 3, [], Quad, Nq);
 
 %% Set Contact Function
-MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0));
+MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0), sparse(2, MESH.Ne*Nq^2));
 
 Pars = [1e12; 1e12; 1e12; 0.25];
 pA = repmat(eye(4), MESH.Ne*MESH.Nq^2, 1);
@@ -40,6 +41,7 @@ Z0 = zeros(2, MESH.Ne*MESH.Nq^2);
 %% Nonlinear Prestress Simulation
 opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
               1e-6, 'ITMAX', 100, 'Display', true);
+opts.Dscale = ones(size(U0))*max(abs(U0));
 [Ustat, ~, eflag, ~, J0] = NSOLVE(@(U) QS_RESFUN([U; 0], Z0, Pars, L, pA, ...
 						 MESH, M, K, Fv*Prestress, Fv*0), U0, opts);
 
@@ -48,7 +50,10 @@ opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
 figure(1)
 clf()
 MESH.SHOWFIELD2D(Txyn_p(3,:)')
-
+xlim(0.06*[-1 1])
+ylim(0.06*[-1 1])
+colorbar()
+keyboard
 %% Linearized Modal Analysis
 [V, D] = eigs(J0, M, 10, 'SM');
 [D,si] = sort(diag(D));

@@ -85,4 +85,4 @@ plot(Th, R(3, :)*Xddh, '.-', 'LineWidth', 2)
 Fh = fex(Th);
 Finput = fdyn(Th);
 
-save('./DATS/RUN3.mat', 'Th', 'Xh', 'zh', 'Xdh', 'Xddh', 'Fh', 'Finput', 'famp', 'freq', '-v6')
+save('./DATS/RUN1.mat', 'Th', 'Xh', 'zh', 'Xdh', 'Xddh', 'Fh', 'Finput', 'famp', 'freq', '-v7')
