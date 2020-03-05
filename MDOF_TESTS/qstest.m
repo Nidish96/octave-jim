@@ -53,7 +53,7 @@ MESH.SHOWFIELD2D(Txyn_p(3,:)')
 xlim(0.06*[-1 1])
 ylim(0.06*[-1 1])
 colorbar()
-keyboard
+
 %% Linearized Modal Analysis
 [V, D] = eigs(J0, M, 10, 'SM');
 [D,si] = sort(diag(D));
@@ -72,3 +72,16 @@ U0 = [Ustat+q*V(:,1);D(1)];
 [Urq, ~, eflag] = NSOLVE(@(Ul) RQNMA_RESFUN([Ul; q], Z0, Pars, L, pA, MESH, M, K, Fv*Prestress, ...
                                             Ustat), U0, opts);
 disp([Ws(1) sqrt(Urq(end))/2/pi])
+
+% March
+Qs = 10.^[-3 -3.5 -4 -4.5];
+Lams = Qs*0;
+Urq = [Ustat+Qs(1)*V(:,1);D(1)];
+for iq=1:length(Qs)
+  U0 = [Ustat+Qs(iq)*V(:,1);D(1)];
+%  U0 = Urq;
+  Urq = NSOLVE(@(Ul) RQNMA_RESFUN([Ul; Qs(iq)], Z0, Pars, L, pA, MESH, M, K, Fv*Prestress, ...
+                                            Ustat), U0, opts);
+  Lams(iq) = Urq(end);                                            
+end
+

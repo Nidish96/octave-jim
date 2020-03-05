@@ -61,9 +61,29 @@ classdef MESH2D
       [m.Qm, m.Tm] = m.ND2QP();
     end
 
-    function m = SETCFUN(m, fcont, z)
+    function m = SETCFUN(m, fcont, varargin)
       m.fcont = fcont;
-      m.z = z;
+      if length(varargin)==1
+          m.z = varargin{1};
+      end
+    end
+
+    function m = SINGLEPREC(m)
+      m.Nds    = single(m.Nds);
+      m.Tri    = uint16(m.Tri);
+      m.Quad   = uint16(m.Quad);
+      m.Nn     = uint16(m.Nn);
+      m.Ne_Tri = uint16(m.Ne_Tri);
+      m.Ne_Quad= uint16(m.Ne_Quad);
+      m.Ne     = uint16(m.Ne);
+
+      m.dpn = uint16(m.dpn);
+      
+      m.Nq = uint16(m.Nq);
+      m.Qm = m.Qm;
+      m.Tm = m.Tm;
+      
+      z = single(m.z);
     end
   end
 end

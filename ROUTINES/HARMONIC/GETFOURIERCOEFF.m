@@ -37,17 +37,17 @@ function [v,h] = GETFOURIERCOEFF( h, x_t )
 %         v(2*i+1,:) = -imag(xf(hi+1,:))/(Nt/2);
 %     end
     
-    zi = find(h==0);
+    zi = uint32(find(h==0));
     h([1 zi]) = h([zi 1]);
-    n = length(h);
-    nd = size(x_t,2);
+    n = uint32(length(h));
+    nd = uint32(size(x_t,2));
     if ~isempty(zi)
         n = n-1;
         siz = 2*n+1;
     else
         siz = 2*n;
     end
-    v = zeros(siz,nd);
+    v = zeros(siz,nd, class(x_t));
     Nt = size(x_t,1);
     xf = fft(x_t);
     if ~isempty(zi)

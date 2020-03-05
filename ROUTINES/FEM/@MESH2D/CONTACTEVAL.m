@@ -60,7 +60,7 @@ function [Fn, Z, dFndUn, dFndUnd, dFndPars, Fxyn_qp] = CONTACTEVAL(m, Un, Z, Und
   dFndUn = zeros(Nu);
   dFndUnd = zeros(Nu);
   dFndPars = zeros(Nu, length(Pars(:)));
-  
+
   % CAN BE PARALLELIZED SINCE ACCESS IS EXCLUSIVE
   for i=1:m.dpn
     for j=1:m.dpn
@@ -71,7 +71,7 @@ function [Fn, Z, dFndUn, dFndUnd, dFndPars, Fxyn_qp] = CONTACTEVAL(m, Un, Z, Und
 
     for j=1:Npars
       dFndPars(i:m.dpn:Ncdof, :) = dFndPars(i:m.dpn:Ncdof, :) + ...
-				 m.INTEG_QP(diag(squeeze(DfxynDpars_qp(i, j, :))))*pA(j:Npars:end, :);
+				   m.INTEG_QP(diag(squeeze(DfxynDpars_qp(i, j, :))))*pA(j:Npars:end, :);
     end
   end
 

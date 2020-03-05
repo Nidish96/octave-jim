@@ -7,7 +7,7 @@ function [U, R, J] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
 
 				% Default options
   Copt = struct('Nmax', 100, 'dsmax', ds*5, 'dsmin', ds/5, ...
-                'angopt', pi/6, 'startdir', 1,...
+                'angopt', pi/6, 'startdir', sign(lam1-lam0),...
                 'Display', 1, 'nev', 1, 'adj', 1,...
                 'opt', struct('reletol', 1e-10, 'rto', 1e-6, 'etol', ...
                               1e-6, 'ITMAX', 100, 'Display', false, ...
@@ -55,10 +55,10 @@ function [U, R, J] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
   uguess = U(:, 1) + ds*duds;
   while ( (lam-lam1)*(lamp-lam1) >= 0 && n<Copt.Nmax )
 % [U(:, n+1), Rtmp, eflag, out, Jtmp] = fsolve(@(u) EXRES(func, u, U(:, n), duds, ds), uguess, Copt.opt);
-    [U(:, n+1), Rtmp, eflag, out, Jtmp] = NSOLVE(@(u) EXRES(func, u, U(:, n), duds, ds), uguess, Copt);
+    [U(:, n+1), Rtmp, eflag, its, Jtmp] = NSOLVE(@(u) EXRES(func, u, U(:, n), duds, ds), uguess, Copt.opt);
     if eflag<=0
       if ds == Copt.dsmin
-        if max(abs(uguess))<eps
+        if max(abs(uguess-U(:,1)))<eps
           disp('Diverged!');
           break;
         else
@@ -89,7 +89,7 @@ function [U, R, J] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
     theta = acos(alp*al*(1+zp'*z));
     if theta>Copt.angopt % optimal angle
       ds = max(Copt.dsmin, ds/2);
-    elseif out.iterations<=10
+    elseif its<=10
       ds = min(Copt.dsmax, ds*2);
     end
     if Copt.Display
