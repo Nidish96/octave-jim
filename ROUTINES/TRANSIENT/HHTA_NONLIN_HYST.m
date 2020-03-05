@@ -162,5 +162,3 @@ function [T,X,Z,Xd,Xdd] = HHTA_NONLIN_HYST(M,C,K,FN,Fhys,X0,Z0,Xd0,t0,t1,dt,a,b,
 
   waitbar(1.0, wb, 'COMPLETED!')
 end
-
-

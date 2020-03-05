@@ -21,23 +21,42 @@ function [R, dRdU, dRdw] = SDOF_NLHYST_HBRESFUN(Uw, m, c, k, Fl, fnl, h, Nt)
   dfdxt = zeros(size(t));
   dfdxdt = zeros(size(t));
   z = zeros(size(t));
+  dzdxt = zeros(size(t));
 
   ftprev = ft;
 
   it = 0;
-
-  while rms(ftprev-ft) > 1e-8 || it == 0
+  
+  dzdai = zeros(length(t), Nhc);
+  jt = zeros(length(t), Nhc);
+  jt2 = zeros(length(t), Nhc);  
+  
+  % while mean((ftprev-ft).^2) > 1e-8 || it == 0
+  while it < 2
     ftprev = ft;
     for i = 1:Nt
-      [ft(i), z(i), dfdxt(i), dfdxdt(i)] = fnl(t(i), ut(i), z(mod(i-2,Nt)+1), udt(i));
+      [ft(i), z(i), dfdxt(i), dfdxdt(i), dzdxt(i)] = fnl(t(i), ut(i), z(mod(i-2,Nt)+1), udt(i));
+      if dzdxt(i)==0
+	dzdai(i, :) = dzdai(mod(i-2,Nt)+1, :);
+      else
+	dzdai(i, :) = dzdxt(i)*cst(i, :);
+      end
+      if z(i)==z(mod(i-2,Nt)+1)  % stick
+	jt(i, :) = dfdxt(i)*(cst(i, :)-cst(mod(i-2,Nt)+1,:)) + jt(mod(i-2,Nt)+1,:);
+      else  % slip
+	jt(i, :) = 0;
+      end
     end
     it = it+1;
   end
+  
   % End of time marching
 
   Fnl = GETFOURIERCOEFF(h, ft);
-  Jnl = GETFOURIERCOEFF(h, dfdxt.*cst+dfdxdt.*sct);
-
+		  %  Jnl = GETFOURIERCOEFF(h, dfdxt.*cst+dfdxdt.*sct);
+  jt = dfdxt.*(cst-dzdai);
+  Jnl = GETFOURIERCOEFF(h, jt);
+keyboard
   % Residue
   R = E*Uw(1:end-1) + Fnl - Fl;
   dRdU = E + Jnl;

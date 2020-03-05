@@ -1,25 +1,30 @@
 clc
 clear all
 addpath('../ROUTINES/TRANSIENT/')
+addpath('../ROUTINES/HARMONIC/')
+addpath('../ROUTINES/SOLVERS/')
 
 %% Parameters
 m = 1.0;
 k = 1.0;
-c = 2.0/(2*sqrt(k*m));
+c = 0.10*2*sqrt(k/m);
+% c = 2.0/(2*sqrt(k*m));
 
 muN0 = 1.0;
 kt = 3.0;
 
-function [f, z, dfdx, dfdxd] = eldryfric(t, x, z, xd, muN0, kt)
+function [f, z, dfdx, dfdxd, dzdx] = eldryfric(t, x, z, xd, muN0, kt)
   f = kt*(x-z);
   dfdx = kt;
   dfdxd = 0;
+  dzdx = 0;
   if abs(f)>muN0  % Slipped - Update
     f = muN0*sign(f);
     dfdx = 0;
     dfdxd = 0;
-    
-    z = x - muN0*sign(f)/kt;
+
+    z = x - f/kt;
+    dzdx = 1;
   end
 end
 
@@ -29,7 +34,7 @@ function [Xp, zp] = func(t, X, z, f, m, c, k, muN0, kt)
   Xp = [0 1; -k/m -c/m]*X + [0; -fp/m] + [0; f(t)/m];
 end
 
-freq = 0.5;
+freq = 1.84/2/pi;
 fex = @(t) 5*sin(2*pi*freq*t);
 
 % RK 45 Butcher Tableau
@@ -52,22 +57,28 @@ ABG = [0, 1/4, 1/2];  % Unconditionally Stable Newmark-Alpha
 %% ABG = [0, 1/6, 1/2];  % Implicit linear acceleration
 %% ABG = [-0.1, 1/6, 1/2];  % HHT-Alpha
 
-opts = struct('reletol', 1e-6, 'etol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'Display', true, 'ITMAX', 10);
+opts = struct('reletol', 1e-6, 'etol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'Display', false, 'ITMAX', 10);
 
 [Th, Xh, zh, Xdh, Xddh] = HHTA_NONLIN_HYST(m, c, k, fex,
 					   @(t, x, z, xd) eldryfric(t, x, z, xd, muN0, kt),
 					   0.5, 0, 0, 0, 40, t(2)-t(1), ABG(1), ABG(2), ABG(3), opts);
 
 %% HBM
-Nt = 256;
-h = [0 1 2 3 4 5];  Nhc = sum(h==0)+2*sum(h~=0);
+Nt = 1024;
+h = [0 1];  Nhc = sum(h==0)+2*sum(h~=0);
 Fl = [0 0 5 zeros(1, Nhc-3)]';
 U0 = zeros(Nhc,1);
 
-opt = optimset('Jacobian', 'on', 'Display', 'iter');
-[U, ~, info, op] = fsolve(@(X) SDOF_NLHYST_HBRESFUN([X; 2*pi*freq], m, c, k, Fl,
+% opt = optimset('Jacobian', 'on', 'Display', 'iter');
+% [U, ~, info, op] = fsolve(@(X) SDOF_NLHYST_HBRESFUN([X; 2*pi*freq], m, c, k, Fl,
+% 						    @(t,x,z,xd) eldryfric(t,x,z,xd,muN0,kt), h, Nt),
+% 			  U0, opt);
+% SDOF_NLHYST_HBRESFUN([U; 2*pi*freq], m, c, k, Fl, @(t,x,z,xd) eldryfric(t,x,z,xd,muN0,kt), h, Nt)
+opts.Display = true;
+opts.ITMAX = 100;
+[U, ~, info, op] = NSOLVE(@(X) SDOF_NLHYST_HBRESFUN([X; 2*pi*freq], m, c, k, Fl,
 						    @(t,x,z,xd) eldryfric(t,x,z,xd,muN0,kt), h, Nt),
-			  U0, opt);
+			  U0, opts);
 th = linspace(0, 2*pi, Nt+1)'/(2*pi*freq); th(end) = [];
 ut = TIMESERIES_DERIV(Nt, h, U, 0);
 
@@ -77,11 +88,13 @@ uthb = repmat(ut, Ncyc, 1);
 
 figure(1)
 clf()
-plot(T, X(:, 1), 'k-', T, z, 'k--'); hold on
-plot(Th, Xh, 'bx', Th, zh, 'r:');
+plot(T, X(:, 1), 'k-', 'LineWidth', 2); hold on
+plot(T, z, 'k--', 'LineWidth', 2); hold on
+plot(Th, Xh, 'b.', 'LineWidth', 2);
+plot(Th, zh, 'r:', 'LineWidth', 2);
 
 figure(2)
 clf()
 plot(T, X(:,1)); hold on
 plot(Th, Xh, 'x')
-plot(Thb, uthb, 'k--')
+plot(Thb, uthb, 'k--', 'LineWidth', 2)

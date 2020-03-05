@@ -18,7 +18,7 @@ function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, z
 %   DfxynDuxyn	  : (3,3,Np) [fx,x fx,y fx,z;
 %  			    fy,x fy,y fy,z;
 %  			    fz,x fz,y fz,z];
-%   DfxynDuxynd : (3,3,Np) [fx,xd fx,yd fx,zd;
+%   DfxynDuxynd   : (3,3,Np) [fx,xd fx,yd fx,zd;
 %  			     fy,xd fy,yd fy,zd;
 %  			     fz,xd fz,yd fz,zd];
 %   DfxynDkxynmu  : (3,4,Np) [fx,kx fx,ky fx,kn fx,mu;
@@ -30,6 +30,7 @@ function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, z
   DfxynDuxyn = zeros(3, 3, Np);
   DfxynDuxynd = zeros(3, 3, Np);
   DfxynDkxynmu = zeros(3, 4, Np);
+  
 				% 1. STICK (PREDICTION)
   fxyn(1, :) = kxynmu(1,:).*(uxyn(1, :)-zxy(1, :));
   fxyn(2, :) = kxynmu(2,:).*(uxyn(2, :)-zxy(2, :));
@@ -43,7 +44,7 @@ function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, z
   DfxynDkxynmu(2, 2, :) = uxyn(2,:)-zxy(2,:); % fy,ky
   DfxynDkxynmu(3, 3, :) = uxyn(3,:); % fn,kn
 
-  % 2. SEPARATION
+				% 2. SEPARATION
   isep = find(fxyn(3,:)==0);  % indices of separated points
   zxy(:, isep) = uxyn(1:2, isep);
 				% Everything is zero when separated
@@ -52,13 +53,13 @@ function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, z
   DfxynDuxynd(:, :, isep) = 0;
   DfxynDkxynmu(:, :, isep) = 0;
 
-  % 3. SLIP
+				      % 3. SLIP
   fT = sqrt(sum(fxyn(1:2, :).^2, 1));  % Tangential force magnitude
   fslip = kxynmu(4,:).*fxyn(3, :);        % Slip force magnitude
 
   islips = find(fT>fslip);       % indices of slipped points
   islips = setdiff(islips, isep);% Not interested in separated points - everything's zero there
-
+  
   fT(fT<eps) = 1.0;  % Avoid dividing by zeros
   if length(islips) ~= 0
 				% Derivatives

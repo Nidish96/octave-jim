@@ -1,3 +1,7 @@
 *.mat
 *.dat
 *~
+/MDOF_TESTS/HBProf/
+/MDOF_TESTS/QSProf/
+/MDOF_TESTS/QsProf2/
+/MDOF_TESTS/TransProf/

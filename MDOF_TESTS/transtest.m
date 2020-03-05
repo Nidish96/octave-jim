@@ -57,7 +57,7 @@ C = ab(1)*M+ab(2)*J0;
 
 % SET DYNAMIC EXCITATION
 freq = 500;
-famp = 100;
+famp = 800;
 fdyn = @(t) famp*sin(2*pi*freq*t).^2.*(t<0.5/freq);
 fex = @(t) R(3, :)'*(fdyn(t))+Fv*Prestress;
 
