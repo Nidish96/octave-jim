@@ -19,7 +19,7 @@ Ne = size(Quad,1);
 
 Nq = 1;
 MESH = MESH2D(Nds, 3, [], Quad, Nq);
-MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0), zeros(2, Ne*Nq^2));  % Contact Function
+MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, 0), sparse(2, Ne*Nq^2));  % Contact Function
 
 % Parameterization
 Pars = [1e12; 1e12; 1e12; 0.25];
@@ -37,16 +37,16 @@ Kstuck(3:3:MESH.Nn*3, 3:3:MESH.Nn*3) = MESH.Tm*MESH.Qm*Pars(3);
 Kstuck = K + L'*Kstuck*L;
 
 U0 = Kstuck\(Fv*Prestress);
-Z0 = zeros(2, MESH.Ne*MESH.Nq^2);
+
 %% Nonlinear Prestress Simulation
 opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
               1e-6, 'ITMAX', 100, 'Display', true, 'Dscale', ones(size(U0)));
 opts.Dscale = ones(size(U0))*max(abs(U0));
 
-[Ustat, ~, eflag, ~, J0] = NSOLVE(@(U) QS_RESFUN([U; 0], Z0, Pars, L, pA, ...
+[Ustat, ~, eflag, ~, J0] = NSOLVE(@(U) QS_RESFUN([U; 0], MESH.z, Pars, L, pA, ...
 						 MESH, M, K, Fv*Prestress, Fv*0), U0, opts);
-[~, Z, ~, ~, ~, Txyn_p] = MESH.CONTACTEVAL(Ustat, Z0, Ustat*0, Pars, pA, L);  % Evaluate Slider
-MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, Txyn_p(3,:)), zeros(2, Ne*Nq^2));  % Contact Function
+[~, Z, ~, ~, ~, Txyn_p] = MESH.CONTACTEVAL(Ustat, MESH.z, Ustat*0, Pars, pA, L);  % Evaluate Slider
+MESH = MESH.SETCFUN(@(u, z, ud, P) ELDRYFRICT(u, z, ud, P, Txyn_p(3,:)), Z);  % Contact Function
 
 %% Linearized Modal Analysis
 [V, D] = eigs(J0, M, 10, 'SM');
@@ -66,7 +66,7 @@ h = [1];  Nhc = sum(h==0)+2*sum(h~=0);
 Nd = size(K, 1);
 
 % Linear Forcing
-fa = 10;
+fa = 1;
 Fl = kron([0 fa 0 zeros(1,Nhc-3)], R(3,:))';
 if h(1)~=0
   Fl(1:Nd) = [];
@@ -95,11 +95,15 @@ if h(1)==0
   U0 = U0./opts.Dscale;
 end
 
+% Free up some space 
+clear Elin J0 Kstuck Nds Quad Z0 Fv Ustat 
+
 [Uws, ~, eflag] = NSOLVE(@(U) MDOF_NLHYST_HBRESFUN([U; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), U0, opts);
 
 				% Sweep
-Nsweep = 10;
-Wsweep = 2*pi*linspace(150, 170, Nsweep);
+Wsweep = 2*pi*[140:2:155 155:0.5:162 163:2:180];
+Nsweep = length(Wsweep);
+
 Xsweep = zeros(Nhc, Nsweep);
 Xsweep(:, 1) = (R(3,:)*reshape(Uws, Nd, Nhc))';
 
@@ -107,9 +111,9 @@ opts.ITMAX = 20;
 for iw=2:Nsweep
   [Uws, ~, eflag] = NSOLVE(@(U) MDOF_NLHYST_HBRESFUN([U; Wsweep(iw)], Pars, L, pA, MESH, ...
 						     M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), ...
-			   U0, opts);
+			   Uws, opts);
   Xsweep(:, iw) = (R(3,:)*reshape(Uws, Nd, Nhc))';
-  fprintf('Done %d/%d W=%f\n', Wsweep(iw)/2/pi);
+  fprintf('Done %d/%d W=%f\n', iw, Nsweep, Wsweep(iw)/2/pi);
 end
 
 save('./DATS/RUN1_HB.mat', 'Xsweep', 'Wsweep', 'fa');
