@@ -51,7 +51,7 @@ opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
               1e-6, 'ITMAX', 100, 'Display', true, 'Dscale', ones(size(U0), 'single'));
 % opts.Dscale = ones(size(U0))*max(abs(U0));
 
-[Ustat, ~, eflag, ~, J0] = NSOLVE(@(U) QS_RESFUN([U; 0], Z0, Pars, L, pA, ...
+[Ustat, ~, eflag, ~, J0] = NSOLVE(@(U) QS_RESFUN([U; 0], MESH.z, Pars, L, pA, ...
 						 MESH, M, K, Fv*Prestress, Fv*0), U0, opts);
 [~, Z, ~, ~, ~, Txyn_p] = MESH.CONTACTEVAL(Ustat, Z0, Ustat*0, Pars, pA, L);  % Evaluate Slider
 disp(sum(MESH.Tm*Txyn_p(3,:)')/(Prestress*3))
@@ -74,7 +74,7 @@ h = uint32([0 1]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
 Nd = uint32(size(K, 1));
 
 % Linear Forcing
-fa = single(0.3125);
+fa = single(5);
 Fl = single(kron([0 fa 0 zeros(1,Nhc-3,'single')], R(3,:))');
 if h(1)~=0
   Fl(1:Nd) = [];
@@ -112,6 +112,7 @@ MESH = MESH.SETCFUN(@(U, h, Nt, P) ELDRYFRICT_HB(U, h, Nt, P, ...
 % Sweep
 Nsweep = 20;
 Wsweep = 2*pi*linspace(145, 170, Nsweep);
+
 Xsweep = zeros(Nhc, Nsweep);
 Xsweep(:, 1) = (R(3,:)*reshape(Uws, Nd, Nhc))';
 
