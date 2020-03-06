@@ -74,7 +74,7 @@ h = uint32([0 1]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
 Nd = uint32(size(K, 1));
 
 % Linear Forcing
-fa = single(10);
+fa = single(0.3125);
 Fl = single(kron([0 fa 0 zeros(1,Nhc-3,'single')], R(3,:))');
 if h(1)~=0
   Fl(1:Nd) = [];
@@ -91,44 +91,64 @@ else
   U0 = single([Ustat; Elin\double(Fl(Nd+1:end))]);
 end
 
-opts = struct('reletol', 1e-10, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
-              1e-6, 'ITMAX', 100, 'Display', true, 'Dscale', ones(size(U0), 'single'));
+opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
+              1e-6, 'ITMAX', 20, 'Display', true, 'Dscale', ones(size(U0), 'single'));
 
 MESH = MESH.SETCFUN(@(U, h, Nt, P) ELDRYFRICT_HB(U, h, Nt, P, ...
                                                  single(0)), []);  % Contact Function
 
-tic
-[R0, dR0] = MDOF3D_NLHYST_HBRESFUN([U0; wfrc], Pars, L, pA, MESH, ...
-                                   M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
-toc
+% [R0, dR0] = MDOF3D_NLHYST_HBRESFUN([U0; wfrc], Pars, L, pA, MESH, ...
+%                                    M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
 
-if h(1)==0
-  opts.Dscale(1:Nd) = ones(Nd,1)*max(abs(Ustat));
-  opts.Dscale(Nd+1:end) = ones(Nd*(Nhc-1),1)*max(abs(U0(Nd+1:end)));
+% if h(1)==0
+%   opts.Dscale(1:Nd) = ones(Nd,1)*max(abs(Ustat));
+%   opts.Dscale(Nd+1:end) = ones(Nd*(Nhc-1),1)*max(abs(U0(Nd+1:end)));
 
-  U0 = U0./opts.Dscale;
-end
+%   U0 = U0./opts.Dscale;
+% end
 
-[Uws, ~, eflag] = NSOLVE(@(U) MDOF3D_NLHYST_HBRESFUN([U; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), U0, opts);
+% [Uws, ~, eflag] = NSOLVE(@(U) MDOF3D_NLHYST_HBRESFUN([U; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), U0, opts);
 
-				% Sweep
-Nsweep = 10;
-Wsweep = 2*pi*linspace(150, 170, Nsweep);
+% Sweep
+Nsweep = 20;
+Wsweep = 2*pi*linspace(145, 170, Nsweep);
 Xsweep = zeros(Nhc, Nsweep);
 Xsweep(:, 1) = (R(3,:)*reshape(Uws, Nd, Nhc))';
 
 opts.ITMAX = 20;
-for iw=iw:Nsweep
+
+figure(1)
+% clf()
+drawnow
+Uws = U0;
+for iw=1:Nsweep
   [Uws, ~, eflag] = NSOLVE(@(U) MDOF3D_NLHYST_HBRESFUN([U; Wsweep(iw)], Pars, L, pA, MESH, ...
 						     M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), ...
 			   Uws, opts);
   Xsweep(:, iw) = (R(3,:)*reshape(Uws, Nd, Nhc))';
-  fprintf('Done %d/%d W=%f\n', iw, Nsweeps, Wsweep(iw)/2/pi);
+  fprintf('Done %d/%d W=%f\n', iw, Nsweep, Wsweep(iw)/2/pi);
+  
+  plot(Wsweep(1:iw)/2/pi, sqrt(sum(Xsweep(2:3, 1:iw).^2,1))/fa, ...
+       'c.-'); hold on
+  xlabel('Forcing Frequency (Hz)')
+  ylabel('First Harmonic Response (m)')  
+  drawnow
 end
 
-save('./DATS/RUN1_HB.mat', 'Xsweep', 'Wsweep', 'fa');
+save('./DATS/RUN6_HB.mat', 'Xsweep', 'Wsweep', 'fa');
 
-% 				% CONTINUATION
-% Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-2);
-% Ubws = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Uws, 2*pi*150, 2*pi*170, 2*pi*2, Copt);
+				% CONTINUATION
+Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-2, 'opts', ...
+              opts);
+Copt.opts.reletol = 1e-10;
+Copt.Dscale = [U0; 2*pi*160];
+% Copt.Dscale(1:Nd) = max(abs(U0(1:Nd)));
+% Copt.Dscale((Nd+1):end-1) = max(abs(U0((Nd+1):end-1)));
 
+Ub = U0./Copt.Dscale(1:end-1);
+[UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, ...
+                                                  pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Ub, 2*pi*150, 2*pi*170, 2*pi*2, Copt);
+
+figure(1)
+clf()
+semilogy(UwC(end,:)/2/pi, sqrt(abs(R(3,:)*(UwC(Nd+(1:Nd),:).^2+UwC(2*Nd+(1:Nd),:).^2)))/fa, '.-');
