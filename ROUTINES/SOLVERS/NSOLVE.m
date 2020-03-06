@@ -43,7 +43,7 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
   dU = dU0;
   it = 0;
 
-  eflag = 8*(e/e0<opts.reletol) + 4*(e<opts.etol) + 2*(r<opts.rtol) + 1*(u<opts.utol) + 16*(e/eps<1e3);
+  eflag = 8*(e<opts.etol) + 4*(e/e0<opts.reletol) + 2*(r<opts.rtol) + 1*(u<opts.utol) + 16*(e/eps<1e3);
   if opts.Display
     fprintf('ITN, E, E/E0, r, du\n%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, eflag);
   end
@@ -60,7 +60,7 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
     r = sqrt(mean(R.^2));
     u = sqrt(mean(dU.^2));
 
-    eflag = 8*(e/e0<opts.reletol) + 4*(e<opts.etol) + 2*(r<opts.rtol) + 1*(u<opts.utol) + 16*(e/eps<1e3);
+    eflag = 8*(e<opts.etol) + 4*(e/e0<opts.reletol) + 2*(r<opts.rtol) + 1*(u<opts.utol) + 16*(e/eps<1e3);
     if opts.Display
       fprintf('%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, eflag);
     end

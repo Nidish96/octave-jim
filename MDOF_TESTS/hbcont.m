@@ -96,55 +96,11 @@ opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
 
 MESH = MESH.SETCFUN(@(U, h, Nt, P) ELDRYFRICT_HB(U, h, Nt, P, ...
                                                  single(0)), []);  % Contact Function
-
-% [R0, dR0] = MDOF3D_NLHYST_HBRESFUN([U0; wfrc], Pars, L, pA, MESH, ...
-%                                    M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn);
-
-% if h(1)==0
-%   opts.Dscale(1:Nd) = ones(Nd,1)*max(abs(Ustat));
-%   opts.Dscale(Nd+1:end) = ones(Nd*(Nhc-1),1)*max(abs(U0(Nd+1:end)));
-
-%   U0 = U0./opts.Dscale;
-% end
-
-% [Uws, ~, eflag] = NSOLVE(@(U) MDOF3D_NLHYST_HBRESFUN([U; wfrc], Pars, L, pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), U0, opts);
-
-% % Sweep
-% Nsweep = 20;
-% Wsweep = 2*pi*linspace(145, 170, Nsweep);
-
-% Xsweep = zeros(Nhc, Nsweep);
-% Xsweep(:, 1) = (R(3,:)*reshape(Uws, Nd, Nhc))';
-
-% opts.ITMAX = 20;
-
-% figure(1)
-% % clf()
-% drawnow
-% Uws = U0;
-% for iw=1:Nsweep
-%   [Uws, ~, eflag] = NSOLVE(@(U) MDOF3D_NLHYST_HBRESFUN([U; Wsweep(iw)], Pars, L, pA, MESH, ...
-% 						     M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), ...
-% 			   Uws, opts);
-%   Xsweep(:, iw) = (R(3,:)*reshape(Uws, Nd, Nhc))';
-%   fprintf('Done %d/%d W=%f\n', iw, Nsweep, Wsweep(iw)/2/pi);
-  
-%   plot(Wsweep(1:iw)/2/pi, sqrt(sum(Xsweep(2:3, 1:iw).^2,1))/fa, ...
-%        'c.-'); hold on
-%   xlabel('Forcing Frequency (Hz)')
-%   ylabel('First Harmonic Response (m)')  
-%   drawnow
-% end
-
-% save('./DATS/RUN6_HB.mat', 'Xsweep', 'Wsweep', 'fa');
-
 				% CONTINUATION
 Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-6, 'opts', ...
               opts);
 Copt.opts.reletol = 1e-10;
 Copt.Dscale = [U0; 2*pi*160];
-% Copt.Dscale(1:Nd) = max(abs(U0(1:Nd)));
-% Copt.Dscale((Nd+1):end-1) = max(abs(U0((Nd+1):end-1)));
 
 Ub = U0./Copt.Dscale(1:end-1);
 [UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, ...
@@ -153,6 +109,6 @@ Ub = U0./Copt.Dscale(1:end-1);
 figure(1)
 % clf()
 plot(UwC(end,:)/2/pi, sqrt(sum((kron(blkdiag(0,eye(Nhc-1)),R(3,:))* ...
-                                UwC(1:end-1,:)).^2/fa,1)), '.-')
+                                UwC(1:end-1,:)).^2,1))/fa, '.-')
 
 save('./DATS/HBCONT_R10.mat', 'UwC', 'dUdwC', 'R', 'fa', 'h')
