@@ -1,0 +1,6 @@
+#+TITLE: Runs Submitted
+
+* Harmonics: [0, 1, 2, 3];  Nt = 256.
+  | Fa | Submitted on     | Completed on |
+  |----+------------------+--------------|
+  | 10 | <2020-03-06 Fri> |              |

@@ -1,3 +1,4 @@
+function [] = hbcont(fa)
 clc
 clear all
 addpath('../ROUTINES')
@@ -7,6 +8,7 @@ addpath('../ROUTINES/QUASISTATIC')
 addpath('../ROUTINES/TRANSIENT')
 addpath('../ROUTINES/HARMONIC')
 addpath('../ROUTINES/SOLVERS')
+warning('off', 'all')
 
 model = 'BRB';
 
@@ -61,7 +63,7 @@ disp(sum(MESH.Tm*Txyn_p(3,:)')/(Prestress*3))
 [D,si] = sort(diag(D));
 Ws = sqrt(D)/2/pi;
 V = V(:,si);
-V = V./sqrt(diag(V'*M*V))';
+V = V./repmat(sqrt(diag(V'*M*V))',size(V,1),1);
 
 % SET LINEAR DAMPING
 zts = [0.002; 0.003];
@@ -69,12 +71,12 @@ ab = [1./(2*2*pi*Ws([1 3])) 2*pi*Ws([1 3])/2]\zts;
 C = ab(1)*M+ab(2)*J0;
 
 %% HARMONIC BALANCE
-Nt = uint32(128);
-h = uint32([0 1 2 3 4]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
+Nt = uint32(256);
+h = uint32([0 1 2 3]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
 Nd = uint32(size(K, 1));
 
 % Linear Forcing
-fa = single(10);
+% fa = single(10);
 Fl = single(kron([0 fa 0 zeros(1,Nhc-3,'single')], R(3,:))');
 if h(1)~=0
   Fl(1:Nd) = [];
@@ -82,14 +84,16 @@ else
   Fl(1:Nd) = Fv*Prestress;
 end
 
-wfrc = single(2*pi*150);
+Wstart = single(2*pi*145);
+Wend = single(2*pi*170);
 
-Elin = HARMONICSTIFFNESS(M, C, J0, wfrc, h(h~=0));
+Elin = HARMONICSTIFFNESS(M, C, J0, Wstart, h(h~=0));
 if h(1)~=0
   U0 = single(Elin\double(Fl));
 else
   U0 = single([Ustat; Elin\double(Fl(Nd+1:end))]);
 end
+clear Elin
 
 opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
               1e-6, 'ITMAX', 20, 'Display', true, 'Dscale', ones(size(U0), 'single'));
@@ -101,14 +105,17 @@ Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-6, 'opts', ...
               opts);
 Copt.opts.reletol = 1e-10;
 Copt.Dscale = [U0; 2*pi*160];
+Copt.Dscale((Nd*3+1):end-1) = repmat(U0((Nd+1):(3*Nd)), length(h)-2,1);
 
 Ub = U0./Copt.Dscale(1:end-1);
-[UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, ...
-                                                  pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Ub, 2*pi*145, 2*pi*170, 2*pi*2, Copt);
+[UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, K, Fl, h, ...
+                                                     Nt, 1:MESH.Nn*MESH.dpn), Ub, ...
+                        Wstart, Wend, 2*pi*2, Copt);
 
-figure(1)
+% figure(1)
 % clf()
-plot(UwC(end,:)/2/pi, sqrt(sum((kron(blkdiag(0,eye(Nhc-1)),R(3,:))* ...
-                                UwC(1:end-1,:)).^2,1))/fa, '.-')
+% plot(UwC(end,:)/2/pi, sqrt(sum((kron(blkdiag(0,eye(Nhc-1)),R(3,:))* ...
+%                                UwC(1:end-1,:)).^2,1))/fa, '.-')
 
-save('./DATS/HBCONT_R10.mat', 'UwC', 'dUdwC', 'R', 'fa', 'h')
+save(sprintf('./DATS/HBCONT_F%.2f.mat',fa), 'UwC', 'dUdwC', 'R', 'fa', 'h')
+end
