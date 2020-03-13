@@ -28,7 +28,8 @@ function [E,dEdw] = HARMONICSTIFFNESS(M,C,K,w,h)
         dEdw = sparse((2*n)*nd,(2*n)*nd);        
         zi = 0;
     end
-    
+
+    % Without loops (Bad on memory)
     if strcmp(class(M), 'double')
         E((nd*zi+1):end, (nd*zi+1):end) = kron(eye(2*n),K) - ...
             kron(kron(diag(h((zi+1):end)*w).^2,eye(2)),M) +...
