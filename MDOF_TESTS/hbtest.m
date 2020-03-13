@@ -74,7 +74,7 @@ h = uint32([0 1]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
 Nd = uint32(size(K, 1));
 
 % Linear Forcing
-fa = single(10);
+fa = single(3);
 Fl = single(kron([0 fa 0 zeros(1,Nhc-3,'single')], R(3,:))');
 if h(1)~=0
   Fl(1:Nd) = [];
@@ -155,4 +155,4 @@ figure(1)
 plot(UwC(end,:)/2/pi, sqrt(sum((kron(blkdiag(0,eye(Nhc-1)),R(3,:))* ...
                                 UwC(1:end-1,:)).^2/fa,1)), '.-')
 
-save('./DATS/HBCONT_R10.mat', 'UwC', 'dUdwC', 'R', 'fa', 'h')
+save('./DATS/HBCONT_R3.mat', 'UwC', 'dUdwC', 'R', 'fa', 'h')
