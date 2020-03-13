@@ -1,6 +1,6 @@
 function [] = hbcont(fa)
-clc
-clear all
+% clc
+% clear all
 addpath('../ROUTINES')
 addpath('../ROUTINES/FEM')
 addpath('../ROUTINES/CONTACTMODELS')

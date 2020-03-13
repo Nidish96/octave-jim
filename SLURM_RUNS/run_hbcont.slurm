@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=HBCONT
+#SBATCH --job-name=HBCONT15
 #SBATCH --ntasks=1
-#SBATCH --mem-per-cpu=90G
+#SBATCH --mem=90G
 #SBATCH --time=24:00:00
 #SBATCH --mail-user=nb25@rice.edu
 #SBATCH --mail-type=ALL
@@ -16,5 +16,5 @@ echo $SLURM_NODELIST
 #
 module load MATLAB/2019a
 #
-matlab -nodisplay -r "hbcont(10); quit"
+matlab -nodisplay -r "hbcont(15); quit"
 
