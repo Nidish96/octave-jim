@@ -102,7 +102,13 @@ MESH = MESH.SETCFUN(@(U, h, Nt, P) ELDRYFRICT_HB(U, h, Nt, P, ...
                                                  single(0)), []);  % Contact Function
 				% CONTINUATION
 Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-6, 'opts', ...
-              opts);
+    opts);
+if fa>0.1
+    Copt.dsmax = 2*pi*1;
+else
+    Copt.dsmax = 2*pi*0.6;
+end
+ds = Copt.dsmax/2;
 Copt.opts.reletol = 1e-10;
 Copt.Dscale = [U0; 2*pi*160];
 Copt.Dscale((Nd*3+1):end-1) = repmat(U0((Nd+1):(3*Nd)), length(h)-2,1);
@@ -110,12 +116,12 @@ Copt.Dscale((Nd*3+1):end-1) = repmat(U0((Nd+1):(3*Nd)), length(h)-2,1);
 Ub = U0./Copt.Dscale(1:end-1);
 [UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, K, Fl, h, ...
                                                      Nt, 1:MESH.Nn*MESH.dpn), Ub, ...
-                        Wstart, Wend, 2*pi*2, Copt);
+                        Wstart, Wend, ds, Copt);
 
 % figure(1)
 % clf()
 % plot(UwC(end,:)/2/pi, sqrt(sum((kron(blkdiag(0,eye(Nhc-1)),R(3,:))* ...
 %                                UwC(1:end-1,:)).^2,1))/fa, '.-')
 
-save(sprintf('./DATS/HBCONT_F%.2f.mat',fa), 'UwC', 'dUdwC', 'R', 'fa', 'h')
+save(sprintf('./H%dDATS/HBCONT_F%.2f.mat',max(h),fa), 'UwC', 'dUdwC', 'R', 'fa', 'h')
 end

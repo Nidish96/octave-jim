@@ -80,7 +80,7 @@ function [U, dUdlam] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
       else
         disp('Diverged - reducing step-size');
         ds = ds/2;
-        u0 = U(:, n) + ds*duds;
+        u0 = U(:, n) + ds*al*dUdlam(:, n);
         continue;
       end
     end

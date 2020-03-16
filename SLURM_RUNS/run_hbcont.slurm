@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=HBCONT15
+#SBATCH --job-name=HBCONT0p01
 #SBATCH --ntasks=1
 #SBATCH --mem=90G
 #SBATCH --time=24:00:00
@@ -16,5 +16,5 @@ echo $SLURM_NODELIST
 #
 module load MATLAB/2019a
 #
-matlab -nodisplay -r "hbcont(15); quit"
+matlab -nodisplay -r "hbcont(0.01); quit"
 
