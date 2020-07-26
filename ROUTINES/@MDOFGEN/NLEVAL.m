@@ -1,0 +1,46 @@
+function [Fnl] = NLEVAL(m, t, U, Udot)
+%NLEVAL evaluates the nonlinearities in the time domain for given set of
+%points
+
+    Nt = length(t);
+    if size(U,1)==Nt
+        U = U';
+    end  % (Nd, Nt)
+    if size(Udot,1)==Nt
+        Udot = Udot';
+    end
+    
+    Fnl = zeros(m.Ndofs, Nt);
+    for ni=1:length(m.NLTs)        
+        unlt = m.NLTs(ni).L*U;
+        unldot = m.NLTs(ni).L*U;
+        
+        if mod(m.NLTs(ni).type-1, 3)==0  % Instantaneous force
+            [ft, dfdu, dfdud] = m.NLTs(ni).func(t(:), unlt', unldot');
+            % (Nt,Ndnl); (Nt,Ndnl); (Nt,Ndnl) (point-wise)
+        else  % Hysteretic force
+            ft = zeros(Nt, Nd);
+            dfdu = zeros(Nt, Nd, Nhc);
+            
+            fprev = ft(end, :);
+            its   = 0;
+            
+            while abs(fprev-ft(end, :))>tol || its==0
+                for ti=1:Nt
+                    tm1 = mod(ti-2, Nt)+1;
+                    [ft(ti,:), dfdu(ti,:,:)] = ...
+                        m.NLTs(ni).func(t(ti), unlt(ti,:), t(mt1), ...
+                        unlt(tm1,:), ft(tm1,:), dfdu(tm1,:,:), h);
+                end
+            end
+        end
+        
+        if m.NLTs(ni).type<=5
+            Fnl = Fnl + m.NLTs(ni).L'*ft';
+        else
+            Fnl = Fnl + m.NLTs(ni).Lf*ft';
+        end
+    end
+    
+    Fnl = Fnl';  % Ndofs x Nt
+end

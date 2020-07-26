@@ -1,4 +1,4 @@
-function [U, dUdlam] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
+function [U, dUdlam, Ss] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
 %CONTINUE Conducts the continuation and solves the system
 %
 % USAGE:
@@ -17,23 +17,24 @@ function [U, dUdlam] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
 				% Default options
   Copt = struct('Nmax', 100, 'dsmax', ds*5, 'dsmin', ds/5, ...
                 'angopt', pi/6, 'startdir', sign(lam1-lam0),...
-                'Display', true, 'nev', 1, 'adj', 1,...
-		'arclengthparm', 'orthogonal', ...
+                'Display', true, 'itDisplay', false, 'nev', 1, 'adj', 1,...
+		'arclengthparm', 'orthogonal', 'ITMAX', 20, ...
                 'opts', struct('reletol', 1e-6, 'rtol', 1e-6, 'etol', ...
-                              1e-6, 'utol', 1e-6, 'ITMAX', 20, ...
-                              'Display', true));
+                              1e-6, 'utol', 1e-6, ...
+                              'Display', false));
   if nargin==6
     nflds = fieldnames(varargin{1});
     for i=1:length(nflds)
       Copt.(nflds{i}) = varargin{1}.(nflds{i});
     end
   end
+  Copt.opts.Display = Copt.itDisplay;
+  Copt.opts.ITMAX = Copt.ITMAX;
 
   % Allocations
   U = zeros(length(u0)+1, Copt.Nmax);
   dUdlam = zeros(length(u0)+1, Copt.Nmax);
 
-  R0 = zeros(length(u0)+1, 1);
   J0 = zeros(length(u0)+1);  
   
   % Correct initial solution
@@ -47,9 +48,17 @@ function [U, dUdlam] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
   elseif Copt.Display
       disp('Initial Point Converged')
   end
+  if isfield(Copt, 'Dscale')
+      Copt.opts.Dscale = Copt.Dscale;
+      clear Copt.Dscale
+  else
+      Copt.opts.Dscale = ones(length(u0)+1,1);
+  end
+  
   % Extract gradient information
   [~, J0(1:end-1,1:end-1), J0(1:end-1,end)] = func(U(:, 1));
-  dUdlam(:, 1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];
+  J0 = Copt.opts.Dscale'.*J0;
+  dUdlam(:, 1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1]./Copt.opts.Dscale;
   
 				% BEGIN CONTINUATION
   lam  = lam0;  % current parameter
@@ -59,31 +68,29 @@ function [U, dUdlam] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
 				% Initial tangent
   dxn = Copt.startdir;
   al = dxn/sqrt(1+sum(dUdlam(1:end-1, 1).^2));
-  
   alp = al;
+  Ss = zeros(Copt.Nmax,1);
   
-  u0 = U(:, 1) + ds*al*dUdlam(:, 1);
-  if isfield(Copt, 'Dscale')
-      Copt.opts.Dscale = Copt.Dscale;
-      clear Copt.Dscale
-  end
+  u0 = U(:, 1) + ds*al*(Copt.opts.Dscale.*dUdlam(:, 1));
   while ( (lam-lam1)*(lamp-lam1) >= 0 && n<Copt.Nmax )
-    [U(:, n+1), R0, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), u0, Copt.opts);
+    [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), u0, Copt.opts);
     if eflag<=0
       if ds <= Copt.dsmin
-	disp('Diverged! Trying with first initial guess!');
-	[U(:, n+1), R0, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), U(:, 1), Copt.opts);
-	if eflag<=0
-	  disp('Diverged! Returning');
-	  break;
-	end
+          disp('Diverged! Trying with first initial guess!');
+          [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), U(:, 1), Copt.opts);
+          if eflag<=0
+              disp('Diverged! Returning');
+              break;
+          end
       else
         disp('Diverged - reducing step-size');
         ds = ds/2;
-        u0 = U(:, n) + ds*al*dUdlam(:, n);
+        u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUdlam(:, n));
         continue;
       end
     end
+    Ss(n+1) = Ss(n)+ds;
+    J0 = Copt.opts.Dscale'.*J0;
     dUdlam(:, n+1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];
     dxn = sign(dxn*sum(prod(dUdlam(:, n:n+1),2)));
 				% Step Update
@@ -100,16 +107,17 @@ function [U, dUdlam] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
       ds = min(Copt.dsmax, ds*2);
     end
     if Copt.Display
-      fprintf('%d %f %f %e %d\n', n+1, U(end,n+1), ds, theta, eflag);
+      fprintf('%d %f %f %e %d (%d)\n', n+1, U(end,n+1), ds, theta, its, eflag);
     end
     
     alp = al;    
     n = n+1;
 
-    u0 = U(:, n) + ds*al*dUdlam(:, n);
+    u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUdlam(:, n));
   end
   U = U(:, 1:n);
-  dUdlam = dUdlam(:, 1:n);
+  dUdlam = Copt.opts.Dscale.*dUdlam(:, 1:n);
+  Ss = Ss(1:n);
   
   if (lam-lam1)*(lamp-lam1) < 0
     disp('Continuation completed successfully');

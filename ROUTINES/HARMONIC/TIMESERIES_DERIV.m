@@ -116,7 +116,11 @@ function [x_t, h] = TIMESERIES_DERIV(Nt,h,X0,ord)
     if size(Xf,1)~=Nt
         disp('error');
     end
-    Xf = Xf*single(Nt/2);
+    if strcmp(class(Xf), 'single')
+        Xf = Xf*single(Nt/2);
+    else
+        Xf = Xf*(Nt/2);
+    end
     x_t = real(ifft(Xf));    
 end
 

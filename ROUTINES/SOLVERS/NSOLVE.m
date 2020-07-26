@@ -23,9 +23,11 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
     opts.Dscale = ones(size(U0));
   end
   Nu = length(U0);
+  U0 = U0./opts.Dscale;
   
   [R0, J0] = func(opts.Dscale.*U0);
-  dU0 = (-J0\R0)./opts.Dscale;
+%   dU0 = (-J0\R0)./opts.Dscale;
+  dU0 = (-(J0.*opts.Dscale')\R0);
   e0  = abs(R0'*dU0);
   
   if (e0 < eps)
@@ -54,7 +56,9 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
     it = it+1;
     
     [R, Jc] = func(opts.Dscale.*U);
-    dU = (-Jc\R)./opts.Dscale;
+%     dU = (-Jc\R)./opts.Dscale;
+    Jc = Jc.*opts.Dscale';
+    dU = -Jc\R;
     
     e = abs(R'*dU);
     r = sqrt(mean(R.^2));
