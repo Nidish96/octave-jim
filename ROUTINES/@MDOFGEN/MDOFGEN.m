@@ -32,13 +32,13 @@ classdef MDOFGEN
         %types are allowed: 'inst' and 'hyst' (see below)
         %
         % USAGE:
-        %   type    : a+b (possible values: {4, 7, 5, 8}),
+        %   type    : a+b (possible values: {4, 6, 5, 7}),
         %               with "a" being,
         %     [1] for instantaneous nonlinearity (in time domain) or
         %     [2] for hysteretic nonlinearity (in time domain)
         %               AND "b" being,
         %     [3] for self adjoint force application (F = Ls'*func(Ls*U))
-        %     [6] for non-self adjoint force application (F = Lf*func(Ls*u)
+        %     [5] for non-self adjoint force application (F = Lf*func(Ls*u)
         %   Ls      : (Nldofs, Ndofs) selection matrix
         %   func    : if 'inst', [ft, dfdut, dfdudt] = @(t, u, ud) func;
         %                           returning (Nldofs-qtties); assumed to
