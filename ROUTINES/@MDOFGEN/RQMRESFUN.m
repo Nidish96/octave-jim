@@ -11,7 +11,7 @@ function [R, dRdUl, dRdq] = RQMRESFUN(m, Ulq, lsc)
     FNL = zeros(m.Ndofs,1);
     dFNL = zeros(m.Ndofs);
     for ni=1:length(m.NLTs)
-        [Fnl, dFnl, ~] = m.NLTs(ni).func(0,  m.NLTs(ni).L*Ulq(1:end-2));  % Additional arguments ignored, implying zeros
+        [Fnl, dFnl] = m.NLTs(ni).func(0,  m.NLTs(ni).L*Ulq(1:end-2));  % Additional arguments ignored, implying zeros
         
         if m.NLTs(ni).type<=5  % Self-adjoint forcing
             FNL = FNL + m.NLTs(ni).L'*Fnl;

@@ -45,8 +45,8 @@ end
 %% Setup model
 GM = MDOFGEN(Mb, Kb, Cb, Lb);
 
-kc = 1e6;
-fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
+kc = 1e7;
+fnl = @(t,u,ud) deal(kc*u.^2, 2*kc*u, zeros(size(u)));
 GM = GM.SETNLFUN(1+3, Lb(end,:), fnl);
 
 %% Check
@@ -58,20 +58,34 @@ Nt = 2^9;
 Fl = kron([0; 1; 0; zeros(Nhc-3,1)], Lb(end,:)');
 
 As = -2;
-Ae = 0.5;
+Ae = 1.5;
 da = 0.01;
 
 Uwx0 = [kron([0; 0; 1; zeros(Nhc-3,1)], V(:,1)); Wsp(1); 2*Zetas(1)*Wsp(1)];
-Dscale = [ones(Nhc*GM.Ndofs,1); Wsp(1); 2*Zetas(1)*Wsp(1); 1.0];
+Dscale = [1e-2*ones(Nhc*GM.Ndofs,1); Wsp(1); 2*Zetas(1)*Wsp(1); 1.0];
 
-Copt = struct('Nmax', 500, 'Dscale', Dscale);
-UwxC = CONTINUE(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt), Uwx0, As, Ae, da, Copt);
+Copt = struct('Nmax', 500, 'Dscale', Dscale, 'dsmax', 0.05);
+[UwxC, dUwxC] = CONTINUE(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt), Uwx0, As, Ae, da, Copt);
 
+%% Save
+save('./DATA/Quadrat_EPMC.mat', 'UwxC', 'dUwxC', 'h', 'Nhc');
 
+%% Load
+load('./DATA/Quadrat_EPMC.mat', 'UwxC');
+
+%% Plot
 figure(1);
 clf();
-plot(UwxC(end-2,:), 10.^UwxC(end,:)); hold on
+plot(10.^UwxC(end,:), UwxC(end-2,:)); hold on
+
+set(gca, 'XScale', 'log')
+xlabel('Modal Amplitude')
+ylabel('Natural Frequency (rad/s)')
 
 figure(2);
 clf()
 plot(10.^UwxC(end,:), UwxC(end-1,:)./(2*UwxC(end-2,:))); hold on
+
+set(gca, 'XScale', 'log')
+xlabel('Modal Amplitude')
+ylabel('Damping Factor')

@@ -101,15 +101,14 @@ function [U, dUdlam, Ss] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
     
 				% step size adaptation
     theta = acos(alp*al*sum(prod(dUdlam(:, n:n+1),2)));
-    if abs(theta)>1.1*Copt.angopt % angle check
-      ds = max(Copt.dsmin, ds/2);
-    elseif its<=10 && abs(theta)<0.9*Copt.angopt  % angle and convergence check
-      ds = min(Copt.dsmax, ds*2);
-    end
     if Copt.Display
       fprintf('%d %f %f %e %d (%d)\n', n+1, U(end,n+1), ds, theta, its, eflag);
     end
-    
+    if abs(theta)>10*Copt.angopt % angle check
+      ds = max(Copt.dsmin, ds/2);
+    elseif its<=10 && abs(theta)<0.1*Copt.angopt  % angle and convergence check
+      ds = min(Copt.dsmax, ds*2);
+    end
     alp = al;    
     n = n+1;
 

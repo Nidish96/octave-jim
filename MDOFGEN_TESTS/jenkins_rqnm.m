@@ -46,19 +46,22 @@ end
 %% Setup model
 GM = MDOFGEN(Mb, Kb, Cb, Lb);
 
-kc = 1e6;
-fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
-GM = GM.SETNLFUN(1+3, Lb(end,:), fnl);
+% kc = 1e6;
+% fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
+kt  = 7.5e6;
+muN = 7.5e5;
+fnl = @(t, u, varargin) JENKFORCE(t, u, kt, muN, varargin{:});
+GM = GM.SETNLFUN(2+3, Lb(end,:), fnl);
 
 %% Continuation
 
-Amax = 0.5;
-da = 0.1;
+Amax = 2;
+da = 0.01;
 
 ul0 = [V(:,1)*10^Amax; Wsp(1)^2];
 Dscale = [ones(GM.Ndofs, 1); Wsp(1)^2; 1.0];
 
-Copt = struct('Nmax', 100, 'Dscale', Dscale);
+Copt = struct('Nmax', 10000, 'Dscale', Dscale, 'dsmax', 0.2);
 [UlC, dUlC, Ss] = CONTINUE(@(ulq) GM.RQMRESFUN(ulq,0), ul0, -10^Amax, 10^Amax, da, Copt);
 
 %% Post Processing (Hermite interpolation + 1HB)
@@ -66,12 +69,15 @@ Ln = reshape([UlC(end-1,:); dUlC(end-1,:)], 2*size(UlC,2), 1);
 As = UlC(end,:)';
 
 Nq = 100;
-Qs = floor(10^Amax)*linspace(0.01, 1, Nq)';
+% Qs = (10^Amax)*linspace(0.01, 1, Nq)';
+Qs = logspace(-2, Amax, Nq)';
 
 Nt = 2^7;
 t = linspace(0, 2*pi, Nt+1)'; t(end) = [];
 qt = cos(t).*Qs';
-[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:));
+tic
+[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:), 8);
+toc
 Lt = reshape(Lt, Nt, Nq);
 
 % Natural Frequency
@@ -90,31 +96,39 @@ Uh = reshape(GETFOURIERCOEFF(1, reshape(Ut, Nt, Nq*GM.Ndofs)), 2, Nq, GM.Ndofs);
 Phi = (squeeze(Uh(1,:,:)-1j*Uh(2,:,:))./Qs)';
 
 % Damping
-
+tol = 1e-6;
+tic
 Zts = zeros(Nq, 1);
-for qi=1:Nq
+parfor (qi=1:Nq,8)
 %     size(sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M + squeeze(Udot(:, qi, :))*GM.C + squeeze(Ut(:, qi, :))*GM.K + GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)))),2))
     Zts(qi) = GETFOURIERCOEFF(0, sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M +...
         squeeze(Udot(:, qi, :))*GM.C +...
-        squeeze(Ut(:, qi, :))*GM.K + GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)))),2))/(Qs(qi)^2*Lams(qi)^1.5);
+        squeeze(Ut(:, qi, :))*GM.K + GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)), tol)),2))/(Qs(qi)^2*Lams(qi)^1.5);
 end
-disp('done')
+toc
 
-%%
+%% Save
+save('./DATA/Jenkins_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi', 'UlC', 'dUlC', 'GM', 'Nint', 'dNint');
+
+%% Load
+load('./DATA/Jenkins_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi')
+
+%% Plot
 figure(1)
 % clf()
-% plot(sqrt(UlC(end-1,:)), UlC(end,:), 'o-'); hold on
-plot(sqrt(Lams), Qs, '.-')
+hold on
+plot(Qs, sqrt(Lams), '.-')
 
-xlabel('Frequency(Hz)')
-ylabel('Amplitude')
+xlabel('Modal Amplitude')
+ylabel('Frequency (rad/s)')
 
 figure(2)
+% clf()
+hold on
 plot(Qs, Zts, '.-')
 
-xlabel('Amplitude')
+xlabel('Modal Amplitude')
 ylabel('Damping Factor')
-
 
 figure(3)
 clf()
