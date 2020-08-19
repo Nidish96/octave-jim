@@ -47,7 +47,7 @@ end
 GM = MDOFGEN(Mb, Kb, Cb, Lb);
 
 kc = 1e6;
-fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
+fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2,zeros(size(u)));
 GM = GM.SETNLFUN(1+3, Lb(end,:), fnl);
 
 %% Continuation
@@ -73,7 +73,8 @@ Nt = 2^7;
 t = linspace(0, 2*pi, Nt+1)'; t(end) = [];
 qt = cos(t).*Qs';
 tic
-[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:), 8);
+[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:));
+% [Lt,Pn] = PCHIP_ANGRAD(As, Ln(1:2:end), Ln(2:2:end), qt(:));
 toc
 Lt = reshape(Lt, Nt, Nq);
 
@@ -95,11 +96,12 @@ Phi = (squeeze(Uh(1,:,:)-1j*Uh(2,:,:))./Qs)';
 % Damping
 tic
 Zts = zeros(Nq, 1);
-parfor (qi=1:Nq, 8)
-%     size(sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M + squeeze(Udot(:, qi, :))*GM.C + squeeze(Ut(:, qi, :))*GM.K + GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)))),2))
-    Zts(qi) = GETFOURIERCOEFF(0, sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M +...
-        squeeze(Udot(:, qi, :))*GM.C +...
-        squeeze(Ut(:, qi, :))*GM.K + GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)))),2))/(Qs(qi)^2*Lams(qi)^1.5);
+for qi=1:Nq    
+%     size(sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M + ...
+%       squeeze(Udot(:, qi, :))*GM.C + squeeze(Ut(:, qi, :))*GM.K + ...
+%       GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)))),2))
+    Zts(qi) = GETFOURIERCOEFF(0, sum(squeeze(Udot(:, qi, :)).*(squeeze(Udot(:, qi, :))*GM.C +...
+        GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)))),2))/(Qs(qi)^2*Lams(qi)^1.5);
 end
 toc
 

@@ -18,8 +18,9 @@ function [Fnl] = NLEVAL(m, t, U, Udot,tol)
         Ndnl = size(m.NLTs(ni).L, 1);
         
         if mod(m.NLTs(ni).type-1, 3)==0  % Instantaneous force
-            [ft, dfdu, dfdud] = m.NLTs(ni).func(t(:), unlt', unldot');
+            [ft, dfdu, dfdud] = m.NLTs(ni).func(t(:), unlt, unldot);
             % (Nt,Ndnl); (Nt,Ndnl); (Nt,Ndnl) (point-wise)
+            
         else  % Hysteretic force
             ft = zeros(Nt, Ndnl);
             dfdu = zeros(Nt, Ndnl, Ndnl, 1);

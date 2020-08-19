@@ -14,7 +14,7 @@ load('./DATA/Quadrat_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi', 'GM');
 load('./DATA/Quadrat_FRESP.mat', 'UCs', 'Fl', 'Fas', 'Wst', 'Wen', 'h', 'Nhc');
 
 %% Just Backbones
-figure(1);
+figure(10);
 clf();
 aa1 = plot(10.^UwxC(end,:), UwxC(end-2,:)); hold on
 aa2 = plot(Qs, sqrt(Lams), '-');
@@ -40,7 +40,7 @@ ylabel('Natural Frequency (rad/s)')
 % set(gca, 'XTick', [1.3 2.3])
 % set(gca, 'YTick', [8200, 8450])
 
-figure(2);
+figure(20);
 clf()
 plot(10.^UwxC(end,:), UwxC(end-1,:)./(2*UwxC(end-2,:))); hold on
 plot(Qs, Zts, '-');
@@ -52,7 +52,7 @@ xlabel('Modal Amplitude')
 ylabel('Damping Factor')
 
 %% Against FRF
-figure(3)
+figure(30)
 clf()
 
 aa = gobjects(length(Fas), 1);

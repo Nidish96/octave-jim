@@ -28,8 +28,7 @@ function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, z
   Np = size(uxyn, 2);
   fxyn = zeros(3, Np);
   DfxynDuxyn = zeros(3, 3, Np);
-  DfxynDuxynd = zeros(3, 3, Np);
-  DfxynDkxynmu = zeros(3, 4, Np);
+  DfxynDuxynd = zeros(3, 3, Np); DfxynDkxynmu = zeros(3, 4, Np);
   
 				% 1. STICK (PREDICTION)
   fxyn(1, :) = kxynmu(1,:).*(uxyn(1, :)-zxy(1, :));
