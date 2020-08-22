@@ -5,3 +5,8 @@
 /MDOF_TESTS/QSProf/
 /MDOF_TESTS/QsProf2/
 /MDOF_TESTS/TransProf/
+*.out
+*.zip
+MDOF_TESTS/FIGS/
+REPS/
+octave-workspace

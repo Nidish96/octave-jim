@@ -1,4 +1,4 @@
-function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
+function [U, R, eflag, it, Jc] = NSOLVE(func, U0, varargin)
 %NSOLVE Uses Newton iterations to solve
 %
 % USAGE:
@@ -19,13 +19,22 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
 %  it		:
 %  Jc		:
 
-  if ~isfield(opts, 'Dscale')
-    opts.Dscale = ones(size(U0));
-  end
+  opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'etol', 1e-6, 'utol', ...
+                1e-6, 'Display', false, 'Dscale', ones(size(U0)), ...
+	       'ITMAX', 10);
+  if nargin==3
+      nflds = fieldnames(varargin{1});
+      for i = 1:length(nflds)
+	opts.(nflds{i}) = varargin{1}.(nflds{i});
+      end
+  end  
+
   Nu = length(U0);
+  U0 = U0./opts.Dscale;
   
   [R0, J0] = func(opts.Dscale.*U0);
-  dU0 = (-J0\R0)./opts.Dscale;
+%   dU0 = (-J0\R0)./opts.Dscale;
+  dU0 = (-(J0.*opts.Dscale')\R0);
   e0  = abs(R0'*dU0);
   
   if (e0 < eps)
@@ -54,7 +63,9 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
     it = it+1;
     
     [R, Jc] = func(opts.Dscale.*U);
-    dU = (-Jc\R)./opts.Dscale;
+%     dU = (-Jc\R)./opts.Dscale;
+    Jc = Jc.*opts.Dscale';
+    dU = -Jc\R;
     
     e = abs(R'*dU);
     r = sqrt(mean(R.^2));

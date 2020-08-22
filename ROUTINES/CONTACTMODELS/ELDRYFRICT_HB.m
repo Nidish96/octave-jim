@@ -36,7 +36,7 @@ function [FXYN, JXYN] = ELDRYFRICT_HB(UXYN, h, Nt, kxynmu, N0, varargin)
 
   % TIME DOMAIN CALCULATIONS
   % NORMAL FORCE AND JACOBIAN
-  fxyn(3:3:end, :) = max(kxynmu(3:4:end).*uxyn(3:3:end,:)+N0, 0);
+  fxyn(3:3:end, :) = max(repmat(kxynmu(3:4:end),1,Nt).*uxyn(3:3:end,:)+N0, 0);
   for p=uint32(1:Np)
     ip0 = (p-1)*3;
     for t=uint32(1:Nt)

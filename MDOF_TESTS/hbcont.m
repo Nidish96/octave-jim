@@ -74,7 +74,7 @@ h = uint32([0 1]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
 Nd = uint32(size(K, 1));
 
 % Linear Forcing
-fa = single(10);
+fa = single(15);
 Fl = single(kron([0 fa 0 zeros(1,Nhc-3,'single')], R(3,:))');
 if h(1)~=0
   Fl(1:Nd) = [];
@@ -91,24 +91,26 @@ else
   U0 = single([Ustat; Elin\double(Fl(Nd+1:end))]);
 end
 
-opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
+opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 5e-6, 'etol', ...
               1e-6, 'ITMAX', 20, 'Display', true, 'Dscale', ones(size(U0), 'single'));
 
 MESH = MESH.SETCFUN(@(U, h, Nt, P) ELDRYFRICT_HB(U, h, Nt, P, ...
                                                  single(0)), []);  % Contact Function
 				% CONTINUATION
-Copt = struct('Nmax', 50, 'Display', 1, 'angopt', 1e-6, 'opts', ...
+Copt = struct('Nmax', 100, 'Display', 1, 'angopt', 5e-6, 'opts', ...
               opts);
+Copt.dsmax = 2*pi*1;
 Copt.opts.reletol = 1e-10;
 Copt.Dscale = [U0; 2*pi*160];
 
 Ub = U0./Copt.Dscale(1:end-1);
 [UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, ...
-                                                  pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Ub, 2*pi*145, 2*pi*170, 2*pi*2, Copt);
+                                                  pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Ub, 2*pi*145, 2*pi*170, 2*pi*1, Copt);
 
+Nhc = uint32(sum(h==0)+2*sum(h~=0));
 figure(1)
 % clf()
 plot(UwC(end,:)/2/pi, sqrt(sum((kron(blkdiag(0,eye(Nhc-1)),R(3,:))* ...
-                                UwC(1:end-1,:)).^2,1))/fa, '.-')
+                                UwC(1:end-1,:)).^2,1))/fa, 'o')
 
-save('./DATS/HBCONT_R10.mat', 'UwC', 'dUdwC', 'R', 'fa', 'h')
+save('./DATS/HBCONT_R15.mat', 'UwC', 'dUdwC', 'R', 'fa', 'h')

@@ -53,7 +53,8 @@ function [T,X,Z,Xd,Xdd] = HHTA_NONLIN_HYST(M,C,K,FN,Fhys,X0,Z0,Xd0,t0,t1,dt,a,b,
   Xdd0 = Xdd(:, 1);
   [Fhys_p, Z_p] = Fhys(T(1), X(:, 1), Z(:, :, 1), Xd(:, 1));  % Hysteretic force at First step
 
-  wb = waitbar(T(1)/t1, sprintf('Progress: %.e/%.e', T(1), t1), 'createcancelbtn', "setappdata(gcbf, 'interrupt', true)");
+  wb = waitbar(T(1)/t1, sprintf('Progress: %.e/%.e', T(1), t1), ...
+      'createcancelbtn', "setappdata(gcbf, 'interrupt', true)");
   for i=2:length(T)
 				% Explicit Predictor
     Xdd(:, i) = Xdd(:, i-1);
@@ -146,7 +147,7 @@ function [T,X,Z,Xd,Xdd] = HHTA_NONLIN_HYST(M,C,K,FN,Fhys,X0,Z0,Xd0,t0,t1,dt,a,b,
       fprintf('---------------------------------------------------\n');
     end
     waitbar(T(i)/t1, wb, sprintf('Progress: %e/%e', T(i), t1));
-    if (! ishandle(wb))
+    if (~ishandle(wb))
       break;
     elseif getappdata(wb, 'interrupt')
        delete(wb);
