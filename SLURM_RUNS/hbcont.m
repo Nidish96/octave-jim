@@ -69,8 +69,8 @@ ab = [1./(2*2*pi*Ws([1 3])) 2*pi*Ws([1 3])/2]\zts;
 C = ab(1)*M+ab(2)*J0;
 
 %% HARMONIC BALANCE
-Nt = uint32(128);
-h = uint32([0 1 2 3 4]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
+Nt = uint32(256);
+h = uint32([0 1 2 3]);  Nhc = uint32(sum(h==0)+2*sum(h~=0));
 Nd = uint32(size(K, 1));
 
 % Linear Forcing
@@ -82,14 +82,16 @@ else
   Fl(1:Nd) = Fv*Prestress;
 end
 
-wfrc = single(2*pi*150);
+Wstart = single(2*pi*145);
+Wend = single(2*pi*170);
 
-Elin = HARMONICSTIFFNESS(M, C, J0, wfrc, h(h~=0));
+Elin = HARMONICSTIFFNESS(M, C, J0, Wstart, h(h~=0));
 if h(1)~=0
   U0 = single(Elin\double(Fl));
 else
   U0 = single([Ustat; Elin\double(Fl(Nd+1:end))]);
 end
+clear Elin
 
 opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'utol', 1e-6, 'etol', ...
               1e-6, 'ITMAX', 20, 'Display', true, 'Dscale', ones(size(U0), 'single'));
@@ -103,8 +105,9 @@ Copt.opts.reletol = 1e-10;
 Copt.Dscale = [U0; 2*pi*160];
 
 Ub = U0./Copt.Dscale(1:end-1);
-[UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, ...
-                                                  pA, MESH, M, C, K, Fl, h, Nt, 1:MESH.Nn*MESH.dpn), Ub, 2*pi*145, 2*pi*170, 2*pi*2, Copt);
+[UwC, dUdwC] = CONTINUE(@(Uw) MDOF3D_NLHYST_HBRESFUN(Uw, Pars, L, pA, MESH, M, C, K, Fl, h, ...
+                                                     Nt, 1:MESH.Nn*MESH.dpn), Ub, ...
+                        Wstart, Wend, 2*pi*2, Copt);
 
 figure(1)
 % clf()
