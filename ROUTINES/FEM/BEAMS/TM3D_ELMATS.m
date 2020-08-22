@@ -42,17 +42,31 @@ function [Me, Ke] = TM3D_ELMATS(Le, pars)
               0, 0, 0, 0, 0, rhoIz, 0, 0, 0, 0, 0, rhoIz*2];
 
   %% Stiffness Matrix
+  % Ke = [EA/Le, 0, 0, 0, 0, 0, -EA/Le, 0, 0, 0, 0, 0;
+  %       0, k1*GA/Le, 0, 0, 0, -k1*GA/2, 0, -k1*GA/Le, 0, 0, 0, -k1*GA/2;
+  %       0, 0, k2*GA/Le, 0, k2*GA/2, 0, 0, 0, -k2*GA/Le, 0, k2*GA/2, 0;
+  %       0, 0, 0, (GIz+GIy)/Le, 0, 0, 0, 0, 0, -(GIz+GIy)/Le, 0, 0;
+  %       0, 0, k2*GA/2, 0, (k2*GA*Le^2+4*EIy)/(4*Le), 0, 0, 0, -k2*GA/2, 0, (k2*GA*Le^2-4*EIy)/(4*Le), 0;
+  %       0, -k1*GA/2, 0, 0, 0, (k1*GA*Le^2+4*EIz)/(4*Le), 0, k1*GA/2, 0, 0, 0, (k1*GA*Le^2-4*EIz)/(4*Le);
+  %       -EA/Le, 0, 0, 0, 0, 0, EA/Le, 0, 0, 0, 0, 0;
+  %       0, -k1*GA/Le, 0, 0, 0, k1*GA/2, 0, k1*GA/Le, 0, 0, 0, k1*GA/2;
+  %       0, 0, -k2*GA/Le, 0, -k2*GA/2, 0, 0, 0, k2*GA/Le, 0, -k2*GA/2, 0;
+  %       0, 0, 0, -(GIz+GIy)/Le, 0, 0, 0, 0, 0, (GIz+GIy)/Le, 0, 0;
+  %       0, 0, k2*GA/2, 0, (k2*GA*Le^2-4*EIy)/(4*Le), 0, 0, 0, -k2*GA/2, 0, (k2*GA*Le^2+4*EIy)/(4*Le), 0;
+  %       0, -k1*GA/2, 0, 0, 0, (k1*GA*Le^2-4*EIz)/(4*Le), 0, k1*GA/2, ...
+  %       0, 0, 0, (k1*GA*Le^2+4*EIz)/(4*Le)];
+  
+  %% New
   Ke = [EA/Le, 0, 0, 0, 0, 0, -EA/Le, 0, 0, 0, 0, 0;
-        0, k1*GA/Le, 0, 0, 0, -k1*GA/2, 0, -k1*GA/Le, 0, 0, 0, -k1*GA/2;
-        0, 0, k2*GA/Le, 0, k2*GA/2, 0, 0, 0, -k2*GA/Le, 0, k2*GA/2, 0;
-        0, 0, 0, (GIz+GIy)/Le, 0, 0, 0, 0, 0, -(GIz+GIy)/Le, 0, 0;
-        0, 0, k2*GA/2, 0, (k2*GA*Le^2+4*EIy)/(4*Le), 0, 0, 0, -k2*GA/2, 0, (k2*GA*Le^2-4*EIy)/(4*Le), 0;
-        0, -k1*GA/2, 0, 0, 0, (k1*GA*Le^2+4*EIz)/(4*Le), 0, k1*GA/2, 0, 0, 0, (k1*GA*Le^2-4*EIz)/(4*Le);
-        -EA/Le, 0, 0, 0, 0, 0, EA/Le, 0, 0, 0, 0, 0;
-        0, -k1*GA/Le, 0, 0, 0, k1*GA/2, 0, k1*GA/Le, 0, 0, 0, k1*GA/2;
-        0, 0, -k2*GA/Le, 0, -k2*GA/2, 0, 0, 0, k2*GA/Le, 0, -k2*GA/2, 0;
-        0, 0, 0, -(GIz+GIy)/Le, 0, 0, 0, 0, 0, (GIz+GIy)/Le, 0, 0;
-        0, 0, k2*GA/2, 0, (k2*GA*Le^2-4*EIy)/(4*Le), 0, 0, 0, -k2*GA/2, 0, (k2*GA*Le^2+4*EIy)/(4*Le), 0;
-        0, -k1*GA/2, 0, 0, 0, (k1*GA*Le^2-4*EIz)/(4*Le), 0, k1*GA/2, ...
-        0, 0, 0, (k1*GA*Le^2+4*EIz)/(4*Le)];
+       0, k1*GA/Le, 0, 0, 0, k1*GA/2, 0, -k1*GA/Le, 0, 0, 0, k1*GA/2;
+       0, 0, k2*GA/Le, 0, -k2*GA/2, 0, 0, 0, -k2*GA/Le, 0, -k2*GA/2, 0;
+       0, 0, 0, (GIz+GIy)/Le, 0, 0, 0, 0, 0, -(GIz+GIy)/Le, 0, 0;
+       0, 0, -k2*GA/2, 0, (k2*GA*Le^2+4*EIy)/(4*Le), 0, 0, 0, k2*GA/2, 0, (k2*GA*Le^2-4*EIy)/(4*Le), 0;
+       0, k1*GA/2, 0, 0, 0, (k1*GA*Le^2+4*EIz)/(4*Le), 0, -k1*GA/2, 0, 0, 0, (k1*GA*Le^2-4*EIz)/(4*Le);
+       -EA/Le, 0, 0, 0, 0, 0, EA/Le, 0, 0, 0, 0, 0;
+       0, -k1*GA/Le, 0, 0, 0, -k1*GA/2, 0, k1*GA/Le, 0, 0, 0, -k1*GA/2;
+       0, 0, -k2*GA/Le, 0, k2*GA/2, 0, 0, 0, k2*GA/Le, 0, k2*GA/2, 0;
+       0, 0, 0, -(GIz+GIy)/Le, 0, 0, 0, 0, 0, (GIz+GIy)/Le, 0, 0;
+       0, 0, -k2*GA/2, 0, (k2*GA*Le^2-4*EIy)/(4*Le), 0, 0, 0, k2*GA/2, 0, (k2*GA*Le^2+4*EIy)/(4*Le), 0;
+       0, k1*GA/2, 0, 0, 0, (k1*GA*Le^2-4*EIz)/(4*Le), 0, -k1*GA/2, 0, 0, 0, (k1*GA*Le^2+4*EIz)/(4*Le)];
 end

@@ -8,7 +8,7 @@ function [freqs, xf] = FFTFUN(t, x)
 % 	t 	: Ntx1 time vector
 % 	x 	: Ntxn matrix of data
 % OUTPUTS:
-%	freqs 	: (Nt/2)x1 vector of frequency values
+%	freqs 	: (Nt/2)x1 vector of frequency values (Hz)
 %	xf	: (Nt/2)xn matrix of frequency components
     Nt = length(t);
     dt = t(2)-t(1);

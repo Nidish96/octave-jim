@@ -32,8 +32,10 @@ function [Q, T] = TM3D_ND2QP(Les, Wys, Zs, No)
     integ_mx  = zeros(12, No^2*3);
     for yi=1:No
       interp_mx((yi-1)*No*3+(1:No*3), :) = kron(NS, [eye(3), [0 Zs(e) -Ys(yi);-Zs(e) 0 0;Ys(yi) 0 0]]);
+%       interp_mx((yi-1)*No*3+(1:No*3), :) = kron(NS, [eye(3), -[0 Zs(e) -Ys(yi);-Zs(e) 0 0;Ys(yi) 0 0]]);      
 
       integ_mx(:, (yi-1)*No*3+(1:No*3)) = kron(Les(e)/2*wi.*NS, [eye(3), [0 Zs(e) -Ys(yi);-Zs(e) 0 0;Ys(yi) 0 0]])'*wi(yi)*Wys(e)/2;
+%       integ_mx(:, (yi-1)*No*3+(1:No*3)) = kron(Les(e)/2*wi.*NS, [eye(3), -[0 Zs(e) -Ys(yi);-Zs(e) 0 0;Ys(yi) 0 0]])'*wi(yi)*Wys(e)/2;
     end
 
     Q((e-1)*(No^2*3)+(1:No^2*3), (e-1)*6+(1:12)) = ...

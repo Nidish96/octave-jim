@@ -1,4 +1,4 @@
-function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
+function [U, R, eflag, it, Jc] = NSOLVE(func, U0, varargin)
 %NSOLVE Uses Newton iterations to solve
 %
 % USAGE:
@@ -19,9 +19,16 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, opts)
 %  it		:
 %  Jc		:
 
-  if ~isfield(opts, 'Dscale')
-    opts.Dscale = ones(size(U0));
-  end
+  opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'etol', 1e-6, 'utol', ...
+                1e-6, 'Display', false, 'Dscale', ones(size(U0)), ...
+	       'ITMAX', 10);
+  if nargin==3
+      nflds = fieldnames(varargin{1});
+      for i = 1:length(nflds)
+	opts.(nflds{i}) = varargin{1}.(nflds{i});
+      end
+  end  
+
   Nu = length(U0);
   U0 = U0./opts.Dscale;
   

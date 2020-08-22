@@ -21,8 +21,8 @@ function [R, dRdUl, dRdq] = RQMRESFUN(m, Ulq, lsc)
             FNL = FNL + m.NLTs(ni).L'*Fnl;
             dFNL = dFNL + m.NLTs(ni).L'*dFnl*m.NLTs(ni).L;
         else
-            FNL = FNL + m.NLTs(ni).Lf'*Fnl;
-            dFNL = dFNL + m.NLTs(ni).Lf'*dFnl*m.NLTs(ni).L;
+            FNL = FNL + m.NLTs(ni).Lf*Fnl;
+            dFNL = dFNL + m.NLTs(ni).Lf*dFnl*m.NLTs(ni).L;
         end
     end
     

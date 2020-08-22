@@ -25,6 +25,6 @@ function [] = DEPICTBEAM_TM3D(Les,wd1s,wd2s,XYZc,U, varargin)
 %            [atan(U(xis+3)) atan(U(xis+4)) U(xis+5)]', col, alph);
         DRAWCUBOID([Les(e); wd1s(e); wd2s(e)], ...
            (XYZce+[U(xis) U(xis+1) U(xis+2)])', ...
-           [atan(U(xis+5)) atan(U(xis+4)) atan(U(xis+3))]', col, alph);
+           [atan(-U(xis+5)) atan(-U(xis+4)) atan(-U(xis+3))]', col, alph);
     end
 end

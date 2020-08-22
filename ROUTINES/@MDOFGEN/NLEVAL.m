@@ -17,7 +17,7 @@ function [Fnl] = NLEVAL(m, t, U, Udot,tol)
         
         Ndnl = size(m.NLTs(ni).L, 1);
         
-        if mod(m.NLTs(ni).type-1, 3)==0  % Instantaneous force
+        if mod(m.NLTs(ni).type,2)==0  % Inst. force
             [ft, dfdu, dfdud] = m.NLTs(ni).func(t(:), unlt, unldot);
             % (Nt,Ndnl); (Nt,Ndnl); (Nt,Ndnl) (point-wise)
             

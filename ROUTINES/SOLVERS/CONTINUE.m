@@ -47,6 +47,7 @@ function [U, dUdlam, Ss] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
       error('Initial point non-convergent!');
   elseif Copt.Display
       disp('Initial Point Converged')
+      fprintf('Starting Continuation from %f to %f\n', lam0, lam1);
   end
   if isfield(Copt, 'Dscale')
       Copt.opts.Dscale = Copt.Dscale;
