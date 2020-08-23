@@ -118,7 +118,7 @@ disp(Ws/2/pi)
 % fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 
 bw = -1;
-famp = 100;
+famp = 1000;
 type = 'WGN';
 fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
 
@@ -162,14 +162,16 @@ opts = struct('Display', 'waitbar');
 Urec = RECOV*Lrbms*U;
 Udrec = RECOV*Lrbms*Ud;
 Uddrec = RECOV*Lrbms*Udd;
-save(sprintf('./DATA/%dIN_%dRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Urec', 'Udrec', 'Uddrec', ...
+save(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Urec', 'Udrec', 'Uddrec', ...
     'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
 return
 %%
-famp = 1000;
-load(sprintf('./DATA/%dIN_IMPRESP_Z%d.mat', Nein, famp), 'T', 'Uddrec','ldof')
+famp = 100;
+type = 'WGN'; 
+DOF = 'Z';
+load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Uddrec','ldof')
 figure(1)
-% clf()
+clf()
 
 % plot(T, RECOV(end-2,:)*Lrbms*Udd); hold on
 % plot(T, RECOV(end-1,:)*Lrbms*Udd)
@@ -181,7 +183,7 @@ ylabel('Acceleration (m/s^2)')
 figure(4)
 % clf()
 [freqs, Uf] = FFTFUN(T(:), Uddrec(ldof,:)');
-[~, Ff] = FFTFUN(T(:), fext);
+[~, Ff] = FFTFUN(T(:), interp1(T0:dt:T1, fext, T)');
 semilogy(freqs, abs(Uf./Ff)/famp)
 hold on
 for i=1:length(Ws)

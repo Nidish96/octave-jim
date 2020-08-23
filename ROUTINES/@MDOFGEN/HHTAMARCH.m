@@ -96,7 +96,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       
       if flag == 0 || any(~isfinite(abs(U(:, i))))
           disp('No Convergence/Non finite march : Returning')
-          keyboard
+%           keyboard
           
           U = U(:, 1:i-1);
           Ud = Ud(:, 1:i-1);
