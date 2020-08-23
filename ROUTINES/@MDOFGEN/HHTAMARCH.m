@@ -95,8 +95,8 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       end
       
       if flag == 0 || any(~isfinite(abs(U(:, i))))
-          disp('No Convergence/Non finite march : Returning')
-%           keyboard
+          disp(sprintf('No Convergence/Non finite march at %f s : Returning', T(i)))
+%          keyboard
           
           U = U(:, 1:i-1);
           Ud = Ud(:, 1:i-1);
@@ -134,7 +134,8 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           end
       end
   end
-  
-  waitbar(1.0, wb, 'COMPLETED!');
-  delete(wb);
+  if strcmp(opts.Display, 'waitbar')  
+    waitbar(1.0, wb, 'COMPLETED!');
+    delete(wb);
+  end
 end
