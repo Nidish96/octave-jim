@@ -1,7 +1,10 @@
 clc
 clear all
+
 addpath('../../ROUTINES/FEM')
 addpath('../../ROUTINES/FEM/BEAMS')
+
+disp('Running setup')
 
 %% Set Geometric Properties
 Lbb = 11.8*25.4e-3;  % Body length
@@ -322,7 +325,7 @@ save(sprintf('./MATS/%dIN_MATS.mat',Nein), 'M', 'K', 'Fbolt', 'L1', 'L2', ...
 % Check Saved Data
 clear all
 Nein = 8;
-load(sprintf('./DATA/%dIN_MATS.mat',Nein))
+load(sprintf('./MATS/%dIN_MATS.mat',Nein))
 
 %% SET UP QUADRATURE
 No = 2;
