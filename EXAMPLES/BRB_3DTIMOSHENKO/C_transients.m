@@ -181,7 +181,7 @@ ylabel('Acceleration (m/s^2)')
 figure(4)
 % clf()
 [freqs, Uf] = FFTFUN(T(:), Uddrec(ldof,:)');
-[~, Ff] = FFTFUN(T(:), fext));
+[~, Ff] = FFTFUN(T(:), fext);
 semilogy(freqs, abs(Uf./Ff)/famp)
 hold on
 for i=1:length(Ws)
