@@ -124,9 +124,19 @@ fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
 
 ldof = 6;
 DOF = 'Z';
-FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
-
 fsamp = 2^18;  % Sampling frequency
+T0 = 0;  T1 = 1;  dt = 1/fsamp;
+fext = fex(T0:dt:T1);
+
+% FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
+FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
+
+% tic 
+% for i=1:fix((T1-T0)/dt)
+%     tmp = FEX1(T0+(i-1)*dt);
+% end
+% toc
+
 [freqs, Ff] = FFTFUN((0:(1/fsamp):1)', fex(0:(1/fsamp):1)');
 
 figure(10)
@@ -142,20 +152,12 @@ ylabel('Forcing (N)')
 %% HHTA
 opts = struct('Display', 'waitbar');
 
-T0 = 0;
-T1 = 1;
-% dt = 6e-6;
-
-% fsamp = 2^18;  % Sampling frequency
-dt = 1/fsamp;
-
 [~, ~, ~, MDL] = MDL.NLFORCE(0, Ustat, zeros(size(Ustat)), 0, 1);
 % MDL.NLTs.fp = 0*MDL.NLTs.fp;
 % MDL.NLTs.up = 0*MDL.NLTs.up;
 
 [T, U, Ud, Udd, MDL] = MDL.HHTAMARCH(T0, T1, dt, Ustat, zeros(size(Ustat)), ...
     FEX, opts);
-fext = fex(T);
 
 Urec = RECOV*Lrbms*U;
 Udrec = RECOV*Lrbms*Ud;
@@ -179,7 +181,7 @@ ylabel('Acceleration (m/s^2)')
 figure(4)
 % clf()
 [freqs, Uf] = FFTFUN(T(:), Uddrec(ldof,:)');
-[~, Ff] = FFTFUN(T(:), fex(T(:)));
+[~, Ff] = FFTFUN(T(:), fext));
 semilogy(freqs, abs(Uf./Ff)/famp)
 hold on
 for i=1:length(Ws)
