@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=SETUP
+#SBATCH --job-name=SRNY500
 #SBATCH --ntasks=4
 #SBATCH --mem=10G
-#SBATCH --time=04:30:00
+#SBATCH --time=09:30:00
 #SBATCH --mail-user=nb25@rice.edu
 #SBATCH --mail-type=ALL
 #SBATCH --threads-per-core=1

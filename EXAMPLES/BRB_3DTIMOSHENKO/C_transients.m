@@ -118,12 +118,16 @@ disp(Ws/2/pi)
 % fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 
 bw = -1;
-famp = 100;
+famp = 500
 type = 'WGN';
 fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
 
-ldof = 6;
-DOF = 'Z';
+% ldof = 6;
+% DOF = 'Z'
+ldof = 8;
+DOF = 'Y'
+% ldof = 1;
+% DOF = 'X'
 fsamp = 2^18;  % Sampling frequency
 T0 = 0;  T1 = 1;  dt = 1/fsamp;
 fext = fex(T0:dt:T1);
@@ -150,7 +154,7 @@ xlabel('Frequency (Hz)')
 ylabel('Forcing (N)')
 
 %% HHTA
-opts = struct('Display', 'waitbar');
+opts = struct('Display', 'progress');
 
 [~, ~, ~, MDL] = MDL.NLFORCE(0, Ustat, zeros(size(Ustat)), 0, 1);
 % MDL.NLTs.fp = 0*MDL.NLTs.fp;
@@ -162,7 +166,7 @@ opts = struct('Display', 'waitbar');
 Urec = RECOV*Lrbms*U;
 Udrec = RECOV*Lrbms*Ud;
 Uddrec = RECOV*Lrbms*Udd;
-save(sprintf('./DATA/%dIN_%dRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Urec', 'Udrec', 'Uddrec', ...
+save(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Urec', 'Udrec', 'Uddrec', ...
     'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
 return
 %%
