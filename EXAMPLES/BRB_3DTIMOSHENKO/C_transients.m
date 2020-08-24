@@ -112,31 +112,31 @@ V = V(:, si);
 disp(Ws/2/pi)
 
 %% Excitation
-fsamp = 2^13;  % Sampling frequency (2^18)
+fsamp = 2^18;  % Sampling frequency (2^18)
 T0 = 0;  T1 = 1;  dt = 1/fsamp;
 
-% ldof = 6;
-% DOF = 'Z'
+ldof = 6;
+DOF = 'Z'
 % ldof = 8;
 % DOF = 'Y'
 % ldof = 1;
 % DOF = 'X'
 
-% % IMPULSE
-% bw = 1000;
-% famp = 100;
-% type = 'IMP';
-% fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
-% fext = fex(T0:dt:T1);
-% FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
-
-% WHITE GAUSSIAN NOISE
-bw = -1;
-famp = 1000
-type = 'WGN';
-fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
+% IMPULSE
+bw = 1000;
+famp = 1000;
+type = 'IMP';
+fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 fext = fex(T0:dt:T1);
-FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
+FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
+
+% % WHITE GAUSSIAN NOISE
+% bw = -1;
+% famp = 100
+% type = 'WGN';
+% fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
+% fext = fex(T0:dt:T1);
+% FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
 
 [freqs, Ff] = FFTFUN((0:(1/fsamp):1)', fex(0:(1/fsamp):1)');
 
@@ -151,7 +151,7 @@ xlabel('Frequency (Hz)')
 ylabel('Forcing (N)')
 
 %% HHTA
-opts = struct('Display', 'waitbar');
+opts = struct('Display', 'progress');
 
 [~, ~, ~, MDL] = MDL.NLFORCE(0, Ustat, zeros(size(Ustat)), 0, 1);
 % MDL.NLTs.fp = 0*MDL.NLTs.fp;
