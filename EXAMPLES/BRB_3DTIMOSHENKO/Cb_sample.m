@@ -4,7 +4,7 @@ clear all
 %% Load Data
 Nein = 8;
 type = 'WGN';
-DOF  = 'X';
+DOF  = 'Y';
 
 load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
     'Ts', 'SensorLocs', 'ldof', 'Exc', 'Famps', 'Urecs', 'Udrecs', 'Uddrecs');
@@ -22,27 +22,29 @@ load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
 
 %% Example time series plotting
 sensor_idx = 4;  % Sensor ID
-DOF_idx    = 2;  % DOF ID (1-X, 2-Y, 3-Z)
+DOF_idx    = 1;  % DOF ID (1-X, 2-Y, 3-Z)
 sensor_coords = SensorLocs(sensor_idx, :);  % [X Y Z] coordinates of chosen sensor
 
 r_idx = (sensor_idx-1)*3+DOF_idx;  % Index pointing to location in the Urecs{i} data
-
+% Ts = {Ts{1}};
 figure(1)
 clf()
 aa = gobjects(size(Ts));
 for i=1:length(Ts)
     
     aa(i) = plot(Ts{i}, Urecs{i}(r_idx, :), '-'); hold on
+%     aa(i) = plot(Ts{i}, Exc{i}(:), '-'); hold on
     legend(aa(i), sprintf('%d N', Famps(i))) 
 end
 legend(aa(1:end), 'Location', 'northeast')
 
 xlabel('Time (s)')
-ylabel('Displacement (m)')
+ylabel('Acceleration (m/s^2)')
 
 %% Plot Location of sensors
 timei = 500/fsamp;
 ti = fix(timei*fsamp);
+
 f_idx = 1;
 
 sc = 1e3;  % Scaling displacements to amplify response visually
@@ -54,14 +56,17 @@ clf()
 plot3(SensorLocs(:, 1)+sc*Urecs{f_idx}(1:3:end,ti), ...
     SensorLocs(:, 2)+sc*Urecs{f_idx}(2:3:end,ti), ...
     SensorLocs(:, 3)+sc*Urecs{f_idx}(3:3:end,ti), ...
-    'b.', 'MarkerSize', 40); hold on
+    'b.', 'MarkerSize', 10); hold on
 % Beam Neutral Axis
-plot3(SensorLocs([1 end], 1)+sc*Urecs{f_idx}([1 end-2],ti), ...
-    SensorLocs([1 end], 2)+sc*Urecs{f_idx}([2 end-1],ti), ...
-    SensorLocs([1 end], 3)+sc*Urecs{f_idx}([3 end],ti), ...
-    'k--');
- 
 
+% plot3(SensorLocs([1 end], 1)+sc*Urecs{f_idx}([1 end-2],ti), ...
+%     SensorLocs([1 end], 2)+sc*Urecs{f_idx}([2 end-1],ti), ...
+%     SensorLocs([1 end], 3)+sc*Urecs{f_idx}([3 end],ti), ...
+%     'k--');
+plot3(SensorLocs(:, 1)+sc*Urecs{f_idx}(1:3:end,ti), ...
+    SensorLocs(:, 2)+sc*Urecs{f_idx}(2:3:end,ti), ...
+    SensorLocs(:, 3)+sc*Urecs{f_idx}(3:3:end,ti), ...
+    'k--'); 
 axis equal
 grid on
 
@@ -69,3 +74,4 @@ xlabel('X Coordinate')
 ylabel('Y Coordinate')
 zlabel('Z Coordinate')
 
+title(sprintf('Frame %d', ti))
