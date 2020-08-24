@@ -1,0 +1,71 @@
+clc
+clear all
+
+%% Load Data
+Nein = 8;
+type = 'WGN';
+DOF  = 'X';
+
+load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
+    'Ts', 'SensorLocs', 'ldof', 'Exc', 'Famps', 'Urecs', 'Udrecs', 'Uddrecs');
+% DESCRIPTION:
+%   fsamp   :  Sampling frequency used 2^18 Hz
+%   Ts      :  3x1 Cell with time stamps: Ts{i} is Ntx1
+%   SensorLocs  : 18x3 matrix with the locations of the 18 "sensors". Each row is [X, Y, Z]
+%   ldof        : integer indicating the DOF that the forcing was applied to (1-sensor 1 x; 2-sensor 1 y; 3-sensor 1 z; 4-sensor 2 x; ...)
+%   Exc         : 3x1 Cell of Ntx1 time series of the forcing that is applied at ldof (location can be obtained from SensorLocs)
+%   Famps       : 3x1 vector of the maximum amplitude of the White Gaussian Noise Spectrum in the Frequency Domain
+%   Urecs       : 3x1 Cell of 54xNt Displacement response at the 3 directions of the 18 sensors ([u1x;u1y;u1z;u2x;u2y;u2z;...])
+%   Udrecs      : 3x1 Cell of 54xNt Velocity response of the 54 chosen DOFs
+%   Uddrecs     : 3x1 Cell of 54xNt Acceleration response of the 54 chosen DOFs
+
+
+%% Example time series plotting
+sensor_idx = 4;  % Sensor ID
+DOF_idx    = 2;  % DOF ID (1-X, 2-Y, 3-Z)
+sensor_coords = SensorLocs(sensor_idx, :);  % [X Y Z] coordinates of chosen sensor
+
+r_idx = (sensor_idx-1)*3+DOF_idx;  % Index pointing to location in the Urecs{i} data
+
+figure(1)
+clf()
+aa = gobjects(size(Ts));
+for i=1:length(Ts)
+    
+    aa(i) = plot(Ts{i}, Urecs{i}(r_idx, :), '-'); hold on
+    legend(aa(i), sprintf('%d N', Famps(i))) 
+end
+legend(aa(1:end), 'Location', 'northeast')
+
+xlabel('Time (s)')
+ylabel('Displacement (m)')
+
+%% Plot Location of sensors
+timei = 500/fsamp;
+ti = fix(timei*fsamp);
+f_idx = 1;
+
+sc = 1e3;  % Scaling displacements to amplify response visually
+
+figure(2)
+clf()
+
+% Plot Sensor Locations + displacements
+plot3(SensorLocs(:, 1)+sc*Urecs{f_idx}(1:3:end,ti), ...
+    SensorLocs(:, 2)+sc*Urecs{f_idx}(2:3:end,ti), ...
+    SensorLocs(:, 3)+sc*Urecs{f_idx}(3:3:end,ti), ...
+    'b.', 'MarkerSize', 40); hold on
+% Beam Neutral Axis
+plot3(SensorLocs([1 end], 1)+sc*Urecs{f_idx}([1 end-2],ti), ...
+    SensorLocs([1 end], 2)+sc*Urecs{f_idx}([2 end-1],ti), ...
+    SensorLocs([1 end], 3)+sc*Urecs{f_idx}([3 end],ti), ...
+    'k--');
+ 
+
+axis equal
+grid on
+
+xlabel('X Coordinate')
+ylabel('Y Coordinate')
+zlabel('Z Coordinate')
+
