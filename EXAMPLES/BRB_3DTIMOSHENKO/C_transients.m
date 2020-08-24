@@ -112,7 +112,7 @@ V = V(:, si);
 disp(Ws/2/pi)
 
 %% Excitation
-fsamp = 2^18;  % Sampling frequency
+fsamp = 2^13;  % Sampling frequency (2^18)
 T0 = 0;  T1 = 1;  dt = 1/fsamp;
 
 % ldof = 6;
@@ -122,21 +122,21 @@ T0 = 0;  T1 = 1;  dt = 1/fsamp;
 % ldof = 1;
 % DOF = 'X'
 
-% IMPULSE
-bw = 1000;
-famp = 1000;
-type = 'IMP';
-fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
-fext = fex(T0:dt:T1);
-FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
+% % IMPULSE
+% bw = 1000;
+% famp = 100;
+% type = 'IMP';
+% fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
+% fext = fex(T0:dt:T1);
+% FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
 
 % WHITE GAUSSIAN NOISE
-% bw = -1;
-% famp = 1000
-% type = 'WGN';
-% fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
+bw = -1;
+famp = 1000
+type = 'WGN';
+fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
 fext = fex(T0:dt:T1);
-% FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
+FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
 
 [freqs, Ff] = FFTFUN((0:(1/fsamp):1)', fex(0:(1/fsamp):1)');
 
@@ -200,21 +200,21 @@ timei = 0.006;
 
 % for timei = 0:0.0001:0.01
 ti = 1+fix(timei/dt);
-sc = 1e3;
+sc = 5e0;
 
 sis = [1 size(SensorLocs,1)];
 sis = 1:size(SensorLocs,1);
 
 % soln = Lrbms*(U(:, ti)-Ustat);
-% soln = Lrbms*V(:, 1);
+soln = Lrbms*V(:, 1);
 % soln = Vrbms(:, 6);
-soln = zeros(size(Vrbms(:,6)));
+% soln = zeros(size(Vrbms(:,6)));
 
 sdat = reshape(RECOV*soln, 3, [])';
 
 figure(5)
 clf()
-set(gcf, 'Position', [1 1 1920 998])
+% set(gcf, 'Position', [1 1 1920 998])
 
 DEPICTBEAM_TM3D(diff(Beam1.X), Beam1.WY, Beam1.WZ, ...
     [Beam1.X, Beam1.Y, Beam1.Z], L1*soln*sc, 'b', ...
