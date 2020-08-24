@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=SRNX100
+#SBATCH --job-name=SRNZ100
 #SBATCH --ntasks=4
 #SBATCH --mem=10G
 #SBATCH --time=09:30:00
