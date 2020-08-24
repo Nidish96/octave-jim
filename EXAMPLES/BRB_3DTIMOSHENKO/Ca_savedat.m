@@ -1,11 +1,12 @@
-clc
-clear all
+function [] = Ca_savedat(DOF)
+% clc
+% clear all
 
 Nein = 8
 load(sprintf('./MATS/%dIN_MATS.mat', Nein), 'SensorLocs');
 
 type = 'WGN';
-DOF = 'X';
+% DOF = 'Z';
 
 Famps = [100 500 1000];
 
@@ -26,8 +27,13 @@ for i=1:length(Famps)
   Udrecs{i}  = Udrec;
   Uddrecs{i} = Uddrec;
   Exc{i}     = interp1(0:(1/fsamp):1, fext, Ts{i});
+
+  fprintf('%d: %f %d\n', i, Famps(i), ldof);
+  disp(max(abs(Urec(1:3,:)), [], 2))
 end
 
 
-load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'Ts', ...
-     'Urecs', 'Udrecs', 'Uddrecs', 'Exc', 'SensorLocs', 'fsamp');
+save(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'Ts', ...
+     'Urecs', 'Udrecs', 'Uddrecs', 'Exc', 'SensorLocs', 'fsamp', 'ldof', ...
+     'Famps');
+end

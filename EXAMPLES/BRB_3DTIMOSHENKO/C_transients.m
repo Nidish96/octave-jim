@@ -112,34 +112,31 @@ V = V(:, si);
 disp(Ws/2/pi)
 
 %% Excitation
-% bw = 1000;
-% famp = 1000;
-% type = 'IMP';
-% fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
-
-bw = -1;
-famp = 100
-type = 'WGN';
-fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
-
-ldof = 6;
-DOF = 'Z'
-% ldof = 8;
-% DOF = 'Y'
-% ldof = 1;
-% DOF = 'X'
 fsamp = 2^18;  % Sampling frequency
 T0 = 0;  T1 = 1;  dt = 1/fsamp;
+
+% ldof = 6;
+% DOF = 'Z'
+ldof = 8;
+DOF = 'Y'
+% ldof = 1;
+% DOF = 'X'
+
+% IMPULSE
+bw = 1000;
+famp = 100;
+type = 'IMP';
+fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 fext = fex(T0:dt:T1);
+FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
 
-% FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
-FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
-
-% tic 
-% for i=1:fix((T1-T0)/dt)
-%     tmp = FEX1(T0+(i-1)*dt);
-% end
-% toc
+% WHITE GAUSSIAN NOISE
+% bw = -1;
+% famp = 1000
+% type = 'WGN';
+% fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
+fext = fex(T0:dt:T1);
+% FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
 
 [freqs, Ff] = FFTFUN((0:(1/fsamp):1)', fex(0:(1/fsamp):1)');
 
@@ -154,7 +151,7 @@ xlabel('Frequency (Hz)')
 ylabel('Forcing (N)')
 
 %% HHTA
-opts = struct('Display', 'progress');
+opts = struct('Display', 'waitbar');
 
 [~, ~, ~, MDL] = MDL.NLFORCE(0, Ustat, zeros(size(Ustat)), 0, 1);
 % MDL.NLTs.fp = 0*MDL.NLTs.fp;
@@ -168,25 +165,25 @@ Udrec = RECOV*Lrbms*Ud;
 Uddrec = RECOV*Lrbms*Udd;
 save(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Urec', 'Udrec', 'Uddrec', ...
     'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
-return
+% return
 %%
-famp = 100;
-type = 'WGN'; 
-DOF = 'Z';
-load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Uddrec','ldof')
+% famp = 100;
+% type = 'IMP'; 
+% DOF = 'X';
+load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Uddrec', 'Udrec', 'Urec', 'ldof')
 figure(1)
 clf()
 
 % plot(T, RECOV(end-2,:)*Lrbms*Udd); hold on
 % plot(T, RECOV(end-1,:)*Lrbms*Udd)
-plot(T, Uddrec(ldof,:)/famp); hold on
+plot(T, Urec(ldof,:)/famp); hold on
 
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
 %%
 figure(4)
-% clf()
-[freqs, Uf] = FFTFUN(T(:), Uddrec(ldof,:)');
+clf()
+[freqs, Uf] = FFTFUN(T(:), Urec(ldof,:)'-(RECOV(ldof,:)*Lrbms*Ustat)'*0);
 [~, Ff] = FFTFUN(T(:), interp1(T0:dt:T1, fext, T)');
 semilogy(freqs, abs(Uf./Ff)/famp)
 hold on
@@ -206,15 +203,18 @@ ti = 1+fix(timei/dt);
 sc = 1e3;
 
 sis = [1 size(SensorLocs,1)];
+sis = 1:size(SensorLocs,1);
 
-soln = Lrbms*(U(:, ti)-Ustat);
+% soln = Lrbms*(U(:, ti)-Ustat);
 % soln = Lrbms*V(:, 1);
 % soln = Vrbms(:, 6);
+soln = zeros(size(Vrbms(:,6)));
 
 sdat = reshape(RECOV*soln, 3, [])';
 
 figure(5)
 clf()
+set(gcf, 'Position', [1 1 1920 998])
 
 DEPICTBEAM_TM3D(diff(Beam1.X), Beam1.WY, Beam1.WZ, ...
     [Beam1.X, Beam1.Y, Beam1.Z], L1*soln*sc, 'b', ...
@@ -225,7 +225,9 @@ DEPICTBEAM_TM3D(diff(Beam2.X), Beam2.WY, Beam2.WZ, ...
 
 plot3(SensorLocs(sis,1)+sc*sdat(sis, 1), SensorLocs(sis,2)+sc*sdat(sis, 2), ...
     SensorLocs(sis,3)+sc*sdat(sis, 3), 'k.', 'MarkerFaceColor', 'k', ...
-    'MarkerSize', 40)
+    'MarkerSize', 12)
+text(SensorLocs(sis,1)+sc*sdat(sis, 1), SensorLocs(sis,2)+sc*sdat(sis, 2), ...
+    SensorLocs(sis,3)+sc*sdat(sis, 3), int2str(sis'))
 
 axis equal
 grid on
@@ -233,9 +235,11 @@ grid on
 xlabel('X Coordinate')
 ylabel('Y Coordinate')
 zlabel('Z Coordinate')
-zlim(0.2*[-1 1])
+% zlim(0.2*[-1 1])
 
-title(sprintf('Frame %d', ti))
+print(sprintf('./FIGS/%dMODEL_WSENS.eps', Nein), '-depsc')
+
+% title(sprintf('Frame %d', ti))
 
 % pause(0.1)
 % end
