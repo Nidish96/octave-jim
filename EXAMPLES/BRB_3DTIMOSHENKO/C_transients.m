@@ -117,14 +117,14 @@ T0 = 0;  T1 = 1;  dt = 1/fsamp;
 
 % ldof = 6;
 % DOF = 'Z'
-ldof = 8;
-DOF = 'Y'
+% ldof = 8;
+% DOF = 'Y'
 % ldof = 1;
 % DOF = 'X'
 
 % IMPULSE
 bw = 1000;
-famp = 100;
+famp = 1000;
 type = 'IMP';
 fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 fext = fex(T0:dt:T1);
