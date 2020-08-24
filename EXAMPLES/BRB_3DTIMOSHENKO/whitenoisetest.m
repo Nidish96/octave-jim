@@ -1,10 +1,12 @@
 clc
 clear all
+addpath('../../ROUTINES/HARMONIC/')
 
 %% Parameters
 Ne = 2;
 rhoAbL = 7800*(1e-2^2)/(1/Ne);
 AEbL = (1e-2^2)*2e11/(1/Ne);
+b = 2e4*0;
 
 Me = [2 1;1 2]*rhoAbL;
 Ke = [1 -1;-1 1]*AEbL;
@@ -39,10 +41,10 @@ Ustat = Kb\(sa*Fs);
 bw = 1000;
 famp = 100;
 
-fsamp = 2^15;
+fsamp = 2^16;
 dt = 1/fsamp;
 T0 = 0;
-T1 = 0.1;
+T1 = 1;
 
 Ts = T0:dt:T1;
 
@@ -50,20 +52,23 @@ type = 'IMP';
 fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 
 % type = 'WGN';
-% fext = wgn(size(Ts,1), size(Ts,2), 40);
+% fext = wgn(size(Ts,1), size(Ts,2), 180);
 % fex = @(t) interp1(Ts, fext, t);
 
-sys = @(t, y) [zeros(Ne) eye(Ne);-Mb\Kb -Mb\Cb]*y + [zeros(Ne,1); Mb\Fb]*fex(t) + [zeros(Ne,1); Mb\Fs]*sa;
+sys = @(t, y) [zeros(Ne) eye(Ne);-Mb\Kb -Mb\Cb]*y+[zeros(Ne,1); Mb\Fb]*(fex(t)+sa)+[zeros(Ne,1); Mb\(-b*Lb(end,:)'*(Lb(end,:)*y(1:Ne)).^3)];
 
 y0 = [Ustat; Ustat*0];
-% tic
-% [T, Y] = ode45(sys, Ts, y0); 
-% toc
-
+tic
+[T, Y] = ode45(sys, Ts, y0); 
+toc
+sol = ode45(sys, Ts, y0);
 disp('done')
 
 %% Test with MDOFGEN
 MDL = MDOFGEN(Mb, Kb, Cb, Lb);
+fnl = @(t,u,ud) deal(b*u.^3, 3*b*u.^2, ud*0);
+MDL = MDL.SETNLFUN(1+3, Lb(end,:), fnl);
+
 FEX = @(t) fex(t).*Fb + Fs*sa;
 
 opts = struct('Display', 'waitbar');
@@ -98,5 +103,39 @@ plot(TT, Lb(end,:)*Ud, '.')
 xlabel('Time (s)')
 ylabel('Velocity (m)')
 
-% yyaxis right
-% plot(T, fex(T), '.-')
+figure(10)
+clf()
+plot(T, fex(T), '.-'); hold on
+plot(TT, fex(TT), 'o-')
+xlim([0 1e-3])
+
+xlabel('Time (s)')
+ylabel('Force (N)')
+
+%% FREQ DOM
+[fr1, uf1] = FFTFUN(T, (Lb(end,:)*Y(:, 1:Ne)')');
+[~, ff1] = FFTFUN(T, fex(T));
+
+[fr2, uf2] = FFTFUN(TT', (Lb(end,:)*U)');
+[~, ff2] = FFTFUN(TT, fex(TT'));
+
+[fr3, uf3] = FFTFUN(Ts', Yl(:,1));
+[~, ff3] = FFTFUN(Ts', fex(Ts'));
+
+figure(3)
+clf()
+subplot(2,1,1)
+loglog(fr1, abs(uf1./ff1), '-'); hold on
+loglog(fr2, abs(uf2./ff2), '.')
+loglog(fr3, abs(uf3./ff3), '.')
+
+xlabel('Frequency (Hz)')
+ylabel('Response (m)')
+
+subplot(2,1,2)
+semilogx(fr1, rad2deg(angle(uf1./ff1)), '-'); hold on
+semilogx(fr2, rad2deg(angle(uf2./ff2)), '.')
+semilogx(fr3, rad2deg(angle(uf3./ff3)), '.')
+
+xlabel('Frequency (Hz)')
+ylabel('Phase (deg)')

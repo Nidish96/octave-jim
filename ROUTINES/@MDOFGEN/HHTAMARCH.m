@@ -44,7 +44,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       %% Corrector Iterations
       [FnlP, dFnldu, dFnldud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
           U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
-          Ud(:, i-1) + (1+a)*dt^2*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
+          Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
       % Residual, Jacobian, and Update
       R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
           (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
@@ -71,7 +71,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           
           [FnlP, dFnldu, dFnldud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
               U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
-              Ud(:, i-1) + (1+a)*dt^2*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
+              Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
           % Residual, Jacobian, and Updates
           R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
               (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));
@@ -95,7 +95,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       end
       
       if flag == 0 || any(~isfinite(abs(U(:, i))))
-          disp(sprintf('No Convergence/Non finite march at %f s : Returning', T(i)))
+          fprintf('No Convergence/Non finite march at %f s : Returning\n', T(i))
 %          keyboard
           
           U = U(:, 1:i-1);
@@ -105,7 +105,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           break;
       end
       
-      %% Update States
+      %% Update States  (alpha not used here)
       Ud(:, i) = Ud(:, i-1) + dt*((1-g)*Udd(:, i-1)+g*Udd(:, i));
       U(:, i) = U(:, i-1) + dt*Ud(:, i-1) + dt^2*((0.5-b)*Udd(:, i-1)+b*Udd(:, i));
       
@@ -139,3 +139,5 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
     delete(wb);
   end
 end
+
+% Command to delete stray waitbars: delete(findall(0,'type','figure','tag','TMWWaitbar'))
