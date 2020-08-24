@@ -8,15 +8,15 @@ addpath('../../ROUTINES/FEM/')
 addpath('../../ROUTINES/FEM/BEAMS/')
 
 Nein = 8;  % Number of Elements in the Bolt Area
-load(sprintf('./DATA/%dIN_MATS.mat',Nein), 'M', 'K', 'Fbolt', 'L1', ...
+load(sprintf('./MATS/%dIN_MATS.mat',Nein), 'M', 'K', 'Fbolt', 'L1', ...
      'L2', 'SensorLocs', 'RECOV', 'R1', 'R2', 'BM1', 'IN1', 'Beam1', ...
      'BM2', 'IN2', 'Beam2', 'pars', 'parsint', 'Nebb', 'Nein', ...
      'wdt', 'nu', 'int1nds', 'int2nds', 'remnds', ...
      'i1s', 'i2s', 'Vrbms');
 
 Lrbms = null(full(Vrbms'*M));
-Lrbms(abs(Lrbms)<1e-10) = 0;
-Lrbms = sparse(Lrbms);
+% Lrbms(abs(Lrbms)<1e-10) = 0;
+% Lrbms = sparse(Lrbms);
 
 
 LML = Lrbms'*M*Lrbms;
@@ -24,8 +24,8 @@ LKL = Lrbms'*K*Lrbms;
 LFb = Lrbms'*Fbolt;
 
 % Truncate sparse
-LML(abs(LML)<1e-10) = 0;
-LKL(abs(LKL)<1e-10) = 0;
+% LML(abs(LML)<1e-10) = 0;
+% LKL(abs(LKL)<1e-10) = 0;
 
 Prestress = 12e3;
 %% Set up Quadrature
@@ -54,8 +54,8 @@ LTrel = Lrbms'*Trel;
 QrelL = Qrel*Lrbms;
 
 % Truncate for Storage Efficiency
-LTrel(abs(LTrel)<1e-10) = 0;
-QrelL(abs(QrelL)<1e-10) = 0;
+% LTrel(abs(LTrel)<1e-10) = 0;
+% QrelL(abs(QrelL)<1e-10) = 0;
 
 LTrel = sparse(LTrel);
 QrelL = sparse(QrelL);
@@ -64,11 +64,13 @@ QrelL = sparse(QrelL);
 Aint = sum(sum(T1(1:6:end, :)));
 
 Pint = Prestress/Aint;
-sint = 100e-6;
+sint = 1e-6;
 chi  = 2.0;
 ktkn = chi*(1-nu)/(2-nu);
 kt   = 4*(1-nu)*Pint/(sqrt(pi)*(2-nu)*sint);
 kn   = kt/ktkn;
+
+kn = 1e10;
 
 %% Linear Dissipation
 tstiff = kron(ones(Nein*No^2,1), [kt;kt;kn]);
@@ -120,7 +122,7 @@ Nd = size(LML,1);
 fa = 10.0;
 
 if Nhc>1
-    Fl = kron([0; 1; 0; zeros(Nhc-3,1)], fa*Lrbms'*RECOV(3,:)');
+    Fl = kron([0; 1; 0; zeros(Nhc-3,1)], fa*Lrbms'*RECOV(6,:)');
 else
     Fl = zeros(Nd, 1);
 end
@@ -129,9 +131,9 @@ Fl(1:Nd) = LFb*Prestress;  % Static Solution
 Wst = 100*2*pi;
 Wen = 200*2*pi;
 
-Wst = 200*2*pi;
-Wen = 100*2*pi;
-dw = 1*2*pi;
+% Wst = 200*2*pi;
+% Wen = 100*2*pi;
+dw = 10*2*pi;
 
 E = HARMONICSTIFFNESS(MDL.M, MDL.C, MDL.K+J0, Wst, h);
 U0 = E\Fl;
@@ -153,7 +155,7 @@ plot(Ws(1)*[1 1]/2/pi, ylim, 'k--');
 xlabel('Frequency (Hz)')
 ylabel('RMS Response (m)')
 
-%% NLvib continuation
-Sopt = struct('jac', 'full', 'stepmax', 100, 'MaxFfunEvals', 100);
+% %% NLvib continuation
+% Sopt = struct('jac', 'full', 'stepmax', 100, 'MaxFfunEvals', 100);
 
-Uc = solve_and_continue(U0, @(Uw) MDL.HBRESFUN(Uw, Fl, h, Nt, 1e-6), Wst, Wen, dw, Sopt);
+% Uc = solve_and_continue(U0, @(Uw) MDL.HBRESFUN(Uw, Fl, h, Nt, 1e-6), Wst, Wen, dw, Sopt);

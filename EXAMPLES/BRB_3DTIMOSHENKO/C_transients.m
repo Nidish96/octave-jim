@@ -122,10 +122,10 @@ famp = 500
 type = 'WGN';
 fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
 
-% ldof = 6;
-% DOF = 'Z'
-ldof = 8;
-DOF = 'Y'
+ldof = 6;
+DOF = 'Z'
+% ldof = 8;
+% DOF = 'Y'
 % ldof = 1;
 % DOF = 'X'
 fsamp = 2^18;  % Sampling frequency
