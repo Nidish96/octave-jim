@@ -4,7 +4,7 @@ clear all
 %% Load Data
 Nein = 8;
 type = 'WGN';
-DOF  = 'Y';
+DOF  = 'Z';
 
 load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
     'Ts', 'SensorLocs', 'ldof', 'Exc', 'Famps', 'Urecs', 'Udrecs', 'Uddrecs');
@@ -22,7 +22,7 @@ load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
 
 %% Example time series plotting
 sensor_idx = 4;  % Sensor ID
-DOF_idx    = 1;  % DOF ID (1-X, 2-Y, 3-Z)
+DOF_idx    = 3;  % DOF ID (1-X, 2-Y, 3-Z)
 sensor_coords = SensorLocs(sensor_idx, :);  % [X Y Z] coordinates of chosen sensor
 
 r_idx = (sensor_idx-1)*3+DOF_idx;  % Index pointing to location in the Urecs{i} data

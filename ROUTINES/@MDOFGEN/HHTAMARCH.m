@@ -47,7 +47,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           Ud(:, i-1) + (1+a)*dt^2*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
       % Residual, Jacobian, and Update
       R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
-          (FnlP-Fnl) - (Fex(T(i)+(1+a)*dt)-Fex(T(i-1)));  
+          (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
       J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
       du = -J\R;
       % Error norms
@@ -74,7 +74,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
               Ud(:, i-1) + (1+a)*dt^2*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
           % Residual, Jacobian, and Updates
           R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
-              (FnlP-Fnl) - (Fex(T(i)+(1+a)*dt)-Fex(T(i-1)));
+              (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));
           J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
           du = -J\R;
           % Error norms
