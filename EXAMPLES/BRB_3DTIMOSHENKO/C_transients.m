@@ -170,10 +170,12 @@ save(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Urec',
     'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
 return
 %%
-famp = 1000;
-load(sprintf('./DATA/%dIN_IMPRESP_Z%d.mat', Nein, famp), 'T', 'Uddrec','ldof')
+famp = 100;
+type = 'WGN'; 
+DOF = 'Z';
+load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Uddrec','ldof')
 figure(1)
-% clf()
+clf()
 
 % plot(T, RECOV(end-2,:)*Lrbms*Udd); hold on
 % plot(T, RECOV(end-1,:)*Lrbms*Udd)
@@ -185,7 +187,7 @@ ylabel('Acceleration (m/s^2)')
 figure(4)
 % clf()
 [freqs, Uf] = FFTFUN(T(:), Uddrec(ldof,:)');
-[~, Ff] = FFTFUN(T(:), fext);
+[~, Ff] = FFTFUN(T(:), interp1(T0:dt:T1, fext, T)');
 semilogy(freqs, abs(Uf./Ff)/famp)
 hold on
 for i=1:length(Ws)
