@@ -3,7 +3,7 @@ function [] = Ca_savedat(DOF)
 % clear all
 
 Nein = 8
-load(sprintf('./MATS/%dIN_MATS.mat', Nein), 'SensorLocs');
+load(sprintf('./MATS/%dIN_MATS.mat', Nein), 'SensorLocs', 'RECOV');
 
 type = 'WGN';
 % DOF = 'Z';
@@ -17,8 +17,14 @@ Uddrecs = cell(3, 1);
 Exc     = cell(3, 1);
 
 for i=1:length(Famps)
+%   load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, Famps(i)), 'T', ...
+%        'Urec', 'Udrec', 'Uddrec', 'fext', 'ldof')
   load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, Famps(i)), 'T', ...
-       'Urec', 'Udrec', 'Uddrec', 'fext', 'ldof')
+       'U', 'Ud', 'Udd', 'fext', 'ldof')
+   Urec = RECOV*U;
+   Udrec = RECOV*Ud;
+   Uddrec = RECOV*Udd;
+   clear U Ud Udd
 
   fsamp = 1.0/(T(2)-T(1));
   
