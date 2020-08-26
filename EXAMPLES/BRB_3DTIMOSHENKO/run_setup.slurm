@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=IRNZ1000
+#SBATCH --job-name=WRNXRS
 #SBATCH --ntasks=4
 #SBATCH --mem=10G
-#SBATCH --time=09:30:00
+#SBATCH --time=00:30:00
 #SBATCH --mail-user=nb25@rice.edu
 #SBATCH --mail-type=ALL
 #SBATCH --threads-per-core=1
@@ -17,4 +17,5 @@ echo $SLURM_NODELIST
 module load MATLAB/2019a
 #
 matlab -nodisplay -r "C_transients; quit"
+# matlab -nodisplay -r "Ca_savedat('Y'); quit"
 
