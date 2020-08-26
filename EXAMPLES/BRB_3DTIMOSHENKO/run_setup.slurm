@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=WRNXRS
+#SBATCH --job-name=19Z1000
 #SBATCH --ntasks=4
 #SBATCH --mem=10G
 #SBATCH --time=00:30:00
