@@ -206,15 +206,15 @@ sis = [1 size(SensorLocs,1)];
 sis = 1:size(SensorLocs,1);
 
 % soln = Lrbms*(U(:, ti)-Ustat);
-soln = Lrbms*V(:, 1);
+% soln = Lrbms*V(:, 1);
 % soln = Vrbms(:, 6);
-% soln = zeros(size(Vrbms(:,6)));
+soln = zeros(size(Vrbms(:,6)));
 
 sdat = reshape(RECOV*soln, 3, [])';
 
 figure(5)
 clf()
-% set(gcf, 'Position', [1 1 1920 998])
+set(gcf, 'Position', [1 1 1920 998])
 
 DEPICTBEAM_TM3D(diff(Beam1.X), Beam1.WY, Beam1.WZ, ...
     [Beam1.X, Beam1.Y, Beam1.Z], L1*soln*sc, 'b', ...
@@ -238,6 +238,7 @@ zlabel('Z Coordinate')
 % zlim(0.2*[-1 1])
 
 print(sprintf('./FIGS/%dMODEL_WSENS.eps', Nein), '-depsc')
+print(sprintf('./FIGS/%dMODEL_WSENS.svg', Nein), '-dsvg')
 
 % title(sprintf('Frame %d', ti))
 

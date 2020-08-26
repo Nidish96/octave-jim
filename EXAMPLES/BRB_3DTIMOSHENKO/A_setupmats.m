@@ -195,7 +195,8 @@ Mbm2 = L2'*blkdiag(Mi2, M2)*L2;
 Kbm2 = L2'*blkdiag(Ki2, K2)*L2;
 
 %% Recovery Matrix for sensor/actuator locations
-sens1 = [0; 100; 200]*1e-3;
+% sens1 = [0; 100; 200]*1e-3;
+sens1 = [0; 100; 200; range(BM1.X*1e3)-20]*1e-3;
 [ndi, ~] = find((Beam1.X(1:end-1)-sens1').*(Beam1.X(2:end)-sens1')<=0);
 SFs = [(Beam1.X(ndi+1)-sens1)./(Beam1.X(ndi+1)-Beam1.X(ndi)), ...
        (Beam1.X(ndi)-sens1)./(Beam1.X(ndi)-Beam1.X(ndi+1))];
@@ -204,16 +205,17 @@ R1 = zeros(length(sens1), length(Beam1.X));
 R1(:, [ndi ndi+1]) = [diag(SFs(:,1)) diag(SFs(:,2))];
 
 don = [eye(3) zeros(3)];  % Displacements at node
-zpd = [eye(3) [0 -wdt/2 0;wdt/2 0 0;0 0 0]];  % Displacement at z+
-zmd = [eye(3) [0 wdt/2 0;-wdt/2 0 0;0 0 0]];  % Displacement at z-
-ypd = [eye(3) [0 0 wdt/2;0 0 0;-wdt/2 0 0]];  % Displacement at y+
-ymd = [eye(3) [0 0 -wdt/2;0 0 0;wdt/2 0 0]];  % Displacement at y+
+zpd = [eye(3) [0 wdt/2 0;-wdt/2 0 0;0 0 0]];  % Displacement at z+
+zmd = [eye(3) [0 -wdt/2 0;wdt/2 0 0;0 0 0]];  % Displacement at z-
+ypd = [eye(3) [0 0 -wdt/2;0 0 0;wdt/2 0 0]];  % Displacement at y+
+ymd = [eye(3) [0 0 wdt/2;0 0 0;-wdt/2 0 0]];  % Displacement at y+
 
 % R1 = kron(R1, [eye(3) zeros(3)])*L1*[eye((Nebb+Nein+1)*6) zeros((Nebb+Nein+1)*6)];  % Only displacements at Nodes
 
 R1 = [kron(R1(1,:), don); kron(R1(2:end,:), [zpd; ypd; zmd; ymd])]*L1*[eye((Nebb+Nein+1)*6) zeros((Nebb+Nein+1)*6)];
 
-sens2 = Beam2.X(end) - [200; 100; 0]*1e-3;
+sens2 = Beam2.X(end) - sens1(end:-1:1);  % Likewise on the other beam
+
 [ndi, ~] = find((Beam2.X(1:end-1)-sens2').*(Beam2.X(2:end)-sens2')<=0);
 
 SFs = [(Beam2.X(ndi+1)-sens2)./(Beam2.X(ndi+1)-Beam2.X(ndi)), ...
@@ -222,40 +224,64 @@ SFs = [(Beam2.X(ndi+1)-sens2)./(Beam2.X(ndi+1)-Beam2.X(ndi)), ...
 R2 = zeros(length(sens2), length(Beam2.X));
 R2(:, [ndi ndi+1]) = [diag(SFs(:,1)) diag(SFs(:,2))];
 
-don = [eye(3) zeros(3)];  % Displacements at node
-zpd = [eye(3) [0 -wdt/2 0;wdt/2 0 0;0 0 0]];  % Displacement at z+
-zmd = [eye(3) [0 wdt/2 0;-wdt/2 0 0;0 0 0]];  % Displacement at z-
-ypd = [eye(3) [0 0 wdt/2;0 0 0;-wdt/2 0 0]];  % Displacement at y+
-ymd = [eye(3) [0 0 -wdt/2;0 0 0;wdt/2 0 0]];  % Displacement at y+
 % R2 = kron(R2, [eye(3) zeros(3)])*L2*[zeros((Nebb+Nein+1)*6) eye((Nebb+Nein+1)*6)];
 
 R2 = [kron(R2(1:end-1,:), [zpd; ypd; zmd; ymd]); kron(R2(end,:), don)]*L2*[zeros((Nebb+Nein+1)*6) eye((Nebb+Nein+1)*6)];
 
 RECOV = [R1; R2];
 
-SensorLocs = [sens1(1) 0 0;   % 1st node from left
-	    %
-	    sens1(2) 0 wdt/2;    % z+ 100mm from left
-	    sens1(2) wdt/2 0;    % y+ 100mm from left
-	    sens1(2) 0 -wdt/2;   % z- 100mm from left
-	    sens1(2) -wdt/2 0;   % y- 100mm from left
-	    %
-	    sens1(3) 0 wdt/2;    % z+ 200mm from left
-	    sens1(3) wdt/2 0;    % y+ 200mm from left
-	    sens1(3) 0 -wdt/2;   % z- 200mm from left
-	    sens1(3) -wdt/2 0;   % y- 200mm from left
-	    %
-	    sens2(1) 0 wdt/2;    % z+ 200mm from right
-	    sens2(1) wdt/2 0;    % y+ 200mm from right
-	    sens2(1) 0 -wdt/2;   % z- 200mm from right
-	    sens2(1) -wdt/2 0;   % y- 200mm from right
-	    %
-	    sens2(2) 0 wdt/2;    % z+ 100mm from right
-	    sens2(2) wdt/2 0;    % y+ 100mm from right
-	    sens2(2) 0 -wdt/2;   % z- 100mm from right
-	    sens2(2) -wdt/2 0;   % y- 100mm from right
-	    %
-	    sens2(3) 0 0];   % 1st node from right
+Nsensors = 2*((length(sens1)-1)*4+1);
+SensorLocs = zeros(Nsensors, 3);
+SensorLocs([1 end], :) = [sens1(1) 0 0;   % 1st node from left
+    sens2(end) 0 0];  % 1st node from right
+for i=1:(length(sens1)-1)
+    SensorLocs(1+(i-1)*4+(1:4), :) = [sens1(1+i) 0 wdt/2;
+        sens1(1+i) wdt/2 0;
+        sens1(1+i) 0 -wdt/2;
+        sens1(1+i) -wdt/2 0];
+    
+    j = length(sens1)-1 + i;
+    SensorLocs(1+(j-1)*4+(1:4), :) = [sens2(i) 0 wdt/2;
+        sens2(i) wdt/2 0;
+        sens2(i) 0 -wdt/2;
+        sens2(i) -wdt/2 0];
+
+%     fprintf('%d: (%d,%d,%d,%d), (%d,%d,%d,%d)\n', i, 1+(i-1)*4+(1:4), 1+(j-1)*4+(1:4));
+end
+
+% SensorLocs = [sens1(1) 0 0;   % 1st node from left
+% 	    %
+% 	    sens1(2) 0 wdt/2;    % z+ 100mm from left
+% 	    sens1(2) wdt/2 0;    % y+ 100mm from left
+% 	    sens1(2) 0 -wdt/2;   % z- 100mm from left
+% 	    sens1(2) -wdt/2 0;   % y- 100mm from left
+% 	    %
+% 	    sens1(3) 0 wdt/2;    % z+ 200mm from left
+% 	    sens1(3) wdt/2 0;    % y+ 200mm from left
+% 	    sens1(3) 0 -wdt/2;   % z- 200mm from left
+% 	    sens1(3) -wdt/2 0;   % y- 200mm from left
+% 	    %
+% 	    sens1(4) 0 wdt/2;    % z+ 50mm from int to left
+% 	    sens1(4) wdt/2 0;    % y+ 50mm from int to left
+% 	    sens1(4) 0 -wdt/2;   % z- 50mm from int to left
+% 	    sens1(4) -wdt/2 0;   % y- 50mm from int to left
+% 	    %        
+% 	    sens2(1) 0 wdt/2;    % z+ 50mm from int to right
+% 	    sens2(1) wdt/2 0;    % y+ 50mm from int to right
+% 	    sens2(1) 0 -wdt/2;   % z- 50mm from int to right
+% 	    sens2(1) -wdt/2 0;   % y- 50mm from int to right
+% 	    %
+% 	    sens2(2) 0 wdt/2;    % z+ 100mm from right
+% 	    sens2(2) wdt/2 0;    % y+ 100mm from right
+% 	    sens2(2) 0 -wdt/2;   % z- 100mm from right
+% 	    sens2(2) -wdt/2 0;   % y- 100mm from right
+% 	    %
+%         sens2(3) 0 wdt/2;    % z+ 100mm from right
+% 	    sens2(3) wdt/2 0;    % y+ 100mm from right
+% 	    sens2(3) 0 -wdt/2;   % z- 100mm from right
+% 	    sens2(3) -wdt/2 0;   % y- 100mm from right
+% 	    %        
+% 	    sens2(4) 0 0];   % 1st node from right
 
 %% Full System Assembly
 M = blkdiag(Mbm1, Mbm2);
@@ -429,7 +455,7 @@ zlabel('Z Coordinate')
 disp(W0(1:10))
 
 disp(diag(Vrbms'*(K+Ks)*Vrbms))
-
+return
 %% Linear Prestress Test
 L = null(full(Vrbms'*M));
 Ups = L*((L'*(K+Ks)*L)\(L'*Fbolt*12e3));
