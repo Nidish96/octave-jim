@@ -163,7 +163,7 @@ opts = struct('Display', 'progress');
 Urec = RECOV*Lrbms*U;
 Udrec = RECOV*Lrbms*Ud;
 Uddrec = RECOV*Lrbms*Udd;
-save(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Urec', 'Udrec', 'Uddrec', ...
+save(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, famp, log2(fsamp)), 'T', 'Urec', 'Udrec', 'Uddrec', ...
     'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
 % return
 %%
