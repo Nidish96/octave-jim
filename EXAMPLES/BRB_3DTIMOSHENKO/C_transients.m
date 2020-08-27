@@ -1,5 +1,5 @@
-clc
-clear all
+% clc
+% clear all
 
 addpath('../../ROUTINES/')
 addpath('../../ROUTINES/SOLVERS/')
@@ -112,11 +112,11 @@ V = V(:, si);
 disp(Ws/2/pi)
 
 %% Excitation
-fsamp = 2^19;  % Sampling frequency (2^18)
+% fsamp = 2^19;  % Sampling frequency (2^18)
 T0 = 0;  T1 = 1;  dt = 1/fsamp;
 
-ldof = 6;
-DOF = 'Z'
+%% ldof = 6;
+%% DOF = 'Z'
 % ldof = 8;
 % DOF = 'Y'
 % ldof = 1;
@@ -132,7 +132,7 @@ DOF = 'Z'
 
 % WHITE GAUSSIAN NOISE
 bw = -1;
-famp = 1000
+%% famp = 500
 type = 'WGN';
 fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
 fext = fex(T0:dt:T1);
