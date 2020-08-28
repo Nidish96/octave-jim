@@ -112,12 +112,12 @@ V = V(:, si);
 disp(max(Ws/2/pi))
 
 %% Excitation
-fsamp = 2^20;  % Sampling frequency (2^18)
+% fsamp = 2^19;  % Sampling frequency (2^18)
 T0 = 0;  T1 = 1;  dt = 1/fsamp;
 T1 = 1e-4;
 
-ldof = 6;
-DOF = 'Z'
+%% ldof = 6;
+%% DOF = 'Z'
 % ldof = 8;
 % DOF = 'Y'
 % ldof = 1;
@@ -125,7 +125,7 @@ DOF = 'Z'
 
 % % IMPULSE
 % bw = 1000;
-% famp = 1000;
+% famp = 100;
 % type = 'IMP';
 % fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 % fext = fex(T0:dt:T1);
@@ -134,7 +134,7 @@ DOF = 'Z'
 % WHITE GAUSSIAN NOISE
 rng(1)
 bw = -1;
-famp = 100
+%% famp = 500
 type = 'WGN';
 fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
 fext = fex(T0:dt:T1);

@@ -1,4 +1,4 @@
-function [] = Ca_savedat(DOF)
+function [] = Ca_savedat(DOF, fsamp)
 % clc
 % clear all
 
@@ -10,7 +10,7 @@ clear Vrbms M
 type = 'WGN';
 % DOF = 'Z';
 
-Famps = [100 500 1000];
+Famps = [1 100 500 1000];
 
 Ts      = cell(3, 1);
 Urecs   = cell(3, 1);
@@ -19,14 +19,14 @@ Uddrecs = cell(3, 1);
 Exc     = cell(3, 1);
 
 for i=1:length(Famps)
-%   load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, Famps(i)), 'T', ...
-%        'Urec', 'Udrec', 'Uddrec', 'fext', 'ldof')
-  load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, Famps(i)), 'T', ...
-       'U', 'Ud', 'Udd', 'fext', 'ldof')
-   Urec = RECOV*Lrbms*U;
-   Udrec = RECOV*Lrbms*Ud;
-   Uddrec = RECOV*Lrbms*Udd;
-   clear U Ud Udd
+   load(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, Famps(i), log2(fsamp)), 'T', ...
+        'Urec', 'Udrec', 'Uddrec', 'fext', 'ldof')
+%  load(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, Famps(i), log2(fsamp)), 'T', ...
+%       'U', 'Ud', 'Udd', 'fext', 'ldof')
+%   Urec = RECOV*Lrbms*U;
+%   Udrec = RECOV*Lrbms*Ud;
+%   Uddrec = RECOV*Lrbms*Udd;
+%   clear U Ud Udd
 
   fsamp = 1.0/(T(2)-T(1));
   
@@ -41,7 +41,7 @@ for i=1:length(Famps)
 end
 
 
-save(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'Ts', ...
+save(sprintf('./DATA/%dIN_%sRESP_%sDOFEX_samp%d.mat', Nein, type, DOF, log2(fsamp)), 'Ts', ...
      'Urecs', 'Udrecs', 'Uddrecs', 'Exc', 'SensorLocs', 'fsamp', 'ldof', ...
      'Famps');
 end
