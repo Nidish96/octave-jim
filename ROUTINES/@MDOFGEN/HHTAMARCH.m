@@ -64,6 +64,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           1*(u<opts.utol);
       if strcmp(opts.Display, 'iter') || strcmp(opts.Display, 'both')
           fprintf('ITN, E, E/E0, r, du\n%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, flag);
+          fprintf('---------------------------------------------------\n');
       end
       while (flag<=8) || (it==0)
           Udd(:, i) = Udd(:, i) + du;
@@ -93,6 +94,9 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
               break;
           end
       end
+      if strcmp(opts.Display, 'iter') || strcmp(opts.Display, 'both')
+          fprintf('---------------------------------------------------\n');
+      end      
       
       if flag == 0 || any(~isfinite(abs(U(:, i))))
           fprintf('No Convergence/Non finite march at %f s : Returning\n', T(i))
@@ -112,7 +116,6 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       [Fnl, ~, ~, m] = m.NLFORCE(T(i), U(:, i), Ud(:, i), T(i-1));
       
       if strcmp(opts.Display, 'progress') || strcmp(opts.Display, 'both')
-          fprintf('---------------------------------------------------\n');
           fprintf('%.4e/%.4e %.4e\n', T(i), T1, dt);
           fprintf('---------------------------------------------------\n');
       end

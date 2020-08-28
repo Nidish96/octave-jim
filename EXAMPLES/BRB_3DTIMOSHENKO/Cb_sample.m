@@ -1,15 +1,15 @@
 clc
 clear all
+% addpath('../../ROUTINES/HARMONIC/')
 
 %% Load Data
 Nein = 8;
 type = 'WGN';
-DOF  = 'Z';
+DOF  = 'X';
+fsamp = 2^18;
 
-load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
+load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX_samp%d.mat', Nein, type, DOF, log2(fsamp)), 'fsamp', ...
     'Ts', 'SensorLocs', 'ldof', 'Exc', 'Famps', 'Urecs', 'Udrecs', 'Uddrecs');
-% load(sprintf('./DATA/new/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
-%     'Ts', 'SensorLocs', 'ldof', 'Exc', 'Famps', 'Urecs', 'Udrecs', 'Uddrecs');
 % DESCRIPTION:
 %   fsamp       :  Sampling frequency used 2^18 Hz
 %   Ts          :  3x1 Cell with time stamps: Ts{i} is Ntx1
@@ -24,36 +24,89 @@ load(sprintf('./DATA/%dIN_%sRESP_%sDOFEX.mat', Nein, type, DOF), 'fsamp', ...
 
 %% Example time series plotting
 sensor_idx = 1;  % Sensor ID
-DOF_idx    = 1;  % DOF ID (1-X, 2-Y, 3-Z)
 sensor_coords = SensorLocs(sensor_idx, :);  % [X Y Z] coordinates of chosen sensor
 
-r_idx = (sensor_idx-1)*3+DOF_idx;  % Index pointing to location in the Urecs{i} data
+sol = Uddrecs;
+
+XL = [0 3e-1];
+
+
+r_idx = (sensor_idx-1)*3;  % Index pointing to location in the Urecs{i} data
 % Ts = {Ts{1}};
 figure(1)
 clf()
+set(gcf, 'Position', [2721 184 560 740])
 aa = gobjects(size(Ts));
-for i=1:length(Ts)
+for fi=length(Ts):-1:1
+    subplot(4,1,1)
+    plot(Ts{fi}, sol{fi}(r_idx+1, :), '-'); hold on
+    ylabel('AX')
+    xlim(XL)
     
-    aa(i) = plot(Ts{i}, Urecs{i}(r_idx, :), '-'); hold on
-%     aa(i) = plot(Ts{i}, Exc{i}(:), '-'); hold on
-    legend(aa(i), sprintf('%d N', Famps(i))) 
+    subplot(4,1,2)
+    plot(Ts{fi}, sol{fi}(r_idx+2, :), '-'); hold on
+    ylabel('AY')
+    xlim(XL)
+    
+    subplot(4,1,3)
+    plot(Ts{fi}, sol{fi}(r_idx+3, :), '-'); hold on
+    ylabel('AZ')
+    xlim(XL)
+    
+    subplot(4,1,4)
+    aa(fi) = plot(Ts{fi}, Exc{fi}, '-'); hold on
+	legend(aa(fi), sprintf('F=%d N', Famps(fi)))
+    ylabel('Force')
+    xlim(XL)
 end
-legend(aa(1:end), 'Location', 'northeast')
-
+subplot(4,1,4)
 xlabel('Time (s)')
-ylabel('Displacement (m)')
+legend(aa(1:end), 'Location', 'best')
 
-return
+%% Frequency Domain response - 3 DOFs (x, y, z) of sensor 1
+% No windowing is done, so the frequency domain looks pretty noisy
+figure(2)
+clf()
+set(gcf, 'Position', [3281 183 560 740]);
+aa = gobjects(size(Famps));
+for fi=length(Famps):-1:1
+    [freqs, UF] = FFTFUN(Ts{fi}, [Uddrecs{fi}(1:3, :)']);
+    [~, FF] = FFTFUN(Ts{fi}, Exc{fi}');
+
+    subplot(4, 1, 1)
+    semilogy(freqs, abs(UF(:,1))); hold on
+    xlim([0 3e3])
+    ylabel('AX')
+    
+    subplot(4, 1, 2)
+    semilogy(freqs, abs(UF(:,2))); hold on
+    xlim([0 3e3])
+    ylabel('AY')
+    
+    subplot(4, 1, 3)
+    semilogy(freqs, abs(UF(:,3))); hold on
+    xlim([0 3e3])
+    ylabel('AZ')
+    
+    subplot(4, 1, 4)
+    aa(fi) = semilogy(freqs, abs(FF)); hold on
+    legend(aa(fi), sprintf('F=%d N', Famps(fi)))
+    xlim([0 3e3])
+    ylim([1e0 1e4])
+    ylabel('Force')
+end
+subplot(4, 1, 4)
+xlabel('Frequency (Hz)');
+legend(aa(1:end), 'Location', 'best')
+
 %% Plot Location of sensors
-timei = 500/fsamp;
+ti = 500;  % Choose frame to depict
 
-ti = fix(timei*fsamp);
 f_idx = 1;
 
 sc = 1e3;  % Scaling displacements to amplify response visually
 
-for ti = 1:1000:100000
-figure(2)
+figure(3)
 clf()
 
 % Plot Sensor Locations + displacements
@@ -82,12 +135,11 @@ axis equal
 grid on
 
 xlim([-0.1 0.8])
-zlim(0.1*[-1 1])
+% zlim(0.1*[-1 1])
 
-xlabel('X Coordinate')
-ylabel('Y Coordinate')
-zlabel('Z Coordinate')
+xlabel('X')
+ylabel('Y')
+zlabel('Z')
 
-title(sprintf('Frame %d', ti))
+title(sprintf('Frame %d. Blue points are sensors, black line is neutral axis. Joint not depicted.', ti))
 pause(0.1)
-end

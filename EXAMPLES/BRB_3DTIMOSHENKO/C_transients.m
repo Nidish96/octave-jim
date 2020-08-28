@@ -1,5 +1,5 @@
-clc
-clear all
+% clc
+% clear all
 
 addpath('../../ROUTINES/')
 addpath('../../ROUTINES/SOLVERS/')
@@ -15,8 +15,8 @@ load(sprintf('./MATS/%dIN_MATS.mat',Nein), 'M', 'K', 'Fbolt', 'L1', ...
      'i1s', 'i2s', 'Vrbms');
 
 Lrbms = null(full(Vrbms'*M));
-% Lrbms(abs(Lrbms)<1e-10) = 0;
-% Lrbms = sparse(Lrbms);
+Lrbms(abs(Lrbms)<eps) = 0;
+Lrbms = sparse(Lrbms);
 
 
 LML = Lrbms'*M*Lrbms;
@@ -24,8 +24,8 @@ LKL = Lrbms'*K*Lrbms;
 LFb = Lrbms'*Fbolt;
 
 % Truncate sparse
-% LML(abs(LML)<1e-10) = 0;
-% LKL(abs(LKL)<1e-10) = 0;
+LML(abs(LML)<eps) = 0;
+LKL(abs(LKL)<eps) = 0;
 
 Prestress = 12e3;
 %% Set up Quadrature
@@ -106,14 +106,15 @@ U0 = (LKL+Ks)\(LFb*Prestress);
 opts = struct('reletol', 1e-6, 'Display', true);
 [Ustat, ~, ~, ~, J0] = NSOLVE(@(U) MDL.STATRESFUN(U, LFb*Prestress), U0, opts);
 
-[V, Ws] = eigs(J0, LML, 10, 'SM');
+[V, Ws] = eig(full(J0), full(LML));
 [Ws, si] = sort(sqrt(diag(Ws)));
 V = V(:, si);
-disp(Ws/2/pi)
+disp(max(Ws/2/pi))
 
 %% Excitation
-fsamp = 2^18;  % Sampling frequency (2^18)
+fsamp = 2^20;  % Sampling frequency (2^18)
 T0 = 0;  T1 = 1;  dt = 1/fsamp;
+T1 = 1e-4;
 
 ldof = 6;
 DOF = 'Z'
@@ -122,64 +123,82 @@ DOF = 'Z'
 % ldof = 1;
 % DOF = 'X'
 
-% IMPULSE
-bw = 1000;
-famp = 1000;
-type = 'IMP';
-fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
-fext = fex(T0:dt:T1);
-FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
-
-% % WHITE GAUSSIAN NOISE
-% bw = -1;
-% famp = 100
-% type = 'WGN';
-% fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
+% % IMPULSE
+% bw = 1000;
+% famp = 1000;
+% type = 'IMP';
+% fex = @(t) sin(2*pi*bw*t).^2.*(t<=1.0/(2*bw));
 % fext = fex(T0:dt:T1);
-% FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
+% FEX = @(t) Lrbms'*RECOV(ldof,:)'*fex(t)+LFb*Prestress;
+
+% WHITE GAUSSIAN NOISE
+rng(1)
+bw = -1;
+famp = 100
+type = 'WGN';
+fex = @(t) wgn(size(t,1), size(t,2), 40+20*log10(famp));
+fext = fex(T0:dt:T1);
+FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
 
 [freqs, Ff] = FFTFUN((0:(1/fsamp):1)', fex(0:(1/fsamp):1)');
 
-figure(10)
-clf()
-semilogy(freqs, abs(Ff), '.'); hold on
-for i=1:length(Ws)
-    semilogy(Ws(i)*[1 1]/2/pi, ylim, 'k--')
-end
-xlim([0 3e3])
-xlabel('Frequency (Hz)')
-ylabel('Forcing (N)')
+% figure(10)
+% clf()
+% semilogy(freqs, abs(Ff), '.'); hold on
+% for i=1:length(Ws)
+%     semilogy(Ws(i)*[1 1]/2/pi, ylim, 'k--')
+% end
+% xlim([0 3e3])
+% xlabel('Frequency (Hz)')
+% ylabel('Forcing (N)')
 
 %% HHTA
-opts = struct('Display', 'progress');
+opts = struct('Display', 'waitbar');
 
 [~, ~, ~, MDL] = MDL.NLFORCE(0, Ustat, zeros(size(Ustat)), 0, 1);
 % MDL.NLTs.fp = 0*MDL.NLTs.fp;
 % MDL.NLTs.up = 0*MDL.NLTs.up;
-
+tic
 [T, U, Ud, Udd, MDL] = MDL.HHTAMARCH(T0, T1, dt, Ustat, zeros(size(Ustat)), ...
     FEX, opts);
+toc/length(T)
+
 
 Urec = RECOV*Lrbms*U;
 Udrec = RECOV*Lrbms*Ud;
 Uddrec = RECOV*Lrbms*Udd;
-save(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, famp, log2(fsamp)), 'T', 'Urec', 'Udrec', 'Uddrec', ...
-    'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
+% save(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, famp, log2(fsamp)), 'T', 'Urec', 'Udrec', 'Uddrec', ...
+%     'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
 % return
 %%
 % famp = 100;
 % type = 'IMP'; 
 % DOF = 'X';
-load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Uddrec', 'Udrec', 'Urec', 'ldof')
+% load(sprintf('./DATA/%dIN_%sRESP_%s%d.mat', Nein, type, DOF, famp), 'T', 'Uddrec', 'Udrec', 'Urec', 'ldof')
+
+pdof = 1;
 figure(1)
 clf()
 
 % plot(T, RECOV(end-2,:)*Lrbms*Udd); hold on
 % plot(T, RECOV(end-1,:)*Lrbms*Udd)
-plot(T, Urec(ldof,:)/famp); hold on
+
+for i=1:3
+    subplot(4,1,i)
+    pdof = i;
+    plot(T, Urec(pdof,:)/famp); hold on
+    plot(T, Urec(pdof,1)*ones(size(T))/famp, 'k--');
+
+    xlabel('Time (s)')
+    ylabel(sprintf('D%d (m)', pdof))
+end
+
+subplot(4,1,4)
+plot(T, fex(T), T, zeros(size(T)), 'k--')
 
 xlabel('Time (s)')
-ylabel('Acceleration (m/s^2)')
+ylabel('Force (N)')
+return
 %%
 figure(4)
 clf()
@@ -236,9 +255,6 @@ xlabel('X Coordinate')
 ylabel('Y Coordinate')
 zlabel('Z Coordinate')
 % zlim(0.2*[-1 1])
-
-print(sprintf('./FIGS/%dMODEL_WSENS.eps', Nein), '-depsc')
-print(sprintf('./FIGS/%dMODEL_WSENS.svg', Nein), '-dsvg')
 
 % title(sprintf('Frame %d', ti))
 

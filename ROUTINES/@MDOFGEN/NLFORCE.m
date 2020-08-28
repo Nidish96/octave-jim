@@ -21,21 +21,26 @@ function [F, dFdU, dFdUd, m] = NLFORCE(m, t, U, Ud, tp, varargin)
                 [f, dfdu] = m.NLTs(ni).func(t, m.NLTs(ni).L*U, 0, tp, m.NLTs(ni).up, ...
                     m.NLTs(ni).fp, m.NLTs(ni).dfdup);
             end
-            dfdud = zeros(size(dfdu));
 
+            dfdu = sparse(dfdu);
+            
             m.NLTs(ni).up = m.NLTs(ni).L*U;
             m.NLTs(ni).fp = f;
-            m.NLTs(ni).dfdup = dfdu;
+            m.NLTs(ni).dfdup = full(dfdu);
         end
 
         if m.NLTs(ni).type<=5
             F = F + m.NLTs(ni).L'*f;
             dFdU = dFdU + m.NLTs(ni).L'*dfdu*m.NLTs(ni).L;
-            dFdUd = dFdUd + m.NLTs(ni).L'*dfdud*m.NLTs(ni).L;
+            if mod(m.NLTs(ni).type,2)==0
+                dFdUd = dFdUd + m.NLTs(ni).L'*dfdud*m.NLTs(ni).L;
+            end
         else
             F = F + m.NLTs(ni).Lf*f;
             dFdU = dFdU + m.NLTs(ni).Lf*dfdu*m.NLTs(ni).L;
-            dFdUd = dFdUd + m.NLTs(ni).Lf*dfdud*m.NLTs(ni).L;
+            if mod(m.NLTs(ni).type,2)==0
+                dFdUd = dFdUd + m.NLTs(ni).Lf*dfdud*m.NLTs(ni).L;
+            end
         end
     end
 end
