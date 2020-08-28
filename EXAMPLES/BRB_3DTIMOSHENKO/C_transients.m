@@ -122,6 +122,14 @@ T1 = 1e-4;
 % DOF = 'Y'
 % ldof = 1;
 % DOF = 'X'
+switch DOF
+    case 'X'
+        ldof = 1;
+    case 'Y'
+        ldof = 8;
+    case 'Z'
+        ldof = 6;
+end
 
 % % IMPULSE
 % bw = 1000;
@@ -155,6 +163,9 @@ FEX = @(t) Lrbms'*RECOV(ldof,:)'*interp1(T0:dt:T1, fext, t)+LFb*Prestress;
 %% HHTA
 opts = struct('Display', 'waitbar');
 
+fprintf('Run with %s Excitation (ldof %d) with type %s and amplitude %f sampled at 2^%d\n', ...
+    DOF, ldof, type, famp, log2(fsamp))
+
 [~, ~, ~, MDL] = MDL.NLFORCE(0, Ustat, zeros(size(Ustat)), 0, 1);
 % MDL.NLTs.fp = 0*MDL.NLTs.fp;
 % MDL.NLTs.up = 0*MDL.NLTs.up;
@@ -167,9 +178,15 @@ toc/length(T)
 Urec = RECOV*Lrbms*U;
 Udrec = RECOV*Lrbms*Ud;
 Uddrec = RECOV*Lrbms*Udd;
-% save(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, famp, log2(fsamp)), 'T', 'Urec', 'Udrec', 'Uddrec', ...
-%     'U', 'Ud', 'Udd', 'fext', 'bw', 'fex', 'ldof');
-% return
+if famp>1
+    fname = sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, famp, log2(fsamp));
+else
+    fname = sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, log10(famp), log2(fsamp));
+end
+
+save(fname, 'T', 'Urec', 'Udrec', 'Uddrec', 'U', 'Ud', 'Udd', 'fext', ...
+    'bw', 'fex', 'ldof', 'Lrbms');
+return
 %%
 % famp = 100;
 % type = 'IMP'; 

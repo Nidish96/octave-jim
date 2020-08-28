@@ -19,8 +19,12 @@ Uddrecs = cell(3, 1);
 Exc     = cell(3, 1);
 
 for i=1:length(Famps)
-   load(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, Famps(i), log2(fsamp)), 'T', ...
-        'Urec', 'Udrec', 'Uddrec', 'fext', 'ldof')
+    if famp>1
+        fname = sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, famp, log2(fsamp));
+    else
+        fname = sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, log10(famp), log2(fsamp));
+    end
+   load(fname, 'T', 'Urec', 'Udrec', 'Uddrec', 'fext', 'ldof')
 %  load(sprintf('./DATA/%dIN_%sRESP_%s%d_samp%d.mat', Nein, type, DOF, Famps(i), log2(fsamp)), 'T', ...
 %       'U', 'Ud', 'Udd', 'fext', 'ldof')
 %   Urec = RECOV*Lrbms*U;
