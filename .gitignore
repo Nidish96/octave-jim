@@ -11,3 +11,6 @@ MDOF_TESTS/FIGS/
 REPS/
 octave-workspace
 slurm*
+*eps
+*svg
+*png
