@@ -13,7 +13,7 @@ function [fnl, dfnldu] = ELDRYFRICT3D(t, u, ktx, kty, kn, mu, gap, varargin)
 %       mu      : scalar or Np x 1
 %       gap	: scalar or Np x 1
 %       h       : Nh x 1
-%       tp      : scalar
+%       tp      : scalar (previous time instant)
 %       up      : 3*Np x 1  [same as u]
 %       fp      : 3*Np x 1  [fx1; fy1; fz1; fx2; fy2; fz2; ...]
 %       dfp     : 3*Np x 3*Np x Nhc

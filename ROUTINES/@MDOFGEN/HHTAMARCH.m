@@ -1,6 +1,29 @@
 function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
-%HHTAMARCH conducts time series marching using HHTA
-  
+%HHTAMARCH conducts time series marching using HHTA. Member of
+%MDOFGEN class.
+%
+%  USAGE:
+%    [T, U, Ud, Udd, m] = m.HHTAMARCH(T0, T1, dt, U0, Ud0, Fex,
+%    opts);
+%  INPUTS:
+%    T0, T1, dt	: Starting, ending, and interval times
+%    U0, Ud0 	: Ndx1 displacement and velocity initial conditions
+%    Fex	: (1x1)->(Ndx1) forcing function
+%    opts	: [optional] Structure with parameters
+%    	alpha [0], beta [1/4], gamma [1/2], reletol [1e-6], etol
+%    	[1e-6], utol [1e-6], rtol [1e-6], Display ['progress'],
+%    	ITMAX [10]
+%  OUTPUTS:
+%    T		: 1xNt time vector
+%    U, Ud, Udd	: NdxNt displacement, velocity, and acceleration 
+%    m		: MDOFGEN struct (with updated hysteretic states if
+%                 relevant)
+
+% [average acceleration]: alpha[0], beta[1/4], gamma[1/2]
+% [implicit linear acceleration]: alpha[0], beta[1/6], gamma[1/2]
+% stability condition: 2b >= g >= 1/2
+% recom: alpha \in [-1/3, 0]; beta = (1-alpha^2)/4; gamma = 1/2-alpha
+
   opts = struct('alpha', 0, 'beta', 1/4, 'gamma', 1/2, ... % Newmark
       'reletol', 1e-6, 'etol', 1e-6, 'utol', 1e-6, 'rtol', 1e-6, ...
       'Display', 'progress', ...  % can be 'iter', 'progress', 'both', 'waitbar'
@@ -10,7 +33,11 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       for i = 1:length(nflds)
         opts.(nflds{i}) = varargin{1}.(nflds{i});
       end
-  end  
+  end
+  
+%   opts.alpha = -1/6;
+%   opts.beta  = (1-opts.alpha)^2/4;
+%   opts.gamma = 1/2-opts.alpha;
   
   a = opts.alpha;
   b = opts.beta;
@@ -34,7 +61,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
   clear U0 Ud0
   
   if strcmp(opts.Display, 'waitbar')
-      wb = waitbar(T(1)/T1, sprintf('Progress: %.e/%.e', T(1), T1), ...
+      wb = waitbar(T(1)/T1, sprintf('Progress: %.4e/%.4e dt: %.4e', T(1), T1, dt), ...
           'createcancelbtn', "setappdata(gcbf, 'interrupt', true)");
   end
   for i=2:Nt
@@ -66,7 +93,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           fprintf('ITN, E, E/E0, r, du\n%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, flag);
           fprintf('---------------------------------------------------\n');
       end
-      while (flag<=8) || (it==0)
+      while (flag<7) || (it==0)
           Udd(:, i) = Udd(:, i) + du;
           it = it+1;
           
@@ -116,13 +143,15 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       [Fnl, ~, ~, m] = m.NLFORCE(T(i), U(:, i), Ud(:, i), T(i-1));
       
       if strcmp(opts.Display, 'progress') || strcmp(opts.Display, 'both')
-          fprintf('%.4e/%.4e %.4e\n', T(i), T1, dt);
-          fprintf('---------------------------------------------------\n');
+          fprintf('%d: %.4e/%.4e %.4e\n', i, T(i), T1, dt);
+          if strcmp(opts.Display, 'both')
+            fprintf('---------------------------------------------------\n');
+          end
       end
       
       %% Check for kill
       if strcmp(opts.Display, 'waitbar')
-          waitbar(T(i)/T1, wb, sprintf('Progress: %e/%e', T(i), T1))
+          waitbar(T(i)/T1, wb, sprintf('Progress: %.4e/%.4e dt: %.4e', T(i), T1, dt))
           
           if (~ishandle(wb))
             break;
@@ -132,7 +161,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
             U   =   U(:, 1:i);
             Ud  =  Ud(:, 1:i);
             Udd = Udd(:, 1:i);
-            T   =   T(:, 1:i);       
+            T   =   T(1:i);
             return;
           end
       end

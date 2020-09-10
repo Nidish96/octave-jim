@@ -5,6 +5,11 @@
     "latex2e"
     "beamertmd"
     "beamertmd10"
-    "graphicx"))
+    "graphicx"
+    "subcaption")
+   (LaTeX-add-labels
+    "fig:xfresp"
+    "fig:yfresp"
+    "fig:zfresp"))
  :latex)
 

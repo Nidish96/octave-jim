@@ -18,7 +18,8 @@ function [R, dRdU, m] = STATRESFUN(m, U, Fstat)
 %         end
 %     end
 
-    [FNL, dFNL, ~, m] = m.NLFORCE(0, U, U*0, -1, 1);
+%     [FNL, dFNL, ~, m] = m.NLFORCE(0, U, U*0, -1, 1);
+    [FNL, dFNL, ~, m] = m.NLFORCE(0, U, U*0, 0, 1);
     
     % Residue
     R = m.K*U+FNL-Fstat;

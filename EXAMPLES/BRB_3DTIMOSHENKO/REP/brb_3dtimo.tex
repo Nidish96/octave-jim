@@ -1,6 +1,7 @@
 \documentclass{beamertmd}
 
 \usepackage{graphicx}
+\usepackage{subcaption}
 
 \title{Description of Timoshenko Model of a Bolted System}
 \author{Nidish Narayanaa Balaji}
@@ -96,6 +97,58 @@
       \end{itemize}
     \end{column}
   \end{columns}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Frequency Response Estimates}
+  \only<1>{\framesubtitle{X Direction Excitation (at Sensor 1)}
+    \begin{figure}[!h]
+      \centering
+      \begin{subfigure}{0.5\linewidth}
+        \includegraphics[width=\linewidth]{../FIGS/FRFA_WGN_X1}
+        \caption{Amplitude}
+      \end{subfigure}%
+      \begin{subfigure}{0.5\linewidth}
+        \includegraphics[width=\linewidth]{../FIGS/FRFP_WGN_X1}
+        \caption{Phase}
+      \end{subfigure}
+      \vspace{-0.25cm}
+      \caption{Frequency Response Estimate From White Noise
+        Excitation}
+      \label{fig:xfresp}
+    \end{figure}}
+  \only<2>{\framesubtitle{Y Direction Excitation (at Sensor 3)}
+    \begin{figure}[!h]
+      \centering
+      \begin{subfigure}{0.5\linewidth}
+        \includegraphics[width=\linewidth]{../FIGS/FRFA_WGN_Y8}
+        \caption{Amplitude}
+      \end{subfigure}%
+      \begin{subfigure}{0.5\linewidth}
+        \includegraphics[width=\linewidth]{../FIGS/FRFP_WGN_Y8}
+        \caption{Phase}
+      \end{subfigure}
+      \vspace{-0.25cm}      
+      \caption{Frequency Response Estimate From White Noise
+        Excitation}
+      \label{fig:yfresp}
+    \end{figure}}
+  \only<3>{\framesubtitle{Z Direction Excitation (at Sensor 2)}
+    \begin{figure}[!h]
+      \centering
+      \begin{subfigure}{0.5\linewidth}
+        \includegraphics[width=\linewidth]{../FIGS/FRFA_WGN_Z6}
+        \caption{Amplitude}
+      \end{subfigure}%
+      \begin{subfigure}{0.5\linewidth}
+        \includegraphics[width=\linewidth]{../FIGS/FRFP_WGN_Z6}
+        \caption{Phase}
+      \end{subfigure}
+      \vspace{-0.25cm}
+      \caption{Frequency Response Estimate From White Noise
+        Excitation}
+      \label{fig:zfresp}
+    \end{figure}}
 \end{frame}
 
 \end{document}

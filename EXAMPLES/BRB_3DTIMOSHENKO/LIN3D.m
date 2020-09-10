@@ -80,6 +80,14 @@ function [fnl, dfnldu] = LIN3D(t, u, ktx, kty, kn, mu, gap, varargin)
   dfnldu(2:3:end, 2:3:end, :) = diag(kty).*del_cst+dfp(2:3:end, 2:3:end, :);
   dfnldu(3:3:end, 3:3:end, :) = diag(kn).*cst;
   
+  fnl(1:3:end) = ktx.*u(1:3:end);
+  fnl(2:3:end) = kty.*u(2:3:end);
+  fnl(3:3:end) = kn.*u(3:3:end);
+  
+  dfnldu(1:3:end, 1:3:end, :) = diag(ktx).*cst;
+  dfnldu(2:3:end, 2:3:end, :) = diag(kty).*cst;
+  dfnldu(3:3:end, 3:3:end, :) = diag(kn).*cst;  
+  
 %   if dfnldu(1:3:end, 1:3:end, 1) == 0
 %       dfnldu(1:3:end, 1:3:end, 1) = diag(ktx);
 %   end
