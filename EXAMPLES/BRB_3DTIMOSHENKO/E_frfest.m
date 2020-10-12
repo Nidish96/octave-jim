@@ -173,7 +173,7 @@ end
 % looping configs --------------------------------------------------
 
 %% Plot FRF
-ci = 1;
+ci = 3;
 
 ldof = configs{ci, 1};
 DOF = configs{ci, 2};
@@ -242,20 +242,25 @@ for fi = 1:length(famps)
     % semilogy(freqs, mean(abs(Ufs./Ffs), 2), '.'); hold on
 
     figure(1)
-    aa(fi+1) = semilogy(freqs, abs(mean(Ufs.*conj(Ffs), 2)./mean(Ffs.*conj(Ffs), 2)), '.'); hold on
+    aa(fi+1) = semilogy(freqs, abs(mean(Ufs.*conj(Ffs), 2)./mean(Ffs.*conj(Ffs), 2)), '.-'); hold on
     legend(aa(fi+1), sprintf('F=%.2f N', famp))
     
     figure(2)
-    plot(freqs, -rad2deg(angle(mean(Ufs.*conj(Ffs), 2)./mean(Ffs.*conj(Ffs), 2))), '.'); hold on
+    plot(freqs, -rad2deg(angle(mean(Ufs.*conj(Ffs), 2)./mean(Ffs.*conj(Ffs), 2))), '.-'); hold on
 end
 
 figure(1)
-legend(aa(1:end), 'Location', 'best')
+ll = legend(aa(1:end), 'Location', 'best')
 xlim([0 1e4])
 xlabel('Frequency (Hz)')
 ylabel('FRF Amplitude (m s^{-2}/N)')
 export_fig(sprintf('./FIGS/FRFA_%s_%s%d.eps', type, DOF, ldof), '-depsc')
 savefig(sprintf('./FIGS/FRFA_%s_%s%d.fig', type, DOF, ldof))
+
+figure(1)
+xlim([0 1800])
+ll.Visible = false;
+savefig(sprintf('./FIGS/FRFA_%s_%s%d_zoom.fig', type, DOF, ldof))
 
 figure(2)
 xlim([0 1e4])
@@ -265,3 +270,7 @@ xlabel('Frequency (Hz)')
 ylabel('Phase (degs)')
 export_fig(sprintf('./FIGS/FRFP_%s_%s%d.eps', type, DOF, ldof), '-depsc')
 savefig(sprintf('./FIGS/FRFP_%s_%s%d.fig', type, DOF, ldof))
+
+figure(2)
+xlim([0 1800])
+savefig(sprintf('./FIGS/FRFP_%s_%s%d_zoom.fig', type, DOF, ldof))
