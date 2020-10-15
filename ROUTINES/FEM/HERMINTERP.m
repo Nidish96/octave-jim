@@ -38,6 +38,7 @@ function [Uq, Nint, dNint, qis, eis] = HERMINTERP(X, U, Xq)
     
     xis = (2*Xq-sum(Xes,2))./Les;
     [N, dN] = HERMSF(xis, Les);
+    dN = 2./Les.*dN;
     Nint = zeros(Nq, (Ne+1)*2);
     dNint = zeros(Nq, (Ne+1)*2);
 

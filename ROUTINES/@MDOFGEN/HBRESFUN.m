@@ -34,30 +34,33 @@ function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol)
       dfdu = zeros(Nt, Ndnl, Ndnl, Nhc);
       
       % First point
-      [ft(end, :), dfdu(end, :, :, 1)] = m.NLTs(ni).func(0,  unlt(1, :)');  % Additional arguments ignored, implying zeros
+%       [ft(end, :), dfdu(end, :, :, 1)] = m.NLTs(ni).func(0,  unlt(1, :)');  % Additional arguments ignored, implying zeros
       
       its = 0;
 
       while its==0 || max(abs(fprev-ft(end, :)))>tol
         fprev = ft(end, :);
         for ti=1:Nt
-          tm1 = mod(ti-2, Nt)+1;
-          [ft(ti,:), dfdu(ti,:,:,:)] = ...
-          m.NLTs(ni).func(t(ti), unlt(ti,:), h, t(tm1), ...
-                          unlt(tm1,:), ft(tm1,:), squeeze(dfdu(tm1,:,:,:)));
+            tm1 = mod(ti-2, Nt)+1;
+%             [ft(ti,:), dfdu(ti,:,:,:)] = ...
+%                 m.NLTs(ni).func(t(ti), unlt(ti,:), h, t(tm1), ...
+%                 unlt(tm1,:), ft(tm1,:), squeeze(dfdu(tm1,:,:,:)));
+            [ft(ti,:), dfdu(ti,:,:,:)] = ...
+                m.NLTs(ni).func(t(ti), unlt(ti,:), h, t(tm1), ...
+                unlt(tm1,:), ft(tm1,:), dfdu(tm1,:,:,:));
         end
         its = its+1;
       end
       F = GETFOURIERCOEFF(h, ft);
       J = zeros(size(m.NLTs(ni).L,1)*Nhc, size(m.NLTs(ni).L,1)*Nhc);
       for di=1:Ndnl
-        for dj=1:Ndnl
-          tmp = squeeze(dfdu(:, di, dj, :));
-          if ~isempty(find(tmp~=0, 1))
-            J(di:Ndnl:end, dj:Ndnl:end) = ...
-            GETFOURIERCOEFF(h, tmp);
+          for dj=1:Ndnl
+              tmp = squeeze(dfdu(:, di, dj, :));
+              if ~isempty(find(tmp~=0, 1))
+                  J(di:Ndnl:end, dj:Ndnl:end) = ...
+                      GETFOURIERCOEFF(h, tmp);
+              end
           end
-        end
       end
     end
     

@@ -45,14 +45,11 @@ end
 %% Setup model
 GM = MDOFGEN(Mb, Kb, Cb, Lb);
 
-% kc = 1e6;
-% fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
-kt  = 7.5e6;
-muN = 7.5e5;
-fnl = @(t, u, varargin) JENKFORCE(t, u, kt, muN, varargin{:});
-GM = GM.SETNLFUN(2+3, Lb(end,:), fnl);
+kc = 1e6;
+fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
+GM = GM.SETNLFUN(1+3, Lb(end,:), fnl);
 
-%% HBM Fresp
+%% HBM Setup FRESP
 h = 0:5;
 Nhc = sum((h==0)+2*(h~=0));
 
@@ -61,46 +58,43 @@ Fl = kron([0; 1; 0; zeros(Nhc-3,1)], Lb(end,:)');
 
 Wst = 7500;
 Wen = 9000;
-dw = 0.01;
+dw = 0.05;
 
-Copt = struct('Nmax', 1000, 'dsmin', 0.001);
+Copt = struct('Nmax', 1000, 'dsmin', 0.025);
 Dscale = [1e-3*ones(Nhc*GM.Ndofs,1); Wsp(1)];
 Copt.Dscale = Dscale;
 
-Fas = [1e5 5e5 10e5 20e5 35e5];
-% UCs = cell(size(Fas));
+Fas = [5e5 10e5 20e5 35e5];
+UCs = cell(size(Fas));
 
 fa = 25e5;  % 1, 5, 25
 for fi=1:length(Fas)
     fa = Fas(fi);
     U0 = HARMONICSTIFFNESS(GM.M, GM.C, GM.K, Wst, h)\(Fl*fa);
 
-    UCs{fi} = CONTINUE(@(Uw) GM.HBRESFUN(Uw, Fl*fa, h, Nt, 1e-6), U0, Wst, Wen, dw, Copt);
+    UCs{fi} = CONTINUE(@(Uw) GM.HBRESFUN(Uw, Fl*fa, h, Nt), U0, Wst, Wen, dw, Copt);
 end
 %% Save
-save('./DATA/Jenkins_FRESP.mat', 'UCs', 'Fl', 'Fas', 'Wst', 'Wen', 'h', 'Nhc');
+save('./DATA/Duffing_FRESP.mat', 'UCs', 'Fl', 'Fas', 'Wst', 'Wen', 'h', 'Nhc');
 
 %% Load
-load('./DATA/Jenkins_FRESP.mat', 'UCs', 'Fl', 'Fas', 'Wst', 'Wen');
-load('./DATA/Jenkins_EPMC.mat', 'UwxC');
+load('./DATA/Duffing_FRESP.mat', 'UCs', 'Fl', 'Fas', 'Wst', 'Wen');
 
-% %% Plotting
+%% Plotting
 figure(4)
 clf()
-% plot(UwxC(end-2,:), (10.^UwxC(end,:)).*sqrt(sum((kron(diag([1 sqrt(0.5)*ones(1,Nhc-1)]), GM.NLTs.L)*UwxC(1:end-3, :)).^2)), ...
-%     '-', 'LineWidth', 2); hold on
+% plot(UwxC(end-2,:), (10.^UwxC(end,:)).*sqrt(sum((kron(diag([1 sqrt(0.5)*ones(1,Nhc-1)]), GM.NLTs.L)*UwxC(1:end-3, :)).^2)), '-', 'LineWidth', 2)
 aa = gobjects(size(Fas));
 for fi=1:length(Fas)
     aa(fi) = plot(UCs{fi}(end,:), ...
-        sqrt(sum((kron(diag([1 sqrt(0.5)*ones(1,Nhc-1)]), GM.NLTs.L)*UCs{fi}(1:end-1, :)).^2))/Fas(fi), ...
-        '.-');
+        sqrt(sum((kron(diag([1 sqrt(0.5)*ones(1,Nhc-1)]), GM.NLTs.L)*UCs{fi}(1:end-1, :)).^2)), ...
+        '-');
     hold on
     legend(aa(fi), sprintf('F = %.2f MN', Fas(fi)*1e-6));
 end
-legend(aa(1:end), 'Location', 'northwest')
+legend(aa(1:end), 'Location', 'best')
 
 set(gca, 'yscale', 'linear')
 xlim([Wst Wen])
-ylim([0 1e-6])
 xlabel('Frequency (rad/s)')
 ylabel('RMS Amplitude')

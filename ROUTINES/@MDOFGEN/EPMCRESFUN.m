@@ -63,7 +63,7 @@ function [R, dRdUwx, dRda] = EPMCRESFUN(m, Uwxa, Fl, h, Nt, tol)
                     tmp = squeeze(dfdu(:, di, dj, :));
                     if ~isempty(find(tmp~=0, 1))
                         J(di:Ndnl:end, dj:Ndnl:end) = ...
-                          GETFOURIERCOEFF(h, tmp);
+                            GETFOURIERCOEFF(h, tmp);
                     end
                 end
             end
