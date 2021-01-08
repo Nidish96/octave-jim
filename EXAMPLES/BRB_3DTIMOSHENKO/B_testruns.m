@@ -135,7 +135,7 @@ Wen = 200*2*pi;
 % Wen = 100*2*pi;
 dw = 10*2*pi;
 
-E = HARMONICSTIFFNESS(MDL.M, MDL.C, MDL.K+J0, Wst, h);
+E = HARMONICSTIFFNESS(MDL.M, MDL.C, J0, Wst, h);
 U0 = E\Fl;
 U0(1:Nd) = Ustat;
 

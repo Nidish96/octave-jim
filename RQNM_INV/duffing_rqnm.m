@@ -106,10 +106,11 @@ end
 toc
 
 %% Save
-save('./DATA/Duffing_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi', 'UlC', 'dUlC', 'GM', 'Nint', 'dNint');
+% save('./DATA/Duffing_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi', 'UlC', 'dUlC', ...
+%     'GM', 'Nint', 'dNint');
 
 %% Load
-load('./DATA/Duffing_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi')
+% load('./DATA/Duffing_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi')
 
 %% Plot
 figure(1)

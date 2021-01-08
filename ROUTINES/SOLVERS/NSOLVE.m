@@ -21,7 +21,7 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, varargin)
 
   opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'etol', 1e-6, 'utol', ...
                 1e-6, 'Display', false, 'Dscale', ones(size(U0)), ...
-	       'ITMAX', 10);
+	       'ITMAX', 10, 'lsrch', 0);
   if nargin==3
       nflds = fieldnames(varargin{1});
       for i = 1:length(nflds)
@@ -48,6 +48,8 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, varargin)
   e   = e0;
   u   = u0;
 
+  Jc = J0.*opts.Dscale';
+  R  = R0;
   U  = U0;
   dU = dU0;
   it = 0;
@@ -59,6 +61,44 @@ function [U, R, eflag, it, Jc] = NSOLVE(func, U0, varargin)
   eflagp = 0;
   
   while (eflag<6 || it==0) && it<=opts.ITMAX
+      
+      % Line search code 
+      if opts.lsrch~=0          
+          ls_e0 = R'*dU;
+          
+%           for il=1:opts.lsrch
+%             [R0, J0] = func(opts.Dscale.*(U+dU));
+%             ls_e1 = R0'*(-(J0.*opts.Dscale')\R0);
+%             if ls_e0.*ls_e1<=0
+%                 ls_s = ls_e0/(ls_e0-ls_e1);
+%                 dU = ls_s*dU;
+%             else
+%                 break;
+%             end
+%           end
+          
+          % Dog-Leg Algorithm
+          dUgn = dU;  % Gauss-Newton step
+          al   = (R'*(Jc*Jc')*R)/(R'*(Jc*Jc')*(Jc*Jc')*R);
+          dUc  =  -al*Jc'*R;  % Cauchy step
+          
+          [R0, J0] = func(opts.Dscale.*(U+dUc));
+          ls_ec = R0'*(-(J0.*opts.Dscale')\R0);
+              
+          [R0, J0] = func(opts.Dscale.*(U+dUgn));
+          ls_egn = R0'*(-(J0.*opts.Dscale')\R0);
+              
+          ls_l = ls_ec/(ls_ec-ls_egn);  % minimizer
+          
+%           ls_l = min(ls_l, 1);
+%           ls_l = max(ls_l, 0);
+          
+%           fprintf('%e\t', ls_l);
+
+          dU = dUc + ls_l*(dUgn-dUc);
+      end
+      % Line search code 
+      
     U  = U + dU;
     it = it+1;
     

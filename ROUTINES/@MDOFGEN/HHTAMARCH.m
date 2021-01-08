@@ -57,7 +57,20 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
   
   % Initialize acceleration
   [Fnl, ~, ~, m] = m.NLFORCE(T0, U0, Ud0, T0-dt);
-  Udd(:,1) = m.M\(Fex(T0)-m.C*Ud0-m.K*U0-Fnl);
+%   if strcmp(typeinfo(Fex), 'function handle')
+%     Udd(:,1) = m.M\(Fex(T0)-m.C*Ud0-m.K*U0-Fnl);
+%   elseif strcmp(typeinfo(Fex), 'matrix')
+%     Udd(:,1) = m.M\(Fex(:,1)-m.C*Ud0-m.K*U0-Fnl);
+%   end 
+  
+  if strcmp(class(Fex), 'function_handle')
+    Udd(:,1) = m.M\(Fex(T0)-m.C*Ud0-m.K*U0-Fnl);
+  elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
+    Udd(:,1) = m.M\(Fex(:,1)-m.C*Ud0-m.K*U0-Fnl);
+  else
+      error('wth');
+  end
+  
   clear U0 Ud0
   
   if strcmp(opts.Display, 'waitbar')
@@ -73,59 +86,103 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
           Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
       % Residual, Jacobian, and Update
-      R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
-          (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
-      J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
-      du = -J\R;
-      % Error norms
-      e = abs(R'*du);
-      r = mean(R.^2);
-      u = mean(du.^2);
-      
-      e0 = e;
-      r0 = r;
-      u0 = u;
-      it = 0;
-      
-      flag = 8*(e/e0<opts.reletol) + 4*(e<opts.etol) + 2*(r<opts.rtol) + ...
-          1*(u<opts.utol);
-      if strcmp(opts.Display, 'iter') || strcmp(opts.Display, 'both')
-          fprintf('ITN, E, E/E0, r, du\n%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, flag);
-          fprintf('---------------------------------------------------\n');
+%       if strcmp(typeinfo(Fex), 'function handle')
+%         R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+%             (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
+%       elseif strcmp(typeinfo(Fex), 'matrix')
+%         R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+%             (FnlP-Fnl) - (1+a)*(Fex(:,i)-Fex(:,i-1));
+%       else
+%         error('wth');        
+%       end
+      if strcmp(class(Fex), 'function_handle')
+        R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+            (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
+      elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
+        R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+            (FnlP-Fnl) - (1+a)*(Fex(:,i)-Fex(:,i-1));
+      else
+        error('wth');
       end
-      while (flag<7) || (it==0)
-          Udd(:, i) = Udd(:, i) + du;
-          it = it+1;
-          
-          [FnlP, dFnldu, dFnldud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
-              U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
-              Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
-          % Residual, Jacobian, and Updates
-          R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
-              (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));
-          J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
+
+      J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
+
+      if ~isempty(m.NLTs)  % Nonlinear Case, Need to iterate
           du = -J\R;
           % Error norms
           e = abs(R'*du);
           r = mean(R.^2);
           u = mean(du.^2);
+
+          e0 = e;
+          r0 = r;
+          u0 = u;
+          it = 0;          
           
           flag = 8*(e/e0<opts.reletol) + 4*(e<opts.etol) + 2*(r<opts.rtol) + ...
               1*(u<opts.utol);
           if strcmp(opts.Display, 'iter') || strcmp(opts.Display, 'both')
-              fprintf('%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, flag);
+              fprintf('ITN, E, E/E0, r, du\n%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, flag);
+              %fprintf('---------------------------------------------------\n');
           end
-          
-          if it>opts.ITMAX
-              flag = 0;
-              break;
+          while ((flag<7) || (it==0))
+              Udd(:, i) = Udd(:, i) + du;
+              it = it+1;
+
+              [FnlP, dFnldu, dFnldud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
+                  U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
+                  Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
+              % Residual, Jacobian, and Updates
+              if strcmp(class(Fex), 'function_handle')
+                R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+                    (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));
+              elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
+                R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+                    (FnlP-Fnl) - (1+a)*(Fex(:,i)-Fex(:,i-1));
+              else
+                error('wth');
+              end
+              J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
+              du = -J\R;
+              % Error norms
+              e = abs(R'*du);
+              r = mean(R.^2);
+              u = mean(du.^2);
+
+              flag = 8*(e/e0<opts.reletol) + 4*(e<opts.etol) + 2*(r<opts.rtol) + ...
+                  1*(u<opts.utol);
+              if strcmp(opts.Display, 'iter') || strcmp(opts.Display, 'both')
+                  fprintf('%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, flag);
+              end
+
+              if it>opts.ITMAX
+                  flag = 0;
+                  break;
+              end
+          end
+          if strcmp(opts.Display, 'iter') || strcmp(opts.Display, 'both')
+              fprintf('---------------------------------------------------\n');
+          end      
+      else  % Linear Case, No need iterations
+          flag = 8+4+2+1;
+          if strcmp(class(Fex), 'function_handle')
+              Udd(:, i) = Z1\(Z2*Udd(:, i-1) - Z3*Ud(:, i-1) - ...
+                  (FnlP-Fnl) + (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1))));
+              
+%               R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+%                   (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));
+          elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
+              Udd(:, i) = Z1\(Z2*Udd(:, i-1) - Z3*Ud(:, i-1) - ...
+                  (FnlP-Fnl) + (1+a)*(Fex(:,i)-Fex(:,i-1)));
+              
+%               R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
+%                   (FnlP-Fnl) - (1+a)*(Fex(:,i)-Fex(:,i-1));
+          else
+              error('wth');
           end
       end
-      if strcmp(opts.Display, 'iter') || strcmp(opts.Display, 'both')
-          fprintf('---------------------------------------------------\n');
-      end      
       
-      if flag == 0 || any(~isfinite(abs(U(:, i))))
+      if flag == 0 || any(~isfinite(abs(Udd(:, i))))
           fprintf('No Convergence/Non finite march at %f s : Returning\n', T(i))
 %          keyboard
           
