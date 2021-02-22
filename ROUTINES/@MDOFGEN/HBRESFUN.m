@@ -1,4 +1,20 @@
 function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol)
+%HBRESFUN 
+%
+%   USAGE: 
+%       [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol)
+%   INPUTS:
+%       MDOFGEN class
+%       Uw  
+%       Fl
+%       h
+%       Nt
+%       tol 
+%   OUTPUTS:
+%       R
+%       dRdU
+%       dRdw
+%       FNL
 
   Nhc = sum((h==0)+2*(h~=0));
   

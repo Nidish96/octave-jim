@@ -54,7 +54,6 @@ fnl = @(t, u, varargin) JENKFORCE(t, u, kt, muN, varargin{:});
 GM = GM.SETNLFUN(2+3, Lb(end,:), fnl);
 
 %% Continuation
-
 Amax = 2;
 da = 0.01;
 
@@ -76,7 +75,8 @@ Nt = 2^7;
 t = linspace(0, 2*pi, Nt+1)'; t(end) = [];
 qt = cos(t).*Qs';
 tic
-[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:), 8);
+% [Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:), 8);
+[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:));
 toc
 Lt = reshape(Lt, Nt, Nq);
 

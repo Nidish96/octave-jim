@@ -1,6 +1,6 @@
 function [Uq, Nint, dNint, qis, eis] = HERMINTERP(X, U, Xq)
 %HERMINTERP interpolates the set of values and gradients using Hermite
-%Polynomials
+%Polynomials. Only for 1D functions.
 %  
 %  USAGE:
 %       Xq = HERMINTERP(X, U, Xq);

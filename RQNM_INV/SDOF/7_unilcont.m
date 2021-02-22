@@ -75,7 +75,7 @@ rqnm2.z = z;
 
 %% RQNM3
 Nt = 128;
-##opt = optimoptions('fsolve', 'Display', 'off', 'SpecifyObjectiveGradient', true);
+% opt = optimoptions('fsolve', 'Display', 'off', 'SpecifyObjectiveGradient', true);
 opt = optimset('Jacobian', 'on', 'Display', 'iter');
 x0 = [0; k/m];
 sols = zeros(3, length(rqnm.q));
