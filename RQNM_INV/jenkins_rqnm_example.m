@@ -48,8 +48,25 @@ GM = MDOFGEN(Mb, Kb, Cb, Lb);
 
 % kc = 1e6;
 % fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
-kt  = 7.5e6;
-muN = 7.5e5;
+
+cfg = 2;
+
+if cfg==1
+    % Shows 1:3 mode coupling (cfg=1)
+    kt  = 6e6;
+    muN = 7.5e5;
+elseif cfg==2
+    % Doesn't show mode coupling (cfg=2)
+    kt  = 2.5e6;
+    muN = 7.5e5;
+elseif cfg==3
+    % Damping of the different estimates look slightly different here
+    kt  = 7.5e6;
+    muN = 7.5e5;
+else
+    error('unknown cfg')
+end
+
 fnl = @(t, u, varargin) JENKFORCE(t, u, kt, muN, varargin{:});
 GM = GM.SETNLFUN(2+3, Lb(end,:), fnl);
 
@@ -202,7 +219,7 @@ semilogx(Qs, Zt_ds, 'k.-'); hold on
 semilogx(Qs, Zt_mf1, 'o-')
 semilogx(Qs, Zt_mf2, '+-')
 
-xlim([0.16 0.35])
+xlim([0.35 1])
 legend('Total Dissipation Concept', 'Modal Force Concept: U/Q Mode shape', ...
     'Modal Force Concept: dU/dQ Mode shape', 'Location', 'southeast')
 xlabel('Modal Amplitude')

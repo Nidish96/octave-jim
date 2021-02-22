@@ -77,7 +77,7 @@ Ae = 2;
 da = 0.05;
 
 mds = [1:2];
-Copt = struct('Nmax', 1000, 'dsmax', 0.05, 'dsmin', 0.001);
+Copt = struct('Nmax', 1000, 'dsmax', 0.05, 'dsmin', 0.001, 'DynDscale', 1);
 UwxC = cell(size(mds));
 dUwxC = cell(size(mds));
 for mi=mds
