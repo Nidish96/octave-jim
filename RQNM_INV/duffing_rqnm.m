@@ -53,13 +53,16 @@ GM = GM.SETNLFUN(1+3, Lb(end,:), fnl);
 %% Continuation
 
 Amax = 2;
-da = 0.1;
+da = 5;
 
 ul0 = [V(:,1)*10^Amax; Wsp(1)^2];
 Dscale = [ones(GM.Ndofs, 1); Wsp(1)^2; 1.0];
+% Dscale = [abs(ul0); 1.0];
 
-Copt = struct('Nmax', 1000, 'Dscale', Dscale);
+Copt = struct('Nmax', 1000, 'Dscale', Dscale, 'DynDscale', 0);
 [UlC, dUlC, Ss] = CONTINUE(@(ulq) GM.RQMRESFUN(ulq,0), ul0, -10^Amax, 10^Amax, da, Copt);
+
+plot(UlC(end,:), UlC(end-1, :), '.-')
 
 %% Post Processing (Hermite interpolation + 1HB)
 Ln = reshape([UlC(end-1,:); dUlC(end-1,:)], 2*size(UlC,2), 1);

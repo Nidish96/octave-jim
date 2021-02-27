@@ -70,7 +70,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
   else
       error('wth');
   end
-  
+  Udd(~isfinite(Udd(:,1)), 1) = 0;
   clear U0 Ud0
   
   if strcmp(opts.Display, 'waitbar')
