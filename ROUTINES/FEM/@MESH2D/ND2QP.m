@@ -44,7 +44,7 @@ function [Q,T] = ND2QP(MESH)
 				      % QP to integrated Nodal
     Jd   = TRI2D_JACDET(V,[X Y]); % Jacobian
     T(nds,(e-1)*Nq+(1:Nq)) = T(nds,(e-1)*Nq+(1:Nq)) + ...
-			     repmat(Jd',3,1).*Q((MESH.Ne_Tri+e-1)*Nq+(1:Nq),nds)'.*repmat(Ws',3,1);
+			     repmat(Jd',3,1).*Q((e-1)*Nq+(1:Nq),nds)'.*repmat(Ws',3,1);
   end
 
 				% Quadrilateral Elements
