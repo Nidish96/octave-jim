@@ -49,9 +49,6 @@ function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol, varargin)
       ft = zeros(Nt, Ndnl);
       dfdu = zeros(Nt, Ndnl, Ndnl, Nhc);
       
-      % First point
-%       [ft(end, :), dfdu(end, :, :, 1)] = m.NLTs(ni).func(0,  unlt(1, :)');  % Additional arguments ignored, implying zeros
-      
       its = 0;
       while its==0 || max(abs(fprev-ft(end, :)))>tol
         fprev = ft(end, :);
@@ -87,7 +84,6 @@ function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol, varargin)
   end
   
   % Residue
-%   Rsc = max(abs(Fl));
   if length(m.Rsc)~=length(Fl)
       m.Rsc = (1/max(abs(Fl)))*ones(length(Fl),1);
   end

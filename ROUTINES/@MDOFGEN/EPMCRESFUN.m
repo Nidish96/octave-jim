@@ -80,37 +80,29 @@ function [R, dRdUwx, dRda] = EPMCRESFUN(m, Uwxa, Fl, h, Nt, tol, varargin)
     end
     
     % Residue
-    Nd = m.Ndofs;    
-%     R = [E*(Asc.*Uwxa(1:end-3)) + FNL;
-%         Uwxa(Nd*(h(1)==0)+(1:Nd))'*m.M*Uwxa(Nd*(h(1)==0)+(1:Nd))+Uwxa(Nd*(h(1)==0)+Nd+(1:Nd))'*m.M*Uwxa(Nd*(h(1)==0)+Nd+(1:Nd))-1;
-%         Fl'*Uwxa(1:end-3)];
-%     dRdUwx = [(E+dFNL)*diag(Asc), dEdw*(A*Uwxa(1:end-3)), dEdxi*(A*Uwxa(1:end-3));
-%         zeros(1, Nd*(h(1)==0)), Uwxa(Nd*(h(1)==0)+(1:2*Nd))'*blkdiag(M,M), zeros(1, Nd*(Nhc-2-(h(1)==0))), 0, 0;
-%         Fl', 0, 0];
-%     dRda = [(E+dFNL)*Uwxa(1:end-3)*dAdla;
-%         0;
-%         0];
-    
-%     R = [E*(A*Uwxa(1:end-3))+FNL;
-%         Uwxa(1:end-3)'*kron(diag([0 ones(1,Nhc-1)]), m.M)*Uwxa(1:end-3)-1;
-%         Fl'*Uwxa(1:end-3)];
-%     dRdUwx = [(E+dFNL)*A, dEdw*(A*Uwxa(1:end-3)), dEdxi*(A*Uwxa(1:end-3));
-%         2*Uwxa(1:end-3)'*kron(diag([0 ones(1,Nhc-1)]), m.M), 0, 0;
-%         Fl', 0, 0];
-%     dRda = [(E+dFNL)*Uwxa(1:end-3)*dAdla;
-%         0; 
-%         0];
-
     h0 = double(h(1)==0);
     Fstat = kron([ones(h0,1); zeros(Nhc-h0,1)], ones(m.Ndofs,1)).*Fl;  % Only static loads if it's there
     Fdyn = kron([zeros(h0,1); ones(Nhc-h0, 1)], ones(m.Ndofs,1)).*Fl;  % Only dynamic loads (for phase constraint)
+    
+%   Use all harmonic amplitudes as mode shape and normalize by sum of all harmonics
+%     R = [E*(Asc.*Uwxa(1:end-3))+FNL-Fstat;
+%         Uwxa(1:end-3)'*kron(diag([0 ones(1,Nhc-1)]), m.M)*Uwxa(1:end-3)-1;
+%         Fdyn'*Uwxa(1:end-3)];
+%     dRdUwx = [(E+dFNL)*diag(Asc), dEdw*(Asc.*Uwxa(1:end-3)), dEdxi*(Asc.*Uwxa(1:end-3));
+%         2*Uwxa(1:end-3)'*kron(diag([0 ones(1,Nhc-1)]), m.M), 0, 0;
+%         Fdyn', 0, 0];
+%     dRda = [(E+dFNL)*(dAscdA.*Uwxa(1:end-3))*dAdla;
+%         0; 
+%         0];
+
+%   Use first harmonic amplitudes as mode shape
     R = [E*(Asc.*Uwxa(1:end-3))+FNL - Fstat;
         Uwxa(m.Ndofs*h0+(1:2*m.Ndofs))'*blkdiag(m.M,m.M)*Uwxa(m.Ndofs*h0+(1:2*m.Ndofs))-1;
         Fdyn'*Uwxa(1:end-3)];
     dRdUwx = [(E+dFNL)*diag(Asc), dEdw*(Asc.*Uwxa(1:end-3)), dEdxi*(Asc.*Uwxa(1:end-3));
         2*Uwxa(1:end-3)'*kron(diag([0 ones(1,Nhc-1)]), m.M), 0, 0;
         Fdyn', 0, 0];
-    dRda = [(E+dFNL)*diag(dAscdA)*Uwxa(1:end-3)*dAdla;
+    dRda = [(E+dFNL)*(dAscdA.*Uwxa(1:end-3))*dAdla;
         0; 
         0];
     

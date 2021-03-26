@@ -25,6 +25,8 @@ function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, z
 %                           fy,kx fy,ky fy,kn fy,mu;
 %                           fn,kx fn,ky fn,kn fn,mu];
 
+    error('This is work in progress and has to be debugged');
+
   Np = size(uxyn, 2);
   fxyn = zeros(3, Np);
   DfxynDuxyn = zeros(3, 3, Np);

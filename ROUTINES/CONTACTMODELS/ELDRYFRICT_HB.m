@@ -18,6 +18,8 @@ function [FXYN, JXYN] = ELDRYFRICT_HB(UXYN, h, Nt, kxynmu, N0, varargin)
 %	 [[fx1; fy1; fz1; fx2; ...]_A0; [fx1; fy1; fz1; fx2; ...]_A1; [fx1; fy1; fz1; fx2; ...]_B1; ...]
 %   JXYN	  : (Np*3*Nhc, Np*3*Nhc)  
 
+    error('This is work in progress and has to be debugged');
+
   if length(varargin)>=1
     tol = varargin{1};
   else
