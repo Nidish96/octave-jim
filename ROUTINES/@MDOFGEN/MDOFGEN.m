@@ -11,6 +11,7 @@ classdef MDOFGEN
         L  % displacement transformation matrix
         
         NLTs % Nonlinear functions
+        Rsc
     end
     
     methods

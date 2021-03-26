@@ -1,4 +1,4 @@
-function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol)
+function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol, varargin)
 %HBRESFUN 
 %
 %   USAGE: 
@@ -35,7 +35,7 @@ function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol)
     unlt = TIMESERIES_DERIV(Nt, h, Unl, 0);  % Nt x Ndnl
     unldot = w*TIMESERIES_DERIV(Nt, h, Unl, 1);  % Nt x Ndnl
     
-    if mod(m.NLTs(ni).type, 3)==0  % Instantaneous force
+    if mod(m.NLTs(ni).type, 2)==0  % Instantaneous force
       [ft, dfdu, dfdud] = m.NLTs(ni).func(t, unlt, unldot);
 			% (Nt,Ndnl); (Nt,Ndnl); (Nt,Ndnl) (point-wise)
       F = GETFOURIERCOEFF(h, ft);
@@ -53,14 +53,11 @@ function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol)
 %       [ft(end, :), dfdu(end, :, :, 1)] = m.NLTs(ni).func(0,  unlt(1, :)');  % Additional arguments ignored, implying zeros
       
       its = 0;
-
       while its==0 || max(abs(fprev-ft(end, :)))>tol
         fprev = ft(end, :);
         for ti=1:Nt
             tm1 = mod(ti-2, Nt)+1;
-%             [ft(ti,:), dfdu(ti,:,:,:)] = ...
-%                 m.NLTs(ni).func(t(ti), unlt(ti,:), h, t(tm1), ...
-%                 unlt(tm1,:), ft(tm1,:), squeeze(dfdu(tm1,:,:,:)));
+
             [ft(ti,:), dfdu(ti,:,:,:)] = ...
                 m.NLTs(ni).func(t(ti), unlt(ti,:), h, t(tm1), ...
                 unlt(tm1,:), ft(tm1,:), dfdu(tm1,:,:,:));
@@ -89,11 +86,17 @@ function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol)
     end
   end
   
-				% Residue
-  R = [E*Uw(1:end-1) + FNL - Fl];
-  dRdU = E+dFNL;
-  dRdw = dEdw*Uw(1:end-1);
+  % Residue
+%   Rsc = max(abs(Fl));
+  if length(m.Rsc)~=length(Fl)
+      m.Rsc = (1/max(abs(Fl)))*ones(length(Fl),1);
+  end
+  R = [E*Uw(1:end-1) + FNL - Fl].*m.Rsc;
+  dRdU = (E+dFNL).*m.Rsc;
+  dRdw = (dEdw*Uw(1:end-1)).*m.Rsc;
   
-  % For NLvib continuation
-%   dRdU = [dRdU dRdw];
+  % All Gradient terms in one matrix
+  if ~isempty(varargin)
+      dRdU = [dRdU dRdw];
+  end
 end

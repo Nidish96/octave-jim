@@ -1,4 +1,4 @@
-function [U, R, eflag, it, Jc, reu] = NSOLVE(func, U0, varargin)
+function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
 %NSOLVE Uses Newton iterations to solve
 %
 % USAGE:
@@ -19,6 +19,7 @@ function [U, R, eflag, it, Jc, reu] = NSOLVE(func, U0, varargin)
 %  it		:
 %  Jc		:
 
+  %% Default Parameters
   opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'etol', 1e-6, 'utol', ...
                 1e-6, 'Display', false, 'Dscale', ones(size(U0)), ...
 	       'ITMAX', 10, 'lsrch', 0, 'crit', 12);
@@ -29,46 +30,49 @@ function [U, R, eflag, it, Jc, reu] = NSOLVE(func, U0, varargin)
       end
   end  
 
+  %% Starting Point Residual, Jacobian, and error metrics
   Nu = length(U0);
   U0 = U0./opts.Dscale(1:Nu);
   
-  [R0, J0] = func(opts.Dscale(1:Nu).*U0);
-%   dU0 = (-J0\R0)./opts.Dscale(1:Nu);
-  dU0 = (-(J0*diag(opts.Dscale(1:Nu)))\R0);
+  [R0, dR0] = func(opts.Dscale(1:Nu).*U0);
+  dU0 = -(dR0*diag(opts.Dscale(1:Nu)))\R0;
   e0  = abs(R0'*dU0);
   
   if (e0 < eps)
     e0 = 1.0;
-    R0 = ones(size(R0));
+    R0 = ones(Nu, 1);
   end
   r0 = R0'*R0;
   u0 = dU0'*dU0;
   
+  %% Termination Flag
+    flagfun = @(e, e0, r, u) 4*(e<opts.etol) + 8*(r<opts.rtol) +...
+        2*(e/e0<opts.reletol) + 1*(u<opts.utol) + 16*(e/eps<1e3);
+    
+  %% Initializing for iterations  
   r   = r0;
   e   = e0;
   u   = u0;
 
   reu = [r e u];
   
-  Jc = J0*diag(opts.Dscale(1:Nu));
-  R  = R0;
-  U  = U0;
-  dU = dU0;
-  it = 0;
-  
-  flagfun = @(e, e0, r, u) 4*(e<opts.etol) + 8*(r<opts.rtol) + 2*(e/e0<opts.reletol) + 1*(u<opts.utol) + 16*(e/eps<1e3);
+  dRc = dR0*diag(opts.Dscale(1:Nu));
+  R   = R0;
+  U   = U0;
+  dU  = dU0;
+  it  = 0;
 
   eflag = flagfun(e, e0, r, u); 
   if opts.Display
     fprintf('ITN, E, E/E0, r, du\n%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, eflag);
   end
   eflagp = 0;
-  
+
+  %% Start Iterations  
   while (eflag<opts.crit || it<1) && it<=opts.ITMAX
-      
       % Line search code 
       if opts.lsrch~=0          
-          ls_e0 = R'*dU;
+          ls_e0 = e;
           
 %           for il=1:opts.lsrch
 %             [R0, J0] = func(opts.Dscale(1:Nu).*(U+dU));
@@ -83,14 +87,14 @@ function [U, R, eflag, it, Jc, reu] = NSOLVE(func, U0, varargin)
           
           % Dog-Leg Algorithm
           dUgn = dU;  % Gauss-Newton step
-          al   = (R'*(Jc*Jc')*R)/(R'*(Jc*Jc')*(Jc*Jc')*R);
-          dUc  =  -al*Jc'*R;  % Cauchy step
+          al   = (R'*(dRc*dRc')*R)/(R'*(dRc*dRc')*(dRc*dRc')*R);
+          dUc  =  -al*dRc'*R;  % Cauchy step
           
-          [R0, J0] = func(opts.Dscale(1:Nu).*(U+dUc));
-          ls_ec = R0'*(-(J0*diag(opts.Dscale(1:Nu)))\R0);
+          [R0, dR0] = func(opts.Dscale(1:Nu).*(U+dUc));
+          ls_ec = R0'*(-(dR0*diag(opts.Dscale(1:Nu)))\R0);
               
-          [R0, J0] = func(opts.Dscale(1:Nu).*(U+dUgn));
-          ls_egn = R0'*(-(J0*diag(opts.Dscale(1:Nu)))\R0);
+          [R0, dR0] = func(opts.Dscale(1:Nu).*(U+dUgn));
+          ls_egn = R0'*(-(dR0*diag(opts.Dscale(1:Nu)))\R0);
               
           ls_l = ls_ec/(ls_ec-ls_egn);  % minimizer
           
@@ -106,10 +110,10 @@ function [U, R, eflag, it, Jc, reu] = NSOLVE(func, U0, varargin)
     U  = U + dU;
     it = it+1;
     
-    [R, Jc] = func(opts.Dscale(1:Nu).*U);
+    [R, dRc] = func(opts.Dscale(1:Nu).*U);
 %     dU = (-Jc\R)./opts.Dscale(1:Nu);
-    Jc = Jc*diag(opts.Dscale(1:Nu));
-    dU = -Jc\R;
+    dRc = dRc*diag(opts.Dscale(1:Nu));
+    dU = -dRc\R;
     
     e = abs(R'*dU);
     r = R'*R;

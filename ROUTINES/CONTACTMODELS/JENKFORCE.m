@@ -44,10 +44,12 @@ function [fnl, dfnldu] = JENKFORCE(t, u, kt, muN, varargin)
       muN = muN*ones(length(u), 1);
     end
 
+    fnl    = zeros(length(u));
+    dfnldu = zeros(length(u), length(u), length(del_cst));
     for di=1:length(u)
       fsp = kt(di)*(u(di)-up(di))+fp(di);   % Stick prediction
       
-      fnl(di) = fsp(di)*(abs(fsp(di))<muN(di)) + muN(di)*sign(fsp)*(abs(fsp)>=muN);  % Nonlinear force
+      fnl(di) = fsp*(abs(fsp)<muN(di)) + muN(di)*sign(fsp)*(abs(fsp)>=muN);  % Nonlinear force
       
       dfnldu(di, di, :) = (kt(di).*del_cst+squeeze(dfp(1, di, di, :))').*(abs(fsp)<muN(di));  % Nonlinear Jacobian
     end
