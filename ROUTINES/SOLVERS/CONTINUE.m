@@ -13,7 +13,7 @@ function [U, dUdlam, Ss] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
 % OUTPUTS:
 %   U		: (Nu+1, Np) Solution vector
 %   dUdlam	: (Nu+1, Np) Solution derivative wrt parameter
-error('This is obsolete now - please use PRECOCONT.m')
+% error('This is obsolete now - please use PRECOCONT.m')
   %% Default options
   Copt = struct('Nmax', 100, 'dsmax', ds*5, 'dsmin', ds/5, ...
                 'angopt', pi/6, 'startdir', sign(lam1-lam0),...

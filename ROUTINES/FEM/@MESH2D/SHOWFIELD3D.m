@@ -1,5 +1,5 @@
-function [] = SHOWFIELD2D(m, varargin)
-%SHOWFIELD2D Depicts the field on the 2D mesh. All inputs are optional.
+function [] = SHOWFIELD3D(m, varargin)
+%SHOWFIELD3D Depicts the field on the 2D mesh in 3D. All inputs are optional.
 %
 %  USAGE:
 %  ------
@@ -46,11 +46,11 @@ function [] = SHOWFIELD2D(m, varargin)
     if any(e_on==ei)
       V = m.Nds(m.Tri(e, 2:end), :);
       if length(U)==m.Nn
-	fill(V(:,1), V(:,2), U(m.Tri(e, 2:end)), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
+	fill3(V(:,1), V(:,2), U(m.Tri(e, 2:end)), U(m.Tri(e, 2:end)), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
       elseif length(U)==m.Ne
-	fill(V(:,1), V(:,2), U(ei), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
+	fill3(V(:,1), V(:,2), U(ei)*ones(3,1), U(ei), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
       elseif length(U)==1
-	fill(V(:,1), V(:,2), U, 'EdgeColor', 'k', 'FaceAlpha', alpha); hold on
+	fill3(V(:,1), V(:,2), U*ones(3,1), U, 'EdgeColor', 'k', 'FaceAlpha', alpha); hold on
       end
     end
   end
@@ -61,11 +61,11 @@ function [] = SHOWFIELD2D(m, varargin)
     if any(e_on==ei)
       V = m.Nds(m.Quad(e, 2:end), :);
       if length(U)==m.Nn
-	fill(V(:,1), V(:,2), U(m.Quad(e, 2:end)), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
+	fill3(V(:,1), V(:,2), U(m.Quad(e, 2:end)), U(m.Quad(e, 2:end)), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
       elseif length(U)==m.Ne
-	fill(V(:,1), V(:,2), U(ei), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
+	fill3(V(:,1), V(:,2), U(ei)*ones(4,1), U(ei), 'EdgeColor', 'k', 'FaceAlpha', alpha(ei)); hold on
       elseif length(U)==1
-	fill(V(:,1), V(:,2), U, 'EdgeColor', 'k', 'FaceAlpha', alpha); hold on
+	fill3(V(:,1), V(:,2), U*ones(4,1), U, 'EdgeColor', 'k', 'FaceAlpha', alpha); hold on
       end
     end
   end

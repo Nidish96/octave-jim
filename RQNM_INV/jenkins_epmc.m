@@ -47,7 +47,7 @@ GM = MDOFGEN(Mb, Kb, Cb, Lb);
 
 % kc = 1e6;
 % fnl = @(t,u,ud) deal(kc*u.^3, 3*kc*u.^2, zeros(size(u)));
-cfg = 2;
+cfg = 1;
 
 if cfg==1
     % Shows 1:3 mode coupling (cfg=1)
@@ -77,7 +77,7 @@ Ae = 2;
 da = 0.05;
 
 mds = [1:2];
-Copt = struct('Nmax', 1000, 'dsmax', 0.05, 'dsmin', 0.001, 'DynDscale', 1);
+Copt = struct('Nmax', 1000, 'dsmax', 0.5, 'dsmin', 0.001, 'DynDscale', 1);
 UwxC = cell(size(mds));
 dUwxC = cell(size(mds));
 for mi=mds
@@ -92,10 +92,10 @@ end
 % Us = fsolve(@(uwx) GM.EPMCRESFUN([uwx; -0.1], Fl, h, Nt, 1e-6), Uwx0, opt);
 
 %% Save
-save(sprintf('./DATA/Jenkins_EPMC_cfg%d.mat',cfg), 'UwxC', 'dUwxC', 'h', 'Nhc', 'mds');
+% save(sprintf('./DATA/Jenkins_EPMC_cfg%d.mat',cfg), 'UwxC', 'dUwxC', 'h', 'Nhc', 'mds');
 
 %% Load
-load(sprintf('./DATA/Jenkins_EPMC_cfg%d.mat',cfg), 'UwxC', 'mds');
+% load(sprintf('./DATA/Jenkins_EPMC_cfg%d.mat',cfg), 'UwxC', 'mds');
 
 %% Plot
 figure(1);

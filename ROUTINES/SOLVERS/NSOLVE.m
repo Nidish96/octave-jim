@@ -18,7 +18,7 @@ function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
 %  eflag	:
 %  it		:
 %  Jc		:
-error('This is obsolete now - please use GSOLVE.m')
+% error('This is obsolete now - please use GSOLVE.m')
   %% Default Parameters
   opts = struct('reletol', 1e-6, 'rtol', 1e-6, 'etol', 1e-6, 'utol', ...
                 1e-6, 'Display', false, 'Dscale', ones(size(U0)), ...

@@ -1,19 +1,22 @@
-function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, zxy, uxynd, kxynmu, N0)
+function [fxyn, DfxynDuxyn, DfxynDuxynd] = ...
+        ELDRYFRICT(t, uxyn, uxynd, Kt, kn, mu, gap, varargin)
 %ELDRYFICT returns the forces and jacobians for the elastic dry friction model
 %
 % USAGE:
 % ------  
-%   [fxyn, zxy, DfxynDuxyn, DfxynDuxynd] = ELDRYFRICT(uxyn, zxy, uxynd, kxynmu, N0);
+%   [fxyn, zxy, DfxynDuxyn, DfxynDuxynd] = ...
+%      ELDRYFRICT(t, uxyn, uxynd, Kt, kn, mu, gap, tp, uxynp, fxynp, dfxynp, h)
 % INPUTS:
 % -------
-%   uxyn	  : (3,Np) [ux; uy; un]
-%   uxynd	  : (3,Np) [uxd; uyd; und]  
-%   zxy		  : (2,Np) [zx; zy]
-%   kxynmu	  : (4,Np) [kx; ky; kn; mu]
-%   N0		  : (1,Np) [N0]
+%   uxyn	  : (3*Np, 1) [[ux; uy; un]_1; [ux; uy; un]_2; ...]
+%   uxynd	  : (3*Np, 1) [[uxd; uyd; und]_1; [uxd; uyd; und]_2; ...]
+%   Kt		  : (3, Np) [[kx; ky; kxy]_1, [kx; ky; kxy]_2, ...]
+%   kn 		  : (1, Np) [kn1, kn2, ...]
+%   mu 		  : (1, Np) [mu1, ...]
+%   gap	 	  : (1, Np)
 % OUTPUTS:
 % --------
-%   fxyn	  : (3,Np) [fx; fy; fn]
+%   fxyn	  : (3*Np) 
 %   zxy		  : (2,Np) [zx; zy]
 %   DfxynDuxyn	  : (3,3,Np) [fx,x fx,y fx,z;
 %  			    fy,x fy,y fy,z;
@@ -21,74 +24,101 @@ function [fxyn, zxy, DfxynDuxyn, DfxynDuxynd, DfxynDkxynmu] = ELDRYFRICT(uxyn, z
 %   DfxynDuxynd   : (3,3,Np) [fx,xd fx,yd fx,zd;
 %  			     fy,xd fy,yd fy,zd;
 %  			     fz,xd fz,yd fz,zd];
-%   DfxynDkxynmu  : (3,4,Np) [fx,kx fx,ky fx,kn fx,mu;
-%                           fy,kx fy,ky fy,kn fy,mu;
-%                           fn,kx fn,ky fn,kn fn,mu];
 
-    error('This is work in progress and has to be debugged');
+error('This is work in progress and has to be debugged');
 
-  Np = size(uxyn, 2);
-  fxyn = zeros(3, Np);
-  DfxynDuxyn = zeros(3, 3, Np);
-  DfxynDuxynd = zeros(3, 3, Np); DfxynDkxynmu = zeros(3, 4, Np);
+  Np = length(uxyn)/3;
   
-				% 1. STICK (PREDICTION)
-  fxyn(1, :) = kxynmu(1,:).*(uxyn(1, :)-zxy(1, :));
-  fxyn(2, :) = kxynmu(2,:).*(uxyn(2, :)-zxy(2, :));
-  fxyn(3, :) = kxynmu(3,:).*max(uxyn(3, :)+N0./kxynmu(3,:), 0);
-					      % Derivatives
-  DfxynDuxyn(1, 1, :) = kxynmu(1,:); % fx,ux
-  DfxynDuxyn(2, 2, :) = kxynmu(2,:); % fx,uy
-  DfxynDuxyn(3, 3, :) = kxynmu(3,:); % fx,un
-				     % Parameter derivatives
-  DfxynDkxynmu(1, 1, :) = uxyn(1,:)-zxy(1,:); % fx,kx
-  DfxynDkxynmu(2, 2, :) = uxyn(2,:)-zxy(2,:); % fy,ky
-  DfxynDkxynmu(3, 3, :) = uxyn(3,:); % fn,kn
-
-				% 2. SEPARATION
-  isep = find(fxyn(3,:)==0);  % indices of separated points
-  zxy(:, isep) = uxyn(1:2, isep);
-				% Everything is zero when separated
-  fxyn(:, isep) = 0;
-  DfxynDuxyn(:, :, isep) = 0;
-  DfxynDuxynd(:, :, isep) = 0;
-  DfxynDkxynmu(:, :, isep) = 0;
-
-				      % 3. SLIP
-  fT = sqrt(sum(fxyn(1:2, :).^2, 1));  % Tangential force magnitude
-  fslip = kxynmu(4,:).*fxyn(3, :);        % Slip force magnitude
-
-  islips = find(fT>fslip);       % indices of slipped points
-  islips = setdiff(islips, isep);% Not interested in separated points - everything's zero there
-  
-  fT(fT<eps) = 1.0;  % Avoid dividing by zeros
-  if length(islips) ~= 0
-				% Derivatives
-    DfxynDuxyn(1, 1, islips) = fslip(islips).*fxyn(2,islips).^2.*kxynmu(1,islips)./fT(islips).^3;% fx,ux
-    DfxynDuxyn(1, 2, islips) = -fslip(islips).*prod(fxyn(1:2,islips),1).*kxynmu(2,islips)./fT(islips).^3;% fx,uy
-    DfxynDuxyn(1, 3, islips) = kxynmu(4,islips).*kxynmu(3,islips).*fxyn(1,islips)./fT(islips);% fx,un
-    
-    DfxynDuxyn(2, 1, islips) = -fslip(islips).*prod(fxyn(1:2,islips),1).*kxynmu(1,islips)./fT(islips).^3;% fy,ux
-    DfxynDuxyn(2, 2, islips) = fslip(islips).*fxyn(1,islips).^2.*kxynmu(2,islips)./fT(islips).^3;% fy,uy
-    DfxynDuxyn(2, 3, islips) = kxynmu(4,islips).*kxynmu(3,islips).*fxyn(2,islips)./fT(islips);% fx,un
-				% Parameter Derivatives
-    DfxynDkxynmu(1, 1, islips) = fslip(islips).*fxyn(2,islips).^2.*(uxyn(1,islips)-zxy(1,islips))./fT(islips).^3;% fx,kx
-    DfxynDkxynmu(1, 2, islips) = -fslip(islips).*prod(fxyn(1:2,islips),1).*(uxyn(2,islips)-zxy(2,islips))./fT(islips).^3;% fx,ky
-    DfxynDkxynmu(1, 3, islips) = kxynmu(4,islips).*uxyn(3,islips).*fxyn(1,islips)./fT(islips);% fx,kn
-    DfxynDkxynmu(1, 4, islips) = (fslip(islips)./kxynmu(4,islips)).*fxyn(1,islips)./fT(islips);% fx,mu
-
-    DfxynDkxynmu(2, 1, islips) = -fslip(islips).*prod(fxyn(1:2,islips),1).*(uxyn(1,islips)-zxy(1,islips))./fT(islips).^3;% fy,kx  
-    DfxynDkxynmu(2, 2, islips) = fslip(islips).*fxyn(1,islips).^2.*(uxyn(2,islips)-zxy(2,islips))./fT(islips).^3;% fy,ky
-    DfxynDkxynmu(2, 3, islips) = kxynmu(4,islips).*uxyn(3,islips).*fxyn(2,islips)./fT(islips);% fy,kn
-    DfxynDkxynmu(2, 4, islips) = (fslip(islips)./kxynmu(4,islips)).*fxyn(2,islips)./fT(islips);% fy,mu
-
-				% Update forces to lie on slip-cone
-    fxyn(1:2, islips) = fxyn(1:2, islips).*repmat(fslip(islips)./fT(islips), 2, 1);
-
-    zxy(:, islips) = uxyn(1:2, islips) - fxyn(1:2, islips)./kxynmu(1:2, islips);
+  if nargin==4  % static or transient without initial state
+      h = 0;
+      tp = 0;
+      uxynp = zeros(Np*3, 1);
+      fxynp = zeros(Np*3, 1);
+      dfxynp = zeros(Np*3, Np*3);
+  elseif nargin==9
+      tp = varargin{1};
+      uxynp = varargin{2};
+      fxynp = varargin{3};
+      dfxynp = varargin{4};
+      h = varargin{5};
+  else
+      fprintf('%d inputs unknown\n',nargin);
+      keyboard
+      error(sprintf('%d inputs unknown',nargin));      
   end
+  h = h(:);
+  del_cst = [cos(h(h~=0)*t) sin(h(h~=0)*t)]'-[cos(h(h~=0)*tp) sin(h(h~=0)*tp)]';
+  del_cst = [zeros(1, h(1)==0), del_cst(:)'];
+  
+  cst = [cos(h(h~=0)*t) sin(h(h~=0)*t)]';
+  cst = [ones(1, h(1)==0), cst(:)'];
+  
+  if numel(Kt)==3 || length(mu)==1 || length(kn)==1 || length(gap)==1
+      Kt  = repmat(Kt(:), 1, Nd);
+      kn  = kn*ones(1, Nd);
+      mu  = mu*ones(1, Nd);
+      gap = gap*ones(1, Nd);
+  end
+  
+  fxyn = zeros(Np*3, 1);
+  DfxynDuxyn = zeros(Np*3, Np*3, length(del_cst));
+  DfxynDuxynd = zeros(Np*3, Np*3, length(del_cst))
+  for di=1:Nd
+      xi = (di-1)*3+1;
+      yi = (di-1)*3+2;
+      ni = (di-1)*3+3;
+      
+      fxyn(ni) = max(kn(di)*(uxyn(ni)-gap(di)), 0);
+      if fxyn(ni)==0  % separation
+          fxyn(xi) = 0;
+          fxyn(yi) = 0;
+          
+          DfxynDuxyn(ni, [xi yi ni], :) = 0;
+          
+          DfxynDuxyn(xi, [xi yi ni], :) = 0;
+          
+          DfxynDuxyn(yi, [xi yi ni], :) = 0;
+      else  % contact
+          
+          % Update Normal Jacobian
+          DfxynDuxyn(ni, [xi yi], :) = 0;
+          DfxynDuxyn(ni, ni, :) = kn(di)*cst;
+          
+          % Predictor-Corrector for Tangential Forces
+          Kmat = [Kt(1, di), Kt(3, di);
+                  Kt(3, di), Kt(2, di)];
+          fslip = mu(di)*fxyn(ni);
 
-  % Remove N0 (unbalanced static force, assumed to just exist to activate the sliders)
-  fxyn(3, :) = fxyn(3, :) - N0;
-  fxyn(3, isep) = 0;
+          % Stick Prediction
+          fxystick = Kmat*(uxyn([xi;yi])-uxynp([xi;yi])) + fxynp([xi;yi]);
+          fT = sqrt(fxystick'*fxystick);
+          
+          % Stick stiffness
+          DfxyDuxystick = Kmat.*permute(del_cst, [1, 3, 2]) + ...
+              DfxynDuxyn([xi; yi], [xi yi], :);
+          
+          % Slip Correction
+          if fT<fslip  % stick
+              fxyn([xi;yi]) = fxystick;
+              
+              DfxynDuxyn([xi; yi], [xi yi], :) = Dfxyuxystick;
+              DfxynDuxyn([xi; yi], ni, :) = 0;
+          else
+              fxyn([xi;yi]) = (fslip/fT)*fxystick;
+              
+              dfT = (fxystick(1)*DfxyDuxystick(1,:,:) + ...
+                     fxystick(2)*DfxyDuxystick(2,:,:))/(2*fT);
+              dfSlipdn = mu(di)*DfxynDuxyn(ni, ni, :);
+
+              DfxynDuxyn([xi; yi], [xi yi], :) = (fslip/fT)*DfxyDuxystick;
+              
+              DfxynDuxyn(xi, [xi yi], :) = DfxynDuxyn(xi, [xi yi], :) + ...
+                  - (fslip/fT^2)*dFT*fxystick(1);
+              DfxynDuxyn(yi, [xi yi], :) = DfxynDuxyn(yi, [xi yi], :) + ...
+                  - (fslip/fT^2)*dFT*fxystick(2);
+
+              DfxynDuxyn([xi; yi], ni, :) = (dfSlipdn/fT).*fxystick;
+          end
+      end
+  end
 end

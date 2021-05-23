@@ -233,7 +233,7 @@ function [Ul, eflag, dUl, nits] = CORRECTORFUN(func, Ul0, Ulpred, dUl0, ds, parm
     %% Flag Function
     flagfun = @(e, e0, r, u) 1*(u<opts.utol) + 2*(e/e0<opts.reletol) + ...
         4*(e<opts.etol) + 8*(r<opts.rtol) + ...
-        16*(u<eps | r<eps);
+        16*(u<eps | r<eps | abs(e/e0)<eps);
 
     %% Evaluate Algebraic function & Arc-Length Parametrization
     [R, dRdU, dRdl] = func(Dscale.*Ul);

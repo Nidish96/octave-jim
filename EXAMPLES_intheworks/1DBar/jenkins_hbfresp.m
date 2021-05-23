@@ -66,7 +66,7 @@ fnl = @(t, u, varargin) JENKFORCE(t, u, kt, muN, varargin{:});
 GM = GM.SETNLFUN(2+3, Lb(end,:), fnl);
 
 %% HBM Fresp
-h = 0:5;
+h = 0:1;
 Nhc = sum((h==0)+2*(h~=0));
 
 Nt = 2^9;
@@ -112,13 +112,24 @@ end
 % load(sprintf('./DATA/Jenkins_EPMC.mat',cfg), 'UwxC');
 
 %% EPMC
+h = 0:3;
+Nhc = sum((h==0)+2*(h~=0));
+
+Nt = 2^9;
+Fl = kron([0; 1; 0; zeros(Nhc-3,1)], Lb(end,:)');
+
 As = -2;
 Ae = 2;
-da = 0.02;
+da = 0.1;
 
-Copt = struct('Nmax', 1000, 'DynScale', 1, 'crit', 6);
+Copt = struct('Nmax', 1000, 'DynScale', 1, 'stepadapt', 0, 'ITMAX', 100);
 
 Uwx0 = [kron([0; 0; 1; zeros(Nhc-3,1)], V(:,1)); Wsp(1); 2*Zetas(1)*Wsp(1)];
+% Use this callback to view plot as it evolves
+figure(5)
+% Copt.CallbackFun = @(Uwxa, dUwxas, Uwxapred, Copt) plot(Uwxa(end,:), Uwxa(end-2,:), '.-', Uwxa(end, end-1), Uwxa(end-2, end-1), 'o', Uwxapred(end), Uwxapred(end-2), '*');  % Live Plot Frequency
+Copt.CallbackFun = @(Uwxa, dUwxas, Uwxapred, Copt) plot(Uwxa(end,:), Uwxa(end-1,:)./(2*Uwxa(end-2,:)), '.-', Uwxa(end, end-1), Uwxa(end-1, end-1)./(2*Uwxa(end-2, end-1)), 'o', Uwxapred(end), Uwxapred(end-1)/(2*Uwxapred(end-2)), '*');  % Live Plot Damping
+clf();
 [UwxC, dUwxC] = PRECOCONT(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt, 1e-6), Uwx0, As, Ae, da, Copt);
 
 Ubb = UwxC(1:end-3, :).*(10.^UwxC(end,:));  % Displacements
