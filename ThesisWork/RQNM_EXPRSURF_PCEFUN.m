@@ -104,7 +104,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     Xis(1) = xi(Ixs(1));  Wis(1) = wi(Ixs(1));
     
     % 2. Micro-Scale Lambda
-    [xi, ~] = GPHWT(Nq_pces(2));
+    [xi, wi] = GPHWT(Nq_pces(2));
     lamt1i = R1top.LLX0s_sd(:,1)+R1top.LLX0s_sd(:,3)*xi(Ixs(2));
     lamt2i = R2top.LLX0s_sd(:,1)+R2top.LLX0s_sd(:,3)*xi(Ixs(2));
     lamb1i = R1bot.LLX0s_sd(:,1)+R1bot.LLX0s_sd(:,3)*xi(Ixs(2));
@@ -121,14 +121,14 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     % 3. Prestress
     Plevels = [12002 12075 12670];
     Psd = 2500;
-    [xi, ~] = GPHWT(Nq_pces(3));
+    [xi, wi] = GPHWT(Nq_pces(3));
     Prestress = mean(Plevels)+Psd*xi(Ixs(3));
     Xis(3) = xi(Ixs(3));  Wis(3) = wi(Ixs(3));
     
     % 4-5. Rotx-Roty
     theta_sd = deg2rad(15);
-    [xi1, ~] = GPHWT(Nq_pces(4));
-    [xi2, ~] = GPHWT(Nq_pces(5));
+    [xi1, wi1] = GPHWT(Nq_pces(4));
+    [xi2, wi2] = GPHWT(Nq_pces(5));
     thetas = theta_sd*[xi1(Ixs(4)); xi2(Ixs(5))];
     TFM = [1,  0               , 0; 
            0,  cos(thetas(1)), sin(thetas(1));
@@ -147,10 +147,10 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
      gapr = (gap1r+gap2r)/2;
      gapr_sd = sqrt(gap1r_sd.^2+gap2r_sd.^2)/2;
      
-     Xis(4:5) = xi(Ixs(4:5));  Wis(4:5) = wi(Ixs(4:5));
+     Xis(4:5) = [xi1(Ixs(4)); xi2(Ixs(5))];  Wis(4:5) = [wwi1(Ixs(4)); wi2(Ixs(5))];
      
      % 6. Gap
-     [xi, ~] = GPHWT(Nq_pces(6));
+     [xi, wi] = GPHWT(Nq_pces(6));
      gap = gapr(:)+gapr_sd(:)*xi(Ixs(6));
      Xis(6) = xi(Ixs(6));  Wis(6) = wi(Ixs(6));
      
@@ -217,8 +217,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     % As = logspace(-6, -3, Na);
     As = [-As(end:-1:1) As]';
     Eflags = zeros(1, 2*Na);
-    load('rqnmsolmm1.mat', 'UlC')
-    % UlC = zeros(GM.Ndofs+1, 2*Na);
+    % load('rqnmsolmm1.mat', 'UlC')
+    UlC = zeros(GM.Ndofs+1, 2*Na);
     dUdalC = zeros(GM.Ndofs+1, 2*Na);
 
     ul0 = [Ustat+Vstat(:,1)*As(Na+1); Wstat(1)^2];
