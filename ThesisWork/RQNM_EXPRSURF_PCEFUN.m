@@ -104,7 +104,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     Xis(1) = xi(Ixs(1));  Wis(1) = wi(Ixs(1));
     
     % 2. Micro-Scale Lambda
-    [xi, ~] = GPHWT(Nq_pces(2));
+    [xi, wi] = GPHWT(Nq_pces(2));
     lamt1i = R1top.LLX0s_sd(:,1)+R1top.LLX0s_sd(:,3)*xi(Ixs(2));
     lamt2i = R2top.LLX0s_sd(:,1)+R2top.LLX0s_sd(:,3)*xi(Ixs(2));
     lamb1i = R1bot.LLX0s_sd(:,1)+R1bot.LLX0s_sd(:,3)*xi(Ixs(2));
@@ -120,8 +120,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
 
     % 3. Prestress
     Plevels = [12002 12075 12670];
-    % Psd = 2500;
-    Psd = 600;
+    Psd = 2500;
+%     Psd = 600;
     [xi, wi] = GPHWT(Nq_pces(3));
     Prestress = mean(Plevels)+Psd*xi(Ixs(3));
     Xis(3) = xi(Ixs(3));  Wis(3) = wi(Ixs(3));
