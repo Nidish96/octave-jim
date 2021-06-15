@@ -28,14 +28,25 @@ ecs = colormap(lines(length(ps)));
 fcs = kron(ps(:)/2, [1 1 1]);
 falph = 0.2;
 
-parms = {'mu', 'msc', 'gap', 'pres', 'rot'};
-pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1])};
+% [mu, msc, prestress, rotx, roty, gap]
+parms = {'mu', 'msc', 'pres', 'rot', 'gap'};
+pdists = {makedist('exp'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1]), makedist('normal')};
 lims = [[0 inf]; repmat([-inf inf], 4, 1)];
-Nsamps = [0; 10000; 0; 10000; 10000];
+Nsamps = [0; 10000; 10000; 10000; 0];
 ttls = {'Coefficient of Friction', 'Mean Asperity Height', ...
-    'Meso-Scale Topology', 'Prestress', 'Stage Rotation'};
+    'Prestress', 'Stage Rotation', 'Meso-Scale Topology'};
 lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
-    '$gap\sim \mathcal{N}(\cdot, \cdot)$', '$P\sim \mathcal{N}(\cdot, \cdot)$', '$\theta_{X,Y}\sim \mathcal{N}^2(\cdot, \cdot)$'};
+    '$P\sim \mathcal{N}(\cdot, \cdot)$', '$\theta_{X,Y}\sim \mathcal{N}^2(\cdot, \cdot)$', ...
+    '$gap\sim \mathcal{N}(\cdot, \cdot)$',};
+
+% parms = {'mu', 'msc', 'gap', 'pres', 'rot'};
+% pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1])};
+% lims = [[0 inf]; repmat([-inf inf], 4, 1)];
+% Nsamps = [0; 10000; 0; 10000; 10000];
+% ttls = {'Coefficient of Friction', 'Mean Asperity Height', ...
+%     'Meso-Scale Topology', 'Prestress', 'Stage Rotation'};
+% lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
+%     '$gap\sim \mathcal{N}(\cdot, \cdot)$', '$P\sim \mathcal{N}(\cdot, \cdot)$', '$\theta_{X,Y}\sim \mathcal{N}^2(\cdot, \cdot)$'};
 Nqps = 10;
 for i=1:length(parms)
 %     if strcmp(parms{i}, 'pres')
@@ -139,7 +150,7 @@ for i=1:length(parms)
 end
 
 %% Sobol Indices
-for i=5
+for i=4
     fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
     load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
     
@@ -184,6 +195,7 @@ for i=5
     legend(aa, '$S_{\theta_{X}}$', '$S_{\theta_{Y}}$', '$S_{\theta_{X}, \theta_{Y}}$', 'Location', 'west')
     
     ylabel('Sobol Indices')
+    export_fig(sprintf('./%sPCE/Sobol_%spce_WBB.png', upper(parms{i}), parms{i}), '-dpng');
     
     figure((i-1)*2+21)
     clf()
@@ -208,6 +220,7 @@ for i=5
     ylim([-0.1 1.1])
     
     ylabel('Sobol Indices')
+    export_fig(sprintf('./%sPCE/Sobol_%spce_ZBB.png', upper(parms{i}), parms{i}), '-dpng');
 end
 %% Static Natural Frequencies
 Wsex = zeros(3,1);  Zsex = zeros(3,1);
@@ -259,9 +272,9 @@ for i=1:length(parms)
     end
 end
 
-Labels = {'$\mu$', '$\lambda$', '$gap$', '$P$', '$\theta_{X,Y}$'};
+Labels = {'$\mu$', '$\lambda$', '$P$', '$\theta_{X,Y}$', '$gap$'};
 Labels = {'[Fric-Coef.]', '[Asp-Hgts.]', ...
-    '[Top.]', '[Prest.]', '[Rotn. (X,Y)]'};
+    '[Prest.]', '[Rotn. (X,Y)]', '[Top.]'};
 nplot = 5;
 for i=1:length(mdis)
     figure(i*1000)
