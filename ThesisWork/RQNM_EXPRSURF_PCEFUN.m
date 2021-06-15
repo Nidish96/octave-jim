@@ -127,32 +127,28 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     Xis(3) = xi(Ixs(3));  Wis(3) = wi(Ixs(3));
     
     % 4-5. Rotx-Roty
-    theta_sd = deg2rad(15);
     [xi1, wi1] = GPHWT(Nq_pces(4));
     [xi2, wi2] = GPHWT(Nq_pces(5));
+    theta_sd = deg2rad(15);
     thetas = theta_sd*[xi1(Ixs(4)); xi2(Ixs(5))];
+    % 6. Gap
+    [xi, wi] = GPHWT(Nq_pces(6));
+
     TFM = [1,  0               , 0; 
            0,  cos(thetas(1)), sin(thetas(1));
            0, -sin(thetas(1)), cos(thetas(1))]*...
         [cos(thetas(2)), 0, -sin(thetas(2));
          0               , 1,  0;
          sin(thetas(2)), 0,  cos(thetas(2))];  % Transformation for gap
-     xygs = [MESH.Qm*MESH.Nds R1top.BilinPlaneQPs(:,1) R2top.BilinPlaneQPs(:,1) R1bot.BilinPlaneQPs(:,1) R2bot.BilinPlaneQPs(:,1)];
-     xygs_sd = [MESH.Qm*MESH.Nds R1top.BilinPlaneQPs(:,2) R2top.BilinPlaneQPs(:,2) R1bot.BilinPlaneQPs(:,2) R2bot.BilinPlaneQPs(:,2)];
+     gtops = [(R1top.BilinPlaneQPs(:,1)+xi(Ixs(6))*R1top.BilinPlaneQPs(:,2)) (R2top.BilinPlaneQPs(:,1)+xi(Ixs(6))*R2top.BilinPlaneQPs(:,2))];
+     gbots = [(R1bot.BilinPlaneQPs(:,1)+xi(Ixs(6))*R1bot.BilinPlaneQPs(:,2)) (R2bot.BilinPlaneQPs(:,1)+xi(Ixs(6))*R2bot.BilinPlaneQPs(:,2))];
+     xygs = [MESH.Qm*MESH.Nds gtops gbots];
      gap1r = xygs(:, [1 2 3])*TFM(:, 3) - xygs(:, [1 2 5])*TFM(:, 3);
-     gap1r_sd = sqrt((xygs_sd(:, [1 2 3])*TFM(:, 3)).^2 + (xygs_sd(:, [1 2 5])*TFM(:, 3)).^2);
-     
      gap2r = xygs(:, [1 2 4])*TFM(:, 3) - xygs(:, [1 2 6])*TFM(:, 3);
-     gap2r_sd = sqrt((xygs_sd(:, [1 2 4])*TFM(:, 3)).^2 + (xygs_sd(:, [1 2 6])*TFM(:, 3)).^2);
      
      gapr = (gap1r+gap2r)/2;
-     gapr_sd = sqrt(gap1r_sd.^2+gap2r_sd.^2)/2;
      
      Xis(4:5) = [xi1(Ixs(4));xi2(Ixs(5))];  Wis(4:5) = [wi1(Ixs(4));wi2(Ixs(5))];
-     
-     % 6. Gap
-     [xi, wi] = GPHWT(Nq_pces(6));
-     gap = gapr(:)+gapr_sd(:)*xi(Ixs(6));
      Xis(6) = xi(Ixs(6));  Wis(6) = wi(Ixs(6));
      
     %% Run Simulations
