@@ -32,11 +32,15 @@ function [] = SHOWFIELD2D(m, varargin)
       U = U(:,1);
   end
 
-  if length(U)==m.Ne*m.Nq^2
+  if length(U)==m.Ne
+      U = U;
+  elseif length(U)==m.Ne*m.Nq^2
     U = m.Qm\U;  % Least-Squares fit on the nodes for depiction
-    alpha = alpha(1:m.Ne);
+    alpha = alpha(1:m.Nn);
   end
-  if length(alpha)==m.Ne*m.Nq^2
+  if length(alpha)==m.Ne
+      alpha = alpha;
+  elseif length(alpha)==m.Ne*m.Nq^2
     alpha = m.Qm\alpha;  % Least-Squares fit on the nodes for depiction
   end
 

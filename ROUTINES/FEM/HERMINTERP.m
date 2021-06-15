@@ -25,7 +25,7 @@ function [Uq, Nint, dNint, qis, eis] = HERMINTERP(X, U, Xq)
     [qis, si] = unique(qis);  eis = eis(si);
     
     if sum(qis(:)'-(1:length(qis)))~=0
-        keyboard
+%         keyboard
         error('no way')
     end
     

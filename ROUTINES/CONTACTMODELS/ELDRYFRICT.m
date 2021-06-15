@@ -1,15 +1,13 @@
-function [fxyn, DfxynDuxyn, DfxynDuxynd] = ...
-        ELDRYFRICT(t, uxyn, uxynd, Kt, kn, mu, gap, varargin)
+function [fxyn, DfxynDuxyn] = ELDRYFRICT(t, uxyn, Kt, kn, mu, gap, varargin)
 %ELDRYFICT returns the forces and jacobians for the elastic dry friction model
 %
 % USAGE:
 % ------  
-%   [fxyn, zxy, DfxynDuxyn, DfxynDuxynd] = ...
-%      ELDRYFRICT(t, uxyn, uxynd, Kt, kn, mu, gap, tp, uxynp, fxynp, dfxynp, h)
+%   [fxyn, zxy, DfxynDuxyn] = ...
+%      ELDRYFRICT(t, uxyn, Kt, kn, mu, gap, tp, uxynp, fxynp, dfxynp, h)
 % INPUTS:
 % -------
 %   uxyn	  : (3*Np, 1) [[ux; uy; un]_1; [ux; uy; un]_2; ...]
-%   uxynd	  : (3*Np, 1) [[uxd; uyd; und]_1; [uxd; uyd; und]_2; ...]
 %   Kt		  : (3, Np) [[kx; ky; kxy]_1, [kx; ky; kxy]_2, ...]
 %   kn 		  : (1, Np) [kn1, kn2, ...]
 %   mu 		  : (1, Np) [mu1, ...]
@@ -21,26 +19,28 @@ function [fxyn, DfxynDuxyn, DfxynDuxynd] = ...
 %   DfxynDuxyn	  : (3,3,Np) [fx,x fx,y fx,z;
 %  			    fy,x fy,y fy,z;
 %  			    fz,x fz,y fz,z];
-%   DfxynDuxynd   : (3,3,Np) [fx,xd fx,yd fx,zd;
-%  			     fy,xd fy,yd fy,zd;
-%  			     fz,xd fz,yd fz,zd];
 
-error('This is work in progress and has to be debugged');
+% error('This is work in progress and has to be debugged');
 
   Np = length(uxyn)/3;
   
-  if nargin==4  % static or transient without initial state
-      h = 0;
+  if nargin==6  % static or transient without initial state
+      h  = 0;
       tp = 0;
-      uxynp = zeros(Np*3, 1);
-      fxynp = zeros(Np*3, 1);
+      uxynp  = zeros(Np*3, 1);
+      fxynp  = zeros(Np*3, 1);
       dfxynp = zeros(Np*3, Np*3);
-  elseif nargin==9
+      dfxynp(1:3:end, 1:3:end, :) = Kt(1,:);
+      dfxynp(1:3:end, 2:3:end, :) = Kt(3,:);
+      dfxynp(2:3:end, 1:3:end, :) = Kt(3,:);
+      dfxynp(2:3:end, 2:3:end, :) = Kt(2,:);
+      dfxynp(3:3:end, 3:3:end, :) = kn;
+  elseif nargin==11
       tp = varargin{1};
-      uxynp = varargin{2};
-      fxynp = varargin{3};
+      uxynp  = varargin{2};
+      fxynp  = varargin{3};
       dfxynp = varargin{4};
-      h = varargin{5};
+      h      = varargin{5};
   else
       fprintf('%d inputs unknown\n',nargin);
       keyboard
@@ -54,16 +54,15 @@ error('This is work in progress and has to be debugged');
   cst = [ones(1, h(1)==0), cst(:)'];
   
   if numel(Kt)==3 || length(mu)==1 || length(kn)==1 || length(gap)==1
-      Kt  = repmat(Kt(:), 1, Nd);
-      kn  = kn*ones(1, Nd);
-      mu  = mu*ones(1, Nd);
-      gap = gap*ones(1, Nd);
+      Kt  = repmat(Kt(:), 1, Np);
+      kn  = kn*ones(1, Np);
+      mu  = mu*ones(1, Np);
+      gap = gap*ones(1, Np);
   end
   
   fxyn = zeros(Np*3, 1);
   DfxynDuxyn = zeros(Np*3, Np*3, length(del_cst));
-  DfxynDuxynd = zeros(Np*3, Np*3, length(del_cst))
-  for di=1:Nd
+  for di=1:Np
       xi = (di-1)*3+1;
       yi = (di-1)*3+2;
       ni = (di-1)*3+3;
@@ -88,37 +87,38 @@ error('This is work in progress and has to be debugged');
           Kmat = [Kt(1, di), Kt(3, di);
                   Kt(3, di), Kt(2, di)];
           fslip = mu(di)*fxyn(ni);
+          dfSlipdn = mu(di)*DfxynDuxyn(ni, ni, :);
 
           % Stick Prediction
           fxystick = Kmat*(uxyn([xi;yi])-uxynp([xi;yi])) + fxynp([xi;yi]);
           fT = sqrt(fxystick'*fxystick);
           
           % Stick stiffness
-          DfxyDuxystick = Kmat.*permute(del_cst, [1, 3, 2]) + ...
-              DfxynDuxyn([xi; yi], [xi yi], :);
+          DfxyDuxynstick = [Kmat [0;0]].*permute(del_cst, [1, 3, 2]) + ...
+              dfxynp([xi; yi], [xi yi ni], :);
           
           % Slip Correction
           if fT<fslip  % stick
               fxyn([xi;yi]) = fxystick;
               
-              DfxynDuxyn([xi; yi], [xi yi], :) = Dfxyuxystick;
-              DfxynDuxyn([xi; yi], ni, :) = 0;
+              DfxynDuxyn([xi; yi], [xi yi ni], :) = DfxyDuxynstick;
           else
+%               fxyn([xi;yi]) = fxystick;
+              
+%               DfxynDuxyn([xi; yi], [xi yi ni], :) = DfxyDuxynstick;
+              
               fxyn([xi;yi]) = (fslip/fT)*fxystick;
               
-              dfT = (fxystick(1)*DfxyDuxystick(1,:,:) + ...
-                     fxystick(2)*DfxyDuxystick(2,:,:))/(2*fT);
-              dfSlipdn = mu(di)*DfxynDuxyn(ni, ni, :);
-
-              DfxynDuxyn([xi; yi], [xi yi], :) = (fslip/fT)*DfxyDuxystick;
+              dfT = (fxystick(1)*DfxyDuxynstick(1,:,:) + ...
+                     fxystick(2)*DfxyDuxynstick(2,:,:))/(fT);
               
-              DfxynDuxyn(xi, [xi yi], :) = DfxynDuxyn(xi, [xi yi], :) + ...
-                  - (fslip/fT^2)*dFT*fxystick(1);
-              DfxynDuxyn(yi, [xi yi], :) = DfxynDuxyn(yi, [xi yi], :) + ...
-                  - (fslip/fT^2)*dFT*fxystick(2);
+              DfxynDuxyn([xi; yi], [xi yi ni], :) = (fslip/fT)*DfxyDuxynstick - ...
+                  [(fslip/fT^2)*dfT*fxystick(1); ...
+                   (fslip/fT^2)*dfT*fxystick(2)];
 
-              DfxynDuxyn([xi; yi], ni, :) = (dfSlipdn/fT).*fxystick;
+              DfxynDuxyn([xi; yi], ni, :) = DfxynDuxyn([xi; yi], ni, :) + ...
+                  (dfSlipdn/fT).*fxystick;
           end
       end
-  end
+ 
 end

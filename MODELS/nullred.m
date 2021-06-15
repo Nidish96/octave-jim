@@ -3,7 +3,7 @@ clear all
 addpath('../ROUTINES/')
 addpath('../ROUTINES/FEM')
 
-model = 'BRB';
+model = 'BRB_Thesis';  % 'BRB'
 
 load(sprintf('./%s/MATRICES.mat',model), 'M', 'K', 'Fv', 'R');
 R = R';
@@ -35,7 +35,7 @@ Fvhcb = Th'*Fvrel;
 Thcb = Trel*Th;
 
 %% Fixed Interface RBMs
-[V, D] = eigs(Khcb(MESH.Nn*MESH.dpn+1:end, MESH.Nn*MESH.dpn+1:end),
+[V, D] = eigs(Khcb(MESH.Nn*MESH.dpn+1:end, MESH.Nn*MESH.dpn+1:end), ...
 	      Mhcb(MESH.Nn*MESH.dpn+1:end, MESH.Nn*MESH.dpn+1:end), 10, 'SM');
 [~, si] = sort(diag(D));
 V = V(:, si);
@@ -47,6 +47,8 @@ R = Rhcb*L;
 Fv = L'*Fvhcb;
 TFM = Thcb*L;  % Recover original system
 
+K = 0.5*(K+K');
+M = 0.5*(M+M');
 disp('DONE!')
 
 % save(sprintf('./%s/MATRICES_NR.mat',model), 'K', 'M', 'R', 'Fv', 'TFM', 'MESH', '-v7');

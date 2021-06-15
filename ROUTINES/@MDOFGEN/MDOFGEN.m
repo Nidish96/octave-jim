@@ -55,6 +55,8 @@ classdef MDOFGEN
             nlfun.type = type;
             if nlfun.type > 5  % Non-self adjoint forcing
                 nlfun.Lf = Lf;
+            else
+                nlfun.Lf = [];
             end
             
             m.NLTs = [m.NLTs; nlfun];

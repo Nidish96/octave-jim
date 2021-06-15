@@ -27,13 +27,31 @@ function [R, dRdUl, dRdq] = RQMRESFUN(m, Ulq, lsc, varargin)
         dQdlq = 1.0;
     end
     
+    if length(varargin)==2
+        Ustat = varargin{2};
+%       tp = varargin{1};
+%       uxynp = varargin{2};
+%       fxynp = varargin{3};
+%       dfxynp = varargin{4};
+%       h = varargin{5};
+    else
+        Ustat = zeros(size(Ulq(1:end-2)));
+    end
+    
     FNL = zeros(m.Ndofs,1);
     dFNL = zeros(m.Ndofs);
     for ni=1:length(m.NLTs)
         if mod(m.NLTs(ni).type,2)==0
-            [Fnl, dFnl, ~] = m.NLTs(ni).func(0,  m.NLTs(ni).L*Ulq(1:end-2));  % Additional arguments ignored, implying zeros
+            [Fnl, dFnl, ~] = m.NLTs(ni).func(0,  m.NLTs(ni).L*Ulq(1:end-2), 0);  % Additional arguments ignored, implying zeros
         else
-            [Fnl, dFnl] = m.NLTs(ni).func(0,  m.NLTs(ni).L*Ulq(1:end-2));  % Additional arguments ignored, implying zeros
+            if length(varargin)>=2  % static solution provided
+                [Fs, dFs] = m.NLTs(ni).func(0, m.NLTs(ni).L*Ustat);
+                
+                [Fnl, dFnl] = m.NLTs(ni).func(0,  m.NLTs(ni).L*Ulq(1:end-2), ...
+                    0, m.NLTs(ni).L*Ustat, Fs, dFs, 0);  % Additional arguments ignored, implying zeros
+            else
+                [Fnl, dFnl] = m.NLTs(ni).func(0,  m.NLTs(ni).L*Ulq(1:end-2));  % Additional arguments ignored, implying zeros
+            end
         end
         
         if m.NLTs(ni).type<=5  % Self-adjoint forcing
@@ -58,11 +76,19 @@ function [R, dRdUl, dRdq] = RQMRESFUN(m, Ulq, lsc, varargin)
         Ustat = varargin{2};
         Fstat = varargin{1};
         
+%         R = [m.K*Ulq(1:end-2)+FNL-Ulq(end-1)*m.M*(Ulq(1:end-2)-Ustat) - Fstat;
+%             (Ulq(1:end-2)-Ustat)'*m.M*(Ulq(1:end-2)-Ustat)-Q^2];
+% 
+%         dRdUl = [m.K+dFNL-Ulq(end-1)*m.M, -m.M*(Ulq(1:end-2)-Ustat);
+%             2*(Ulq(1:end-2)-Ustat)'*m.M, 0];
+% 
+%         dRdq = [zeros(m.Ndofs,1);-2*Q*dQdlq]; 
+        
         R = [m.K*Ulq(1:end-2)+FNL-Ulq(end-1)*m.M*(Ulq(1:end-2)-Ustat) - Fstat;
             (Ulq(1:end-2)-Ustat)'*(m.K*Ulq(1:end-2)+FNL-Fstat)-Ulq(end-1)*Q^2];
 
-        dRdUl = [m.K+dFNL-Ulq(end-1)*m.M, -m.M*Ulq(1:end-2);
-            (Ulq(1:end-2)-Ustat)'*(K+dFNL)+Ulq(1:end-2)'*K+FNL'-Fstat', -Q^2];
+        dRdUl = [m.K+dFNL-Ulq(end-1)*m.M, -m.M*(Ulq(1:end-2)-Ustat);
+            (Ulq(1:end-2)-Ustat)'*(m.K+dFNL)+Ulq(1:end-2)'*m.K+FNL'-Fstat', -Q^2];
 
         dRdq = [zeros(m.Ndofs,1);-2*Ulq(end-1)*Q*dQdlq]; 
     else

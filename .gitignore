@@ -14,3 +14,16 @@ slurm*
 *eps
 *svg
 *png
+*.odb
+*.cae
+*.mdl
+*.prt
+*.sim
+*.stt
+*.msg
+*.com
+*.sta
+*.mtx
+*.rpy*
+*.sup
+*.fig
