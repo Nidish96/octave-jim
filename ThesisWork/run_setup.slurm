@@ -2,14 +2,14 @@
 #SBATCH --job-name=20$-1
 #SBATCH --ntasks=4
 #SBATCH --mem=20G
-#SBATCH --time=01:30:00
+#SBATCH --time=02:00:00
 # #SBATCH --mail-user=nb25@rice.edu
 # #SBATCH --mail-type=ALL
 #SBATCH --threads-per-core=1
 #SBATCH --cpus-per-task=4
 # #SBATCH --exclusive
 #SBATCH --partition=commons
-#SBATCH --output=./slurmouts
+# #SBATCH --output=/scratch/nb25/octave-jim/ThesisWork/slurmouts/
 #
 echo "I ran on:"
 cd $SLURM_SUBMIT_DIR
