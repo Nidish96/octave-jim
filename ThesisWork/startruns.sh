@@ -1,7 +1,11 @@
 #!/usr/bin/sh
 
-# 1. 1-5067
-# 2. 5068-10000
-for n in `seq 5068 10000`; do
-  sbatch --export=ALL,NDES=$n --job-name="D_$n" run_setup.slurm
+# Coeficient of Friction Study
+sis=12346
+nqpces=7
+
+for n in `seq 1 100`; do
+  printf "$n : "
+  sbatch --export=ALL,NDES=$n,NQPCES=$nqpces,sis=$sis --job-name="ROT_$n" --partition=scavenge run_setup.slurm
 done
+
