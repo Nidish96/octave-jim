@@ -60,17 +60,13 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     gapsd = sqrt((R1top.BilinPlaneQPs(:,2).^2+R1bot.BilinPlaneQPs(:,2).^2+R2top.BilinPlaneQPs(:,2).^2+R2bot.BilinPlaneQPs(:,2).^2)/4);  % Gap Standard Deviation
 
     %% Nasps, Lambda and z0
-    Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,2);
-    Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,2);
+    Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,1);
+    Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,1);
     Nasps = (Nasps1+Nasps2)/2;
 
     lam1 = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./R1top.LLX0s_sd(:,1)+R1bot.NASPS(:,1)./R1bot.LLX0s_sd(:,1));
     lam2 = (R2top.NASPS(:,1)+R2bot.NASPS(:,1))./(R2top.NASPS(:,1)./R2top.LLX0s_sd(:,1)+R2bot.NASPS(:,1)./R2bot.LLX0s_sd(:,1));
     lam = (lam1+lam2)/2;
-
-    z01 = -log(0.01)./lam1;
-    z02 = -log(0.01)./lam2;
-    z0 = (z01+z02)/2;
 
     % Collect
     Nasps = kron(Nasps, ones(Nq^2,1));
@@ -80,8 +76,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     z0 = log(Nasps)./lam;
 
     %% Curvature Radii
-    R1 = (R1top.CRAD(:,1).*R1top.NASPS(:,1)+R1bot.CRAD(:,1).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,2));
-    R2 = (R2top.CRAD(:,1).*R2top.NASPS(:,1)+R2bot.CRAD(:,1).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,2));
+    R1 = (R1top.CRAD(:,1).*R1top.NASPS(:,1)+R1bot.CRAD(:,1).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
+    R2 = (R2top.CRAD(:,1).*R2top.NASPS(:,1)+R2bot.CRAD(:,1).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
 
     Rad = (R1+R2)/2;
     Rad = kron(Rad, ones(Nq^2,1));
@@ -120,7 +116,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
 
     % 3. Prestress
     Plevels = [12002 12075 12670];
-    Psd = 2500;
+    Psd = 2100;
 %     Psd = 600;
     [xi, wi] = GPHWT(Nq_pces(3));
     Prestress = mean(Plevels)+Psd*xi(Ixs(3));
@@ -147,6 +143,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
      gap2r = xygs(:, [1 2 4])*TFM(:, 3) - xygs(:, [1 2 6])*TFM(:, 3);
      
      gapr = (gap1r+gap2r)/2;
+     gap = gapr-max(gapr);
      
      Xis(4:5) = [xi1(Ixs(4));xi2(Ixs(5))];  Wis(4:5) = [wi1(Ixs(4));wi2(Ixs(5))];
      Xis(6) = xi(Ixs(6));  Wis(6) = wi(Ixs(6));
