@@ -24,8 +24,7 @@ V = V(:,si);
 V = V./sqrt(diag(V'*M*V))';
 
 %% Continuation
-
-Amax = 1.5;
+Amax = 2.5;
 da = 0.1;
 
 ul0 = [V(:,1)*10^Amax; Wsp(1)^2];
@@ -54,7 +53,7 @@ Nt = 2^7;
 t = linspace(0, 2*pi, Nt+1)'; t(end) = [];
 qt = cos(t).*Qs';
 tic
-[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:), 8);
+[Lt, Nint, dNint] = HERMINTERP(As, Ln, qt(:));
 toc
 Lt = reshape(Lt, Nt, Nq);
 
@@ -77,6 +76,8 @@ Phi = (squeeze(Uh(1,:,:)-1j*Uh(2,:,:))./Qs)';
 % Damping
 tic
 Zts = zeros(Nq, 1);
+fnl = @(t, u, ud) 0.5*u.^3;
+GM.NLTs(1).func = fnl;
 parfor (qi=1:Nq, 8)
 %     size(sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M + squeeze(Udot(:, qi, :))*GM.C + squeeze(Ut(:, qi, :))*GM.K + GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)))),2))
     Zts(qi) = GETFOURIERCOEFF(0, sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M +...
@@ -90,22 +91,24 @@ save('./DATA/Stifnl_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi', 'UlC', 'dUlC', 'GM', 
 
 %% Load
 load('./DATA/Stifnl_RQNM.mat', 'Qs', 'Zts', 'Lams', 'Phi')
-
+load('./DATA/Stifnl_EPMC.mat', 'UwxC');
 %% Plot
 figure(1)
-% clf()
+clf()
 hold on
-plot(Qs, sqrt(Lams), '.-')
+semilogx(Qs, sqrt(Lams), '.-'); hold on
+plot(10.^UwxC(end,:), UwxC(end-2,:), '.-'); hold on
+set(gca, 'XScale', 'log')
 
 xlabel('Modal Amplitude')
 ylabel('Frequency (rad/s)')
 
 figure(2)
-% clf()
+clf()
 hold on
 plot(Qs, Zts, '.-')
 
-set(gca, 'YScale', 'log')
+% set(gca, 'YScale', 'log')
 xlabel('Modal Amplitude')
 ylabel('Damping Factor')
 

@@ -29,10 +29,10 @@ Nt = 2^10;
 
 As = -2;
 Ae = 3;
-da = 0.01;
+da = 0.001;
 
 Copt = struct('Nmax', 5000, ...
-    'dsmax', 0.1, 'dsmin', da/1000, ...
+    'dsmax', 0.01, 'dsmin', da/1000, ...
     'angopt', 1e-2);
 
 Uwx0 = [kron([0; 1; 1; zeros(Nhc-3,1)], V(:,1)); Wsp(1); 0];
@@ -41,10 +41,10 @@ Fl = kron([0; 1; 0; zeros(Nhc-3,1)], L');
 [UwxC, dUwxC] = CONTINUE(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt), Uwx0, As, Ae, da, Copt);
 
 %% Save
-save('./DATA/Stifnl_EPMC.mat', 'UwxC', 'dUwxC', 'h', 'Nhc');
+% save('./DATA/Stifnl_EPMC.mat', 'UwxC', 'dUwxC', 'h', 'Nhc');
 
 %% Load
-load('./DATA/Stifnl_EPMC.mat', 'UwxC');
+% load('./DATA/Stifnl_EPMC.mat', 'UwxC');
 
 %% Plot
 figure(1);

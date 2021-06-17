@@ -210,7 +210,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
 
     %% March
     Na = 10;
-    As = logspace(-0.5, 2.5, Na)*9.81/Wstat(1)^2;
+%     As = logspace(-0.5, 2.5, Na)*9.81/Wstat(1)^2;
+    As = logspace(-0.5, 2.5, Na)/Wstat(1)^2;
     % As = logspace(-6, -3, Na);
     As = [-As(end:-1:1) As]';
     Eflags = zeros(1, 2*Na);
@@ -264,7 +265,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     Ln = reshape([UlC(end,:); dUdalC(end,:)], 2*size(UlC,2), 1);
 
     Nq = 100;
-    Qs = logspace(-5.5, -2.625, Nq)';
+%     Qs = logspace(-5.5, -2.625, Nq)';
+    Qs = logspace(-5.5, -2.625, Nq)'/9.81;
 
     Nt = 2^7;
     t = linspace(0, 2*pi, Nt+1)'; t(end) = [];

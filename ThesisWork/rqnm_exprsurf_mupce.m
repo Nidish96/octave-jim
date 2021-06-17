@@ -59,8 +59,8 @@ gap = (gap1+gap2)/2;
 gapsd = sqrt((R1top.BilinPlaneQPs(:,2).^2+R1bot.BilinPlaneQPs(:,2).^2+R2top.BilinPlaneQPs(:,2).^2+R2bot.BilinPlaneQPs(:,2).^2)/4);  % Gap Standard Deviation
 
 %% Nasps, Lambda and z0
-Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,2);
-Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,2);
+Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,1);
+Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,1);
 Nasps = (Nasps1+Nasps2)/2;
 
 lam1 = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./R1top.LLX0s_sd(:,1)+R1bot.NASPS(:,1)./R1bot.LLX0s_sd(:,1));
@@ -79,8 +79,8 @@ lam   = kron(lam, ones(Nq^2,1));
 z0 = log(Nasps)./lam;
 
 %% Curvature Radii
-R1 = (R1top.CRAD(:,1).*R1top.NASPS(:,1)+R1bot.CRAD(:,1).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,2));
-R2 = (R2top.CRAD(:,1).*R2top.NASPS(:,1)+R2bot.CRAD(:,1).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,2));
+R1 = (R1top.CRAD(:,1).*R1top.NASPS(:,1)+R1bot.CRAD(:,1).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
+R2 = (R2top.CRAD(:,1).*R2top.NASPS(:,1)+R2bot.CRAD(:,1).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
 
 Rad = (R1+R2)/2;
 Rad = kron(Rad, ones(Nq^2,1));
@@ -306,7 +306,9 @@ for iq=1:length(Qs)
     wxps(iq, :) = sym2poly(wx(iq));
     zxps(iq, :) = sym2poly(zx(iq));
 end
-.Tick
+for iw=1:10
+    wsxps(iw, :) = sym2poly(wsx(iw));
+end
 
 save(sprintf('./MUPCE/mupce_N%d_cofs.mat', Nq_pce), 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'Integs', 'wxps', 'zxps', 'rxps', 'wsxps')
 

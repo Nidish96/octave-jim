@@ -21,6 +21,10 @@ exp(1) = load('./MATFILES/Mode1_Low.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 exp(2) = load('./MATFILES/Mode1_Med.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 exp(3) = load('./MATFILES/Mode1_High.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 
+for j=1:3
+    exp(j).AMP_avg = exp(j).AMP_avg/9.81;
+end
+
 % ps = [0.05 0.50 0.99];
 ps = [0.25 0.05];
 ecs = colormap(lines(length(ps)));
@@ -29,7 +33,9 @@ fcs = kron(ps(:)/2, [1 1 1]);
 falph = 0.2;
 
 % [mu, msc, prestress, rotx, roty, gap]
+apref = 'nlbb';
 parms = {'mu', 'msc', 'pres', 'rot', 'gap'};
+ids = {1, 2, 3, 45, 6};
 pdists = {makedist('exp'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1]), makedist('normal')};
 lims = [[0 inf]; repmat([-inf inf], 4, 1)];
 Nsamps = [0; 10000; 10000; 10000; 0];
@@ -49,16 +55,21 @@ lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
 %     '$gap\sim \mathcal{N}(\cdot, \cdot)$', '$P\sim \mathcal{N}(\cdot, \cdot)$', '$\theta_{X,Y}\sim \mathcal{N}^2(\cdot, \cdot)$'};
 Nqps = 10;
 for i=1:length(parms)
+% for i=5
 %     if strcmp(parms{i}, 'pres')
 %         fname = sprintf('./%sPCE_25/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
 %     else
-        fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
+%         fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
+        fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
 %     end
 
     if ~strcmp(parms{i}, 'rot')
         load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'rxps', 'wxps', 'zxps', 'Integs')
     else
         load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
+        if size(IJs,2)==6
+            IJs = IJs(:, [4 5]);
+        end
     end
     
     % Variances
@@ -91,10 +102,10 @@ for i=1:length(parms)
     set(gcf, 'Color', 'white')
     aa = gobjects(length(ps)+2, 1);
     for j=1:length(ps)
-        aa(j) = fill(Rcofs([1:end end:-1:1],1)/9.81, [WCIs(:,1,j); WCIs(end:-1:1,2,j)]/2/pi, fcs(j,:), 'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
+        aa(j) = fill(Rcofs([1:end end:-1:1],1), [WCIs(:,1,j); WCIs(end:-1:1,2,j)]/2/pi, fcs(j,:), 'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
         legend(aa(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', ps(j)*100, (1-ps(j))*100));
     end
-    aa(length(ps)+1) = semilogx(Rcofs(:,1)/9.81, Wcofs(:,1)/2/pi, 'b-', 'LineWidth', 1);
+    aa(length(ps)+1) = semilogx(Rcofs(:,1), Wcofs(:,1)/2/pi, 'b-', 'LineWidth', 1);
     legend(aa(length(ps)+1), 'PCE Mean')
     for j=1:length(exp)
         aa(length(ps)+2) = semilogx(exp(j).AMP_avg, exp(j).FRE_avg, 'k-', 'LineWidth', 2);
@@ -102,9 +113,9 @@ for i=1:length(parms)
     legend(aa(length(ps)+2), 'Experimental Data')
     
     set(gca, 'xscale', 'log')
-    xlim(10.^[-0.5 2.5])
+%     xlim(10.^[-0.5 2.5])
 
-    xlabel('Response Amplitude (g)')
+    xlabel('Response Amplitude (m/$s^2$)')
     ylabel('Natural Frequency (Hz)')
     title(ttls{i})
     legend(aa(1:end), 'Location', 'southwest')
@@ -124,19 +135,19 @@ for i=1:length(parms)
 %     zeta0 = 5.5e-5;
     zeta0 = 1.3841e-4;
     for j=1:length(ps)
-        fill(Rcofs([1:end end:-1:1],1)/9.81, [ZCIs(:,1,j); ZCIs(end:-1:1,2,j)]*100+zeta0*100, fcs(j,:), 'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
-%         fill(Rcofs([1:end end:-1:1],1)/9.81, max([ZCIs(:,1,j); ZCIs(end:-1:1,2,j)]*100+zeta0*100,zeta0*100), fcs(j,:), 'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
+        fill(Rcofs([1:end end:-1:1],1), [ZCIs(:,1,j); ZCIs(end:-1:1,2,j)]*100+zeta0*100, fcs(j,:), 'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
+%         fill(Rcofs([1:end end:-1:1],1), max([ZCIs(:,1,j); ZCIs(end:-1:1,2,j)]*100+zeta0*100,zeta0*100), fcs(j,:), 'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
     end
-    semilogx(Rcofs(:,1)/9.81, Zcofs(:,1)*100+zeta0*100, 'b-', 'LineWidth', 1);
+    semilogx(Rcofs(:,1), Zcofs(:,1)*100+zeta0*100, 'b-', 'LineWidth', 1);
     for j=1:length(exp)
         semilogx(exp(j).AMP_avg, exp(j).DAM_avg*100, 'k-', 'LineWidth', 2)
     end
     set(gca, 'xscale', 'log')
 %     set(gca, 'yscale', 'log')
-    xlim(10.^[-0.5 2.5])
+%     xlim(10.^[-0.5 2.5])
 	title(ttls{i})
 
-    xlabel('Response Amplitude (g)')
+    xlabel('Response Amplitude (m/$s^2$)')
     ylabel('Damping Factor (\%)')
     
 %     if strcmp(parms{i}, 'pres')
@@ -151,7 +162,8 @@ end
 
 %% Sobol Indices
 for i=4
-    fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
+%     fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
+    fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
     load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
     
     % Variances
@@ -174,7 +186,7 @@ for i=4
     clf()
     set(gcf, 'Color', 'white')
     aa = gobjects(3,1);
-    aa(1) = semilogx(Rcofs(:,1)/9.81, Wcofs(:,1)/2/pi, 'b-', 'LineWidth', 1); hold on
+    aa(1) = semilogx(Rcofs(:,1), Wcofs(:,1)/2/pi, 'b-', 'LineWidth', 1); hold on
 %     legend(aa(1), 'PCE Mean')
     for j=1:length(exp)
         aa(2) = semilogx(exp(j).AMP_avg, exp(j).FRE_avg, 'k-', 'LineWidth', 2);
@@ -182,14 +194,14 @@ for i=4
 %     legend(aa(2), 'Experimental Data')
     
     set(gca, 'xscale', 'log')
-    xlim(10.^[-0.5 2.5])
-    xlabel('Response Amplitude (g)')
+%     xlim(10.^[-0.5 2.5])
+    xlabel('Response Amplitude (m/$s^2$)')
     ylabel('Natural Frequency (Hz)')
     
     yyaxis right;
-    aa(1) = plot(Rcofs(:,1)/9.81, W_S1(:,1), 'r.-');
-    aa(2) = plot(Rcofs(:,1)/9.81, W_S1(:,2), 'g*-');
-    aa(3) = plot(Rcofs(:,1)/9.81, W_S2, 'm.-');
+    aa(1) = plot(Rcofs(:,1), W_S1(:,1), 'r.-');
+    aa(2) = plot(Rcofs(:,1), W_S1(:,2), 'g*-');
+    aa(3) = plot(Rcofs(:,1), W_S2, 'm.-');
     ylim([-0.1 1.1])
     
     legend(aa, '$S_{\theta_{X}}$', '$S_{\theta_{Y}}$', '$S_{\theta_{X}, \theta_{Y}}$', 'Location', 'west')
@@ -201,7 +213,7 @@ for i=4
     clf()
     set(gcf, 'Color', 'white')
     aa = gobjects(3,1);
-    aa(1) = semilogx(Rcofs(:,1)/9.81, Zcofs(:,1)*100, 'b-', 'LineWidth', 1); hold on
+    aa(1) = semilogx(Rcofs(:,1), Zcofs(:,1)*100, 'b-', 'LineWidth', 1); hold on
 %     legend(aa(1), 'PCE Mean')
     for j=1:length(exp)
         aa(2) = semilogx(exp(j).AMP_avg, exp(j).DAM_avg*100, 'k-', 'LineWidth', 2);
@@ -209,14 +221,14 @@ for i=4
 %     legend(aa(2), 'Experimental Data')
     
     set(gca, 'xscale', 'log')
-    xlim(10.^[-0.5 2.5])
-    xlabel('Response Amplitude (g)')
+%     xlim(10.^[-0.5 2.5])
+    xlabel('Response Amplitude (m/$s^2$)')
     ylabel('Natural Frequency (Hz)')
     
     yyaxis right;
-    plot(Rcofs(:,1)/9.81, Z_S1(:,1), 'r.-');
-    plot(Rcofs(:,1)/9.81, Z_S1(:,2), 'g*-');
-    plot(Rcofs(:,1)/9.81, Z_S2*100, 'm.-');
+    plot(Rcofs(:,1), Z_S1(:,1), 'r.-');
+    plot(Rcofs(:,1), Z_S1(:,2), 'g*-');
+    plot(Rcofs(:,1), Z_S2*100, 'm.-');
     ylim([-0.1 1.1])
     
     ylabel('Sobol Indices')
@@ -246,7 +258,8 @@ for i=1:length(parms)
 %     if strcmp(parms{i}, 'pres')
 %         fname = sprintf('./%sPCE_25/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
 %     else
-        fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
+%         fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
+        fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
 %     end
 
     if ~strcmp(parms{i}, 'rot')
@@ -267,6 +280,9 @@ for i=1:length(parms)
         Wstatsamps(:, :, i) = rWstat(mdis, :);
     else
         Samps = random(pdists{i}, Nsamps);
+        if size(IJs,2)==6
+            IJs = IJs(:, [4 5]);
+        end
         Psis = PHERM(IJs(:,1), Samps(:,1)).*PHERM(IJs(:,2), Samps(:,2));
         Wstatsamps(:, :, i) = Wstatcofs(mdis,:)*Psis';
     end
@@ -286,8 +302,8 @@ for i=1:length(mdis)
     plot(xlim, Wsex(i)*[1 1]/2/pi, 'k--', 'LineWidth', 2)
     yl = ylim;
     
-%     ylim([min(Wsex(i)/2/pi-0.5,yl(1)) yl(2)])
-    ylim([(Wsex(i)/2/pi-1) yl(2)])
+    ylim([min(Wsex(i)/2/pi-0.5,yl(1)) yl(2)])
+%     ylim([(Wsex(i)/2/pi-1) yl(2)])
     
     ylabel('Natural Frequency (Hz)')
     xlabel('Factors')

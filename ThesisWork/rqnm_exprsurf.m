@@ -57,8 +57,8 @@ gap2 = gap2-max(gap2);
 gap = (gap1+gap2)/2;
 gapsd = sqrt((R1top.BilinPlaneQPs(:,2).^2+R1bot.BilinPlaneQPs(:,2).^2+R2top.BilinPlaneQPs(:,2).^2+R2bot.BilinPlaneQPs(:,2).^2)/4);  % Gap Standard Deviation
 %% Nasps, Lambda and z0
-Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,2);
-Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,2);
+Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,1);
+Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,1);
 Nasps = (Nasps1+Nasps2)/2;
 
 lam1 = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./R1top.LLX0s_sd(:,1)+R1bot.NASPS(:,1)./R1bot.LLX0s_sd(:,1));
@@ -77,8 +77,8 @@ lam   = kron(lam, ones(Nq^2,1));
 z0 = log(Nasps)./lam;
 
 %% Curvature Radii
-R1 = (R1top.CRAD(:,1).*R1top.NASPS(:,1)+R1bot.CRAD(:,1).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,2));
-R2 = (R2top.CRAD(:,1).*R2top.NASPS(:,1)+R2bot.CRAD(:,1).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,2));
+R1 = (R1top.CRAD(:,1).*R1top.NASPS(:,1)+R1bot.CRAD(:,1).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
+R2 = (R2top.CRAD(:,1).*R2top.NASPS(:,1)+R2bot.CRAD(:,1).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
 
 Rad = (R1+R2)/2;
 Rad = kron(Rad, ones(Nq^2,1));
@@ -192,7 +192,7 @@ fopts = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'ite
 %% Plot Static Tractions
 Tstat = GM.NLTs.func(0, GM.NLTs.L*Ustat);
 
-figure(2)
+figure(1)
 clf()
 for i=1:3
     subplot(3,1,i)
@@ -212,8 +212,8 @@ Vstat = Vstat./sqrt(diag(Vstat'*M*Vstat))';
 %% March
 mds = [1 3 5];
 
-% mdi = 1;  % Mode of Interest
-% AMIN = -0.5;  AMAX = 2.5;
+mdi = 1;  % Mode of Interest
+AMIN = -0.5;  AMAX = 2.5;
 
 % mdi = 2;  % Mode of Interest
 % AMIN = 0;  AMAX = 3;
@@ -222,7 +222,7 @@ mds = [1 3 5];
 % AMIN = -2;  AMAX = 3;
 
 Na = 10;
-As = logspace(AMIN, AMAX, Na)*9.81/Wstat(mds(mdi))^2;
+As = logspace(AMIN, AMAX, Na)/Wstat(mds(mdi))^2;
 As = [-As(end:-1:1) As]';
 Eflags = zeros(1, 2*Na);
 UlC = zeros(GM.Ndofs+1, 2*Na);
@@ -297,7 +297,9 @@ toc
 % % cng = cno;
 % % lamg = lamo;
 % % mug = muo;
-% % gapg = gapo;
+% % gapg = gapo;E = 1.9231e11;
+nu = 0.3;
+
 % 
 % tic
 % Ts = arrayfun(@EXPROUGHFRICT_sca, tg, uxs, uys, uns, ctg, cng, lamg, mug, gapg);
@@ -311,7 +313,7 @@ toc
 
 %%
 OpDs = R(3,:)*(UlC(1:end-1,:)-Ustat);
-OpAs = (R(3,:)*(UlC(1:end-1,:)-Ustat)).*(UlC(end,:))/9.81;
+OpAs = (R(3,:)*(UlC(1:end-1,:)-Ustat)).*(UlC(end,:));
 OpWs = sqrt(UlC(end,:));
 
 figure(2)
@@ -389,14 +391,14 @@ load(sprintf('./MATFILES/Mode%d_High.mat', mdi), 'AMP_avg', 'FRE_avg', 'DAM_avg'
 figure(400)
 clf()
 set(gcf, 'Color', 'white')
-semilogx((Qs.*Rxs').*Lams/9.81, sqrt(Lams)/2/pi, '-', 'LineWidth', 2); hold on
+semilogx((Qs.*Rxs').*Lams, sqrt(Lams)/2/pi, '-', 'LineWidth', 2); hold on
 % semilogx(abs(As.*Rx').*UlC(end,:)'/9.81, sqrt(UlC(end,:))/2/pi, 'ko', 'MarkerFaceColor', 'k')
 semilogx(AMP_avg, FRE_avg, 'k-', 'LineWidth', 2)
 
 % xlim([10^-0.5 10^2.5])
 
 legend('Model Prediction', 'Experimental Data', 'Location', 'Best')
-xlabel('Response Amplitude (g)')
+xlabel('Response Amplitude (m/$s^2$)')
 ylabel('Natural Frequency (Hz)')
 
 % export_fig('./FIGS/BBWmm.png', '-dpng')
@@ -404,13 +406,13 @@ ylabel('Natural Frequency (Hz)')
 figure(500)
 clf()
 set(gcf, 'Color', 'white')
-semilogx((Qs.*Rxs').*Lams/9.81, Zts*100, '-', 'LineWidth', 2); hold on
+semilogx((Qs.*Rxs').*Lams, Zts*100, '-', 'LineWidth', 2); hold on
 semilogx(AMP_avg, DAM_avg*100, 'k-', 'LineWidth', 2)
 
 % xlim([10^-0.5 10^2.5])
 
 legend('Model Prediction', 'Experimental Data', 'Location', 'Best')
-xlabel('Response Amplitude (g)')
+xlabel('Response Amplitude (m/$s^2$)')
 ylabel('Damping Factor (%)')
 % ylim([-0.5 2])
 

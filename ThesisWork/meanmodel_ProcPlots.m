@@ -25,11 +25,15 @@ exp(2) = load(sprintf('./MATFILES/Mode%d_Med.mat', mdi), 'AMP_avg', ...
 exp(3) = load(sprintf('./MATFILES/Mode%d_High.mat', mdi), 'AMP_avg', ...
               'FRE_avg', 'DAM_avg');
 
+for j=1:3
+    exp(j).AMP_avg = exp(j).AMP_avg/9.81;
+end
+
 load(sprintf('./MEANMODELRESP/MM_MODE%d.mat', mdi), 'Qs', 'Lams', ...
      'Zts', 'Phi', 'Wstat');
 load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'R');
 
-Rs = (abs(R(3,:)*Phi)'.*Qs).*Lams/9.81;
+Rs = (abs(R(3,:)*Phi)'.*Qs).*Lams;
 
 figure((mdi-1)*1+1)
 clf()
@@ -40,7 +44,7 @@ for i=1:3
     semilogx(exp(i).AMP_avg, exp(i).FRE_avg, 'k.'); hold on
 end
 semilogx(Rs, sqrt(Lams)/2/pi, 'b-', 'LineWidth', 2);
-xlim([min(Rs) max(Rs)])
+% xlim([min(Rs) max(Rs)])
 
 xlabel('Response Amplitude (g)')
 ylabel('Natural Frequency (Hz)')
@@ -52,7 +56,7 @@ for i=1:3
 end
 semilogx(Rs, sqrt(Lams)/2/pi, 'b-', 'LineWidth', 2);
 ylim(zoomlims(mdi,:))
-xlim([min(Rs) max(Rs)])
+% xlim([min(Rs) max(Rs)])
 
 subplot(1,2, 2)
 for i=1:3
@@ -65,7 +69,7 @@ legend([aae aam], 'Experimental Measurements', 'Model Predictions', ...
 xlabel('Response Amplitude (g)')
 ylabel('Damping Factor (\%)')
 grid on
-xlim([min(Rs) max(Rs)])
+% xlim([min(Rs) max(Rs)])
 
 export_fig(sprintf('./MEANMODELRESP/BBFIG_M%d.png', mdi), '-dpng');
 

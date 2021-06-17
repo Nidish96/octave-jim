@@ -10,8 +10,9 @@ Nq_pce = 10;
 
 %% (i, j, k, ...)^th parameter (N-D) 
 % is = [4; 5; 6];
-is = [1 2 3 4 6];
-pref = "nlbb";
+% is = [1 2 3 4 6];
+is = [1; 3; 4];
+pref = "nlbb_134";
 
 %% "Mu" PCE
 % is = 1;
@@ -29,8 +30,9 @@ nxis = Ir*Nq_pce.^((1:length(is))'-1);
 Irr = zeros(Nq_pce^length(is), 6);
 Irr(:, is) = Ir;
 
-n = 1;
-% for n=1:length(nxis)
+n = 443;
+% [443 454 479]
+for n=[444 455 480]
     RQNM_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref);
 %     STATRES_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref);
-% end
+end
