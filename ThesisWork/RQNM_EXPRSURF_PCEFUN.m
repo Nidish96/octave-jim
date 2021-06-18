@@ -1,7 +1,23 @@
-function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
+function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 %RQNM_EXPRSURF_PCEFUN conducts PCE evaluation for given Design
-% Order of parameters Assumed: [mu, msc, prestress, rotx, roty, gap]
+% Order of parameters Assumed: [mu, msc, prestress, rotx, roty, gap, rad]
 
+    %% Choose Mode
+    mds = [1 3 5];
+    
+    mdi = 1;  
+    AMIN = -7.5;  AMAX = -4.5;  % Default
+    if length(varargin)>=1
+        mdi = varargin{1};
+    end
+    if length(varargin)>=2
+        AMIN = varargin{2}(1);
+        AMAX = varargin{2}(2);
+    end
+    QMIN = AMIN+0.1;
+    QMAX = AMAX-0.1;
+    
+    %%
     addpath('../ROUTINES/')
     addpath('../ROUTINES/FEM/')
     addpath('../ROUTINES/HARMONIC/')
@@ -50,51 +66,37 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     R1bot = load(sprintf('./MATFILES/%s_R1_AspPDEs.mat', bot), 'BilinPlaneQPs', 'LLX0s_sd', 'CRAD', 'NASPS');
     R2bot = load(sprintf('./MATFILES/%s_R2_AspPDEs.mat', bot), 'BilinPlaneQPs', 'LLX0s_sd', 'CRAD', 'NASPS');
 
-    %% Gap Function ( with Nqp = 2^2 per element )
-    gap1 = R1top.BilinPlaneQPs(:,1)-R1bot.BilinPlaneQPs(:,1);
-    gap2 = R2top.BilinPlaneQPs(:,1)-R2bot.BilinPlaneQPs(:,1);
-    gap1 = gap1-max(gap1);
-    gap2 = gap2-max(gap2);
-
-    gap = (gap1+gap2)/2;
-    gapsd = sqrt((R1top.BilinPlaneQPs(:,2).^2+R1bot.BilinPlaneQPs(:,2).^2+R2top.BilinPlaneQPs(:,2).^2+R2bot.BilinPlaneQPs(:,2).^2)/4);  % Gap Standard Deviation
-
-    %% Nasps, Lambda and z0
+    %% Number of Asperities in Interface
     Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,1);
     Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,1);
     Nasps = (Nasps1+Nasps2)/2;
 
-    lam1 = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./R1top.LLX0s_sd(:,1)+R1bot.NASPS(:,1)./R1bot.LLX0s_sd(:,1));
-    lam2 = (R2top.NASPS(:,1)+R2bot.NASPS(:,1))./(R2top.NASPS(:,1)./R2top.LLX0s_sd(:,1)+R2bot.NASPS(:,1)./R2bot.LLX0s_sd(:,1));
-    lam = (lam1+lam2)/2;
-
     % Collect
     Nasps = kron(Nasps, ones(Nq^2,1));
-    lam   = kron(lam, ones(Nq^2,1));
-    % z0    = kron(z0, ones(Nq^2,1));
-    % z0 = -log(0.1)./lam;
-    z0 = log(Nasps)./lam;
-
-    %% Curvature Radii
-    R1 = (R1top.CRAD(:,1).*R1top.NASPS(:,1)+R1bot.CRAD(:,1).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
-    R2 = (R2top.CRAD(:,1).*R2top.NASPS(:,1)+R2bot.CRAD(:,1).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
-
-    Rad = (R1+R2)/2;
-    Rad = kron(Rad, ones(Nq^2,1));
-
-%     %% Setup PCE in mu alone
-%     Nq_pce = 10;
-%     [xi, wi] = LAGWT(Nq_pce);
-%     % wi = wi*(s/H);  % multiplied weight by mean
-%     mui = xi*(s/H);
 
     %% Use the Given PCE Coefficients: [mu, msc, prestress, rotx, roty, gap]
-    Xis = zeros(6,1);
-    Wis = zeros(6,1);
+    Xis = zeros(7,1);
+    Wis = zeros(7,1);
+    
+    % Hardness Conversion
+%     Vickers -> HV/94.5 Gpa
+%     Brinell -> BHN*9.81 MPa
+%     Knoop -> HK*9.81
+%     Rockwell B & C -> https://www.westyorkssteel.com/technical-information/steel-hardness-converter//
+
     
     % 1. Coefficient of Friction
-    % s = 190e6;  H = 545e6; (AISI 304N SS)
-    s = 0.85;  H = 1.0;
+%     s = 74.5 to 597 MPa (avg. 358); http://www.matweb.com/search/DataSheet.aspx?MatGUID=71396e57ff5940b791ece120e4d563e0
+
+%     HV = 82 - 1100 HV (Vickers) => HV/94.5 GPa; (avg. 294) -> 3.1111e9 Pa
+%     BHN = 80 - 600 BHN (Brinell) => BHN*9.81 MPa; (avg. 251) -> 2.4623e9 Pa
+%     HK = 97-662 HK (Knoop) => HK*9.81 MPa; (avg. 301) -> 2.9528e9 Pa
+%     HRB = 37 - 130 (Rockwell B) => (avg. 86.4) -> 0.5600e9 Pa
+%     HRC = 10 - 71 (Rockwell C) => (avg. 39.3) -> 1.232e9 Pa
+
+%     s = 190e6;  H = 545e6; % (AISI 304N SS)
+%     s = 0.85;  H = 1.0;
+    s = 358e6;  H = 294e9/94.5;
     [xi, wi] = LAGWT(Nq_pces(1));
     mu = xi(Ixs(1))*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
     Xis(1) = xi(Ixs(1));  Wis(1) = wi(Ixs(1));
@@ -148,16 +150,29 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
      Xis(4:5) = [xi1(Ixs(4));xi2(Ixs(5))];  Wis(4:5) = [wi1(Ixs(4));wi2(Ixs(5))];
      Xis(6) = xi(Ixs(6));  Wis(6) = wi(Ixs(6));
      
+     % 7. Mean Curvature Radius
+     [xi, wi] = GPHWT(Nq_pces(7));
+     R1 = ((R1top.CRAD*[1;xi(Ixs(7))]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;xi(Ixs(7))]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
+     R2 = ((R2top.CRAD*[1;xi(Ixs(7))]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;xi(Ixs(7))]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
+
+     Rad = (R1+R2)/2;    
+     Rad = kron(Rad, ones(Nq^2,1));
+     Xis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
+     
     %% Run Simulations
     tic
     %% Contact Model
     Estar = E/(1-nu^2)/2;
-    Gstar = E/((1+nu)*(2-nu))/2;
+    Gstar = E/((1+nu)*(2-nu))/4;
 
     cn = Estar*sqrt(pi*Rad./lam.^3).*Nasps./Aels;
-    ct = 4*Gstar*sqrt(pi*Rad./lam).*Nasps./Aels;
+%     chi = 2;  % Mindlin [1949] (mu=0.85 => 177.1 Hz) (8 is the leading coefficient)
+    chi = pi;  % Sherif and Korsa [1991] (mu=0.85 => 178.9 Hz) (4pi is the leading coefficient)
+%     chi = 0.71; % Yoshioka & Scholz [1989] (mu=0.85 => 172.1 Hz)
+    ct = 2*chi*Gstar*sqrt(pi*Rad./lam).*Nasps./Aels;
 
     cno = cn.*exp(-lam.*z0); cto = ct.*exp(-lam.*z0);
+%     cno = cn./Nasps;  cto = ct./Nasps;
     %% Create Object
     GM = MDOFGEN(M, K, zeros(size(M)), L);
 
@@ -207,8 +222,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
 
     %% March
     Na = 10;
-%     As = logspace(-0.5, 2.5, Na)*9.81/Wstat(1)^2;
-    As = logspace(-0.5, 2.5, Na)/Wstat(1)^2;
+%     As = logspace(-0.5, 2.5, Na)*9.81/Wstat(mds(mdi))^2;
+    As = logspace(AMIN, AMAX, Na);
     % As = logspace(-6, -3, Na);
     As = [-As(end:-1:1) As]';
     Eflags = zeros(1, 2*Na);
@@ -216,7 +231,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     UlC = zeros(GM.Ndofs+1, 2*Na);
     dUdalC = zeros(GM.Ndofs+1, 2*Na);
 
-    ul0 = [Ustat+Vstat(:,1)*As(Na+1); Wstat(1)^2];
+    ul0 = [Ustat+Vstat(:,mds(mdi))*As(Na+1); Wstat(mds(mdi))^2];
     fopts = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
     fopts.Display = 'off';
     for ia=1:Na
@@ -238,7 +253,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     end
     fprintf('\n');
 
-    ul0 = [Ustat+Vstat(:,1)*As(Na+1-1); Wstat(1)^2];
+    ul0 = [Ustat+Vstat(:,mds(mdi))*As(Na+1-1); Wstat(mds(mdi))^2];
     for ia=1:Na
         [UlC(:, Na+1-ia), ~, Eflags(Na+1-ia), ~, dRdUl] = fsolve(@(ul) GM.RQMRESFUN([ul; log10(-As(Na+1-ia))], 1, Fv*Prestress, Ustat), ul0, fopts);
         if eflag<=0
@@ -262,8 +277,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     Ln = reshape([UlC(end,:); dUdalC(end,:)], 2*size(UlC,2), 1);
 
     Nq = 100;
-%     Qs = logspace(-5.5, -2.625, Nq)';
-    Qs = logspace(-5.5, -2.625, Nq)'/9.81;
+    Qs = logspace(QMIN, QMAX, Nq)';
 
     Nt = 2^7;
     t = linspace(0, 2*pi, Nt+1)'; t(end) = [];
@@ -300,7 +314,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref)
     end
 
     %% Save Information into file
-    save(sprintf('./ALLPCE/%s_%d.mat', pref, nxi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
+    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
 
     fprintf('=============================================\n')
     fprintf('Done %d\n', nxi);
