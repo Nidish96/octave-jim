@@ -155,7 +155,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
      R1 = ((R1top.CRAD*[1;xi(Ixs(7))]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;xi(Ixs(7))]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
      R2 = ((R2top.CRAD*[1;xi(Ixs(7))]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;xi(Ixs(7))]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
 
-     Rad = (R1+R2)/2;    
+     Rad = abs(R1+R2)/2; 
      Rad = kron(Rad, ones(Nq^2,1));
      Xis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
      
@@ -304,8 +304,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     tol = 1e-6;
     Nits = 2;  % Maximum marching iterations
     Zts = zeros(Nq, 1);
-    parfor (qi=1:Nq,8)
-    % for qi=1:Nq
+    % parfor (qi=1:Nq,8)
+    for qi=1:Nq
         Zts(qi) = GETFOURIERCOEFF(0, sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M +...
             squeeze(Udot(:, qi, :))*GM.C +...
             squeeze(Ut(:, qi, :))*GM.K + ...
