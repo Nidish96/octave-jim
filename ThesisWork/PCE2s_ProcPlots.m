@@ -10,12 +10,6 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13)
 
 %%
-% rqnm_exprsurf_mupce();
-% rqnm_exprsurf_gappce();
-% rqnm_exprsurf_mscpce();
-% rqnm_exprsurf_prespce();
-
-%%
 % Experimental Data
 exp(1) = load('./MATFILES/Mode1_Low.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 exp(2) = load('./MATFILES/Mode1_Med.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
@@ -34,16 +28,18 @@ falph = 0.2;
 
 % [mu, msc, prestress, rotx, roty, gap]
 apref = 'nlbb';
-parms = {'mu', 'msc', 'pres', 'rot', 'gap'};
-ids = {1, 2, 3, 45, 6};
-pdists = {makedist('exp'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1]), makedist('normal')};
-lims = [[0 inf]; repmat([-inf inf], 4, 1)];
-Nsamps = [0; 10000; 10000; 10000; 0];
+parms = {'mu', 'msc', 'pres', 'rot', 'gap', 'rad', 'rgap'};
+ids = {1, 2, 3, 45, 6, 7, 46};
+pdists = {makedist('exp'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1]), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1])};
+lims = [[0 inf]; repmat([-inf inf], 6, 1)];
+Nsamps = [0; 10000; 50000; 10000; 0; 10000; 10000];
 ttls = {'Coefficient of Friction', 'Mean Asperity Height', ...
-    'Prestress', 'Stage Rotation', 'Meso-Scale Topology'};
+    'Prestress', 'Stage Rotation', 'Meso-Scale Topology', ...
+    'Mean Asperity Radius', 'Meso-Scale'};
 lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
     '$P\sim \mathcal{N}(\cdot, \cdot)$', '$\theta_{X,Y}\sim \mathcal{N}^2(\cdot, \cdot)$', ...
-    '$gap\sim \mathcal{N}(\cdot, \cdot)$',};
+    '$gap\sim \mathcal{N}(\cdot, \cdot)$', '$R\sim \mathcal{N}(\cdot, \cdot)$', ...
+    '$\theta_X,gap\sim \mathcal{N}^2(\cdot, \cdot)$'};
 
 % parms = {'mu', 'msc', 'gap', 'pres', 'rot'};
 % pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1])};
@@ -63,12 +59,12 @@ for i=1:length(parms)
         fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
 %     end
 
-    if ~strcmp(parms{i}, 'rot')
+    if ~strcmp(parms{i}, 'rot') && ~strcmp(parms{i}, 'rgap')
         load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'rxps', 'wxps', 'zxps', 'Integs')
     else
         load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
-        if size(IJs,2)==6
-            IJs = IJs(:, [4 5]);
+        if size(IJs,2)==7
+            IJs = IJs(:, dec2base(ids{i}, 10)-'0');
         end
     end
     
@@ -81,7 +77,7 @@ for i=1:length(parms)
     Nq = length(Qs);
     WCIs = zeros(Nq, 2, length(ps));
     ZCIs = zeros(Nq, 2, length(ps));
-    if ~strcmp(parms{i}, 'rot')
+    if ~strcmp(parms{i}, 'rot') && ~strcmp(parms{i}, 'rgap')
         for j=1:length(ps)
             [WCIs(:, 1, j), WCIs(:, 2, j)] = PCE1_PCONTOURS(wxps, ps(j), pdists{i}, lims(i,:), Nsamps(i));
             [ZCIs(:, 1, j), ZCIs(:, 2, j)] = PCE1_PCONTOURS(zxps, ps(j), pdists{i}, lims(i,:), Nsamps(i));
@@ -124,9 +120,9 @@ for i=1:length(parms)
 %         savefig(sprintf('./%sPCE/%spce_WBB_25.fig', upper(parms{i}), parms{i}));
 %         savefig(sprintf('./SEND/%spce_WBB_25.fig', parms{i}));
 %     else
-        savefig(sprintf('./%sPCE/%spce_WBB.fig', upper(parms{i}), parms{i}));
+%         savefig(sprintf('./%sPCE/%spce_WBB.fig', upper(parms{i}), parms{i}));
         savefig(sprintf('./SEND/%spce_WBB.fig', parms{i}));
-        export_fig(sprintf('./%sPCE/%spce_WBB.png', upper(parms{i}), parms{i}), '-dpng');
+%         export_fig(sprintf('./%sPCE/%spce_WBB.png', upper(parms{i}), parms{i}), '-dpng');
 %     end
     figure((i-1)*2+20)
     clf();
@@ -154,9 +150,9 @@ for i=1:length(parms)
 %         savefig(sprintf('./%sPCE/%spce_ZBB_25.fig', upper(parms{i}), parms{i}));
 %         savefig(sprintf('./SEND/%spce_ZBB_25.fig', parms{i}));
 %     else
-        savefig(sprintf('./%sPCE/%spce_ZBB.fig', upper(parms{i}), parms{i}));
+%         savefig(sprintf('./%sPCE/%spce_ZBB.fig', upper(parms{i}), parms{i}));
         savefig(sprintf('./SEND/%spce_ZBB.fig', parms{i}));
-        export_fig(sprintf('./%sPCE/%spce_ZBB.png', upper(parms{i}), parms{i}), '-dpng');
+%         export_fig(sprintf('./%sPCE/%spce_ZBB.png', upper(parms{i}), parms{i}), '-dpng');
 %     end
 end
 
@@ -262,7 +258,7 @@ for i=1:length(parms)
         fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
 %     end
 
-    if ~strcmp(parms{i}, 'rot')
+    if ~strcmp(parms{i}, 'rot') && ~strcmp(parms{i}, 'rgap')
         load(fname, 'Qs', 'Wstatcofs', 'wsxps', 'Integs')
     else
         load(fname, 'Qs', 'Wstatcofs', 'Integs', 'IJs')
@@ -273,29 +269,29 @@ for i=1:length(parms)
     Nq = length(Qs);
     WSCIs = zeros(size(wsxps,1), 2, length(ps));
 
-    if ~strcmp(parms{i}, 'rot')
+    if ~strcmp(parms{i}, 'rot') && ~strcmp(parms{i}, 'rgap')
         for j=1:length(ps)
             [WSCIs(:, 1, j), WSCIs(:, 2, j), rWstat] = PCE1_PCONTOURS(wsxps, ps(j), pdists{i}, lims(i,:), Nsamps);
         end
         Wstatsamps(:, :, i) = rWstat(mdis, :);
     else
         Samps = random(pdists{i}, Nsamps);
-        if size(IJs,2)==6
-            IJs = IJs(:, [4 5]);
+        if size(IJs,2)==7
+            IJs = IJs(:, dec2base(ids{i}, 10)-'0');
         end
         Psis = PHERM(IJs(:,1), Samps(:,1)).*PHERM(IJs(:,2), Samps(:,2));
         Wstatsamps(:, :, i) = Wstatcofs(mdis,:)*Psis';
     end
 end
-
-Labels = {'$\mu$', '$\lambda$', '$P$', '$\theta_{X,Y}$', '$gap$'};
-Labels = {'[Fric-Coef.]', '[Asp-Hgts.]', ...
-    '[Prest.]', '[Rotn. (X,Y)]', '[Top.]'};
-nplot = 5;
+%%
+Labels = {'$\mu$', '$\lambda$', '$P$', '$\theta_{X,Y}$', '$gap$', '$R$', 'Meso'};
+Labels = {'[F-Coef.]', '[Hgts.]', ...
+    '[Prest.]', '[Rotn.]', '[Gap.]', '[Rad.]', '[Top.]'};
+nplot = 2:7;
 for i=1:length(mdis)
     figure(i*1000)
     clf()
-    boxplot(squeeze(Wstatsamps(i, :, 1:nplot))/2/pi, 'Labels', Labels(1:nplot), 'Whisker', 3*max(Wstatvars(i, :))/2/pi);
+    boxplot(squeeze(Wstatsamps(i, :, nplot))/2/pi, 'Labels', Labels(nplot), 'Whisker', 3*max(Wstatvars(i, :))/2/pi);
     bp = gca;
     bp.XAxis.TickLabelInterpreter = 'latex';
     hold on
@@ -308,6 +304,6 @@ for i=1:length(mdis)
     ylabel('Natural Frequency (Hz)')
     xlabel('Factors')
     grid on
-    savefig(sprintf('./SEND/Mode%d_W.fig',i));
-    export_fig(sprintf('./FIGS/Boxplot_Mode%d_W.png',i), '-dpng');
+%     savefig(sprintf('./SEND/Mode%d_W.fig',i));
+%     export_fig(sprintf('./FIGS/Boxplot_Mode%d_W.png',i), '-dpng');
 end

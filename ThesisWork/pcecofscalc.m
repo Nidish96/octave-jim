@@ -13,19 +13,19 @@ model = 'BRB_Thesis';
 load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'R');
 
 %% Calculate PCE
-Pars = {'\mu', '\lambda', 'P', '\theta_X', '\theta_Y', 'gap'};
-pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal')};
-polfuns = {@(ns, xs) PLAGU(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs)};
-quadfuns = {@(n) LAGWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n)};
+Pars = {'\mu', '\lambda', 'P', '\theta_X', '\theta_Y', 'gap', 'rad'};
+pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal')};
+polfuns = {@(ns, xs) PLAGU(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs)};
+quadfuns = {@(n) LAGWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n)};
 mdis = [1 3 5];
 Nsamps = 100000;
 
 apref = 'nlbb';
-is = {[1], [2], [3], [4 5], [6], [1 3 4]}; % [1 3 4]
-Nq_pce = {10, 10, 10, 10, 10, 10};
+is = {[1], [2], [3], [4 5], [6], [4 6], [7], [1 2 7]}; % [1 3 4]
+Nq_pce = {10, 10, 10, 10, 10, 10, 10, 10};
 Npce = 9;
-for i=1:length(is)
-    Nq_pces = ones(1, 6);
+for i=length(is)
+    Nq_pces = ones(1, 7);
     Nq_pces(is{i}) = Nq_pce{i};
 
     Ir = cell(size(is{i}));
@@ -33,7 +33,7 @@ for i=1:length(is)
     Ir = cell2mat(cellfun(@(c) c(:)', Ir(:), 'UniformOutput', false))';
     nxis = Ir*Nq_pce{i}.^((1:length(is{i}))'-1);
 
-    Irr = zeros(Nq_pce{i}^length(is{i}), 6);
+    Irr = zeros(Nq_pce{i}^length(is{i}), 7);
     Irr(:, is{i}) = Ir;
 
     % Construct PCE Coefficients
@@ -43,9 +43,9 @@ for i=1:length(is)
    
     IJs = Irr(sum(Irr, 2)<=Npce, :);  % Polynomial Order
 
-    Xis = zeros(Nq_pce{i}, 6);
-    Wis = zeros(Nq_pce{i}, 6);
-    for j=1:6
+    Xis = zeros(Nq_pce{i}, 7);
+    Wis = zeros(Nq_pce{i}, 7);
+    for j=1:7
         [Xis(:, j), Wis(:, j)] = quadfuns{j}(Nq_pces(j));
     end
 
@@ -57,7 +57,7 @@ for i=1:length(is)
     clf()
     for n=1:length(nxis)
         nxi = nxis(n);
-        load(sprintf('./ALLPCE/%s/%s_%d.mat', dpref, pref, nxi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat');
+        load(sprintf('./ALLPCE/%s/%s_%d_m1.mat', dpref, pref, nxi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat');
         semilogx(Qs, sqrt(Lams)/2/pi', '.-'); hold on
 %         plot(Wstat(1,:)/2/pi, '.-'); hold on
     
@@ -66,7 +66,7 @@ for i=1:length(is)
         Psi = 1;
         wi = 1;
         Integs = 1;
-        for j=1:6
+        for j=1:7
             [psi, Intg] = polfuns{j}(IJs(:,j), Xis(Irr(n, j)+1, j));
             Psi = Psi.*psi;
             Integs = Integs.*Intg;
@@ -75,7 +75,8 @@ for i=1:length(is)
         end
 
         Qs = Qs;
-        Rx = real((Qs.*(R(3,:)*Phi)').*Lams);
+%         Rx = real((Qs.*(R(3,:)*Phi)').*Lams);  % Response Acceleration Amplitude (m)
+        Rx = real((Qs.*(R(3,:)*Phi)'));  % Response Amplitude (m)
         Rcofs = Rcofs + wi*(Rx.*Psi)./Integs';
         Wcofs = Wcofs + wi*(sqrt(Lams).*Psi)./Integs';
         Zcofs = Zcofs + wi*(Zts.*Psi)./Integs';

@@ -31,13 +31,15 @@ end
 
 % load(sprintf('./MEANMODELRESP/MM_MODE%d.mat', mdi), 'Qs', 'Lams', ...
 %     'Zts', 'Phi', 'Wstat');
-load(sprintf('./ALLPCE/meanmodelbb1_0_m%d.mat', mdi), 'Qs', 'Lams', ...
+% load(sprintf('./ALLPCE/meanmodelbb1_0_m%d.mat', mdi), 'Qs', 'Lams', ...
+%     'Zts', 'Phi', 'Wstat');
+load(sprintf('./ALLPCE/testbb_0_m%d.mat', mdi), 'Qs', 'Lams', ...
     'Zts', 'Phi', 'Wstat');
 load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'R');
 
 Rs = (abs(R(3,:)*Phi)'.*Qs);
 
-figure((mdi-1)*1+2)
+figure((mdi-1)*1+1)
 clf()
 set(gcf, 'Color', 'white')
 set(gcf, 'Position', [2800 550 1200 480])
