@@ -6,7 +6,7 @@ addpath('../ROUTINES/export_fig/')
 
 set(0,'defaultAxesTickLabelInterpreter', 'default');
 set(0,'defaultTextInterpreter','latex'); 
-set(0, 'DefaultLegendInterpreter', 'latex'); 
+set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13)
 
 model = 'BRB_Thesis';
@@ -34,16 +34,17 @@ exp(2) = load('./MATFILES/Mode1_Med.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 exp(3) = load('./MATFILES/Mode1_High.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 
 for i=1:3
-    exp(i).AMP_avg = exp(i).AMP_avg/9.81;
+%     exp(i).AMP_avg = exp(i).AMP_avg/9.81;
     exp(i).AMP_avg = exp(i).AMP_avg./(2*pi*exp(i).FRE_avg).^2;
 end
 
 % ps = [0.05 0.50 0.99];
-ps = [0.05 0.25];
+ps = [0.05 0.25 0.45];
 % ecs = colormap(lines(length(ps)));
 ecs = zeros(length(ps), 3);
 % ecs = {'red', 'yellow', 'green'};
 fcs = kron((1-ps(:)), [1 1 1]);
+ecs = fcs;
 falph = 1;
 pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal')};
 polfuns = {@(ns, xs) PLAGU(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs)};
@@ -52,8 +53,10 @@ Pars = {'\mu', '\lambda', 'P', '\theta_X', '\theta_Y', 'gap', 'rad'};
 mdis = [1 3 5];
 Nsamps = 1000000;
 
-is = {[1 2 7]};
-Nq_pce = {10};
+% is = {[1 2 7]};
+% Nq_pce = {10};
+is = {[1 2 3 4 6 7]};
+Nq_pce = {5};
 zeta0 = 1.3841e-4;
 for i=1:length(is)
     Nq_pces = ones(1, length(Pars));
@@ -103,7 +106,7 @@ for i=1:length(is)
     
     % Second Order Sobol Indices
     i2s = [];
-    ns = factorial(length(is{i}))/factorial(2);
+    ns = factorial(length(is{i}))/(factorial(length(is{i})-2)*factorial(2));
     W_S2 = zeros(100, ns);
     Z_S2 = zeros(100, ns);
     Wstat_S2 = zeros(10, ns);
@@ -122,7 +125,11 @@ for i=1:length(is)
         end
     end
     
-    %% S1 Plots
+    W_S1 = sqrt(W_S1);
+    W_S2 = sqrt(W_S2);
+    Wstat_S1 = sqrt(Wstat_S1);
+    Wstat_S2 = sqrt(Wstat_S2);
+    %% S1 Plots    
     % Frequency - S1
     figure((i-1)*10+1)
     clf()
@@ -132,7 +139,7 @@ for i=1:length(is)
         ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi, fcs(j,:), ...
             'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
-        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', ps(j)*100, (1-ps(j))*100));
+        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
     end
     set(gca, 'XScale', 'log')
     aa = gobjects(size(W_S1,2), 1);
@@ -187,7 +194,7 @@ for i=1:length(is)
         ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi, fcs(j,:), ...
             'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
-        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', ps(j)*100, (1-ps(j))*100));
+        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
     end
     set(gca, 'XScale', 'log')
     aa = gobjects(size(W_S2,2)+1, 1);
@@ -233,7 +240,7 @@ for i=1:length(is)
     ylim([min(ylim) 2e0])
     xlim(minmax(Rcofs(:,1)'))
     
-    % Modal Frequencies
+    %% Modal Frequencies
     figure((i-1)*10+4)
     clf()
     colos = DISTINGUISHABLE_COLORS(size([Wstat_S1 Wstat_S2],2));

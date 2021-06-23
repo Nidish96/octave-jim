@@ -8,12 +8,19 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     mdi = 1;  
 %    AMIN = -7.5;  AMAX = -4.5;  % Default
     AMIN = -7.0;  AMAX = -3.0;  % Default
+    simmode = 'quad';
     if length(varargin)>=1
         mdi = varargin{1};
     end
     if length(varargin)>=2
         AMIN = varargin{2}(1);
         AMAX = varargin{2}(2);
+    end
+    if length(varargin)>=3
+        gapmul = varargin{3};
+    end
+    if length(varargin)>=4
+        simmode = varargin{4};
     end
     QMIN = AMIN+0.1;
     QMAX = AMAX-0.1;
@@ -85,7 +92,6 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 %     Knoop -> HK*9.81
 %     Rockwell B & C -> https://www.westyorkssteel.com/technical-information/steel-hardness-converter//
 
-    
     % 1. Coefficient of Friction
 %     s = 74.5 to 597 MPa (avg. 358); http://www.matweb.com/search/DataSheet.aspx?MatGUID=71396e57ff5940b791ece120e4d563e0
 
@@ -99,15 +105,29 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 %     s = 0.85;  H = 1.0;
     s = 358e6;  H = 294e9/94.5;
     [xi, wi] = LAGWT(Nq_pces(1));
-    mu = xi(Ixs(1))*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
-    Xis(1) = xi(Ixs(1));  Wis(1) = wi(Ixs(1));
+    if strcmp(simmode, 'quad')
+        mu = xi(Ixs(1))*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
+        Xis(1) = xi(Ixs(1));  Wis(1) = wi(Ixs(1));
+    else
+        mu = Ixs(1)*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
+        Xis(1) = Ixs(1);  Wis(1) = 1;
+    end
     
     % 2. Micro-Scale Lambda
     [xi, wi] = GPHWT(Nq_pces(2));
-    lamt1i = R1top.LLX0s_sd(:,1)+R1top.LLX0s_sd(:,3)*xi(Ixs(2));
-    lamt2i = R2top.LLX0s_sd(:,1)+R2top.LLX0s_sd(:,3)*xi(Ixs(2));
-    lamb1i = R1bot.LLX0s_sd(:,1)+R1bot.LLX0s_sd(:,3)*xi(Ixs(2));
-    lamb2i = R2bot.LLX0s_sd(:,1)+R2bot.LLX0s_sd(:,3)*xi(Ixs(2));
+    if strcmp(simmode, 'quad')
+        lamt1i = R1top.LLX0s_sd(:,1)+R1top.LLX0s_sd(:,3)*xi(Ixs(2));
+        lamt2i = R2top.LLX0s_sd(:,1)+R2top.LLX0s_sd(:,3)*xi(Ixs(2));
+        lamb1i = R1bot.LLX0s_sd(:,1)+R1bot.LLX0s_sd(:,3)*xi(Ixs(2));
+        lamb2i = R2bot.LLX0s_sd(:,1)+R2bot.LLX0s_sd(:,3)*xi(Ixs(2));
+        Xis(2) = xi(Ixs(2));  Wis(2) = wi(Ixs(2));
+    else
+        lamt1i = R1top.LLX0s_sd(:,1)+R1top.LLX0s_sd(:,3)*Ixs(2);
+        lamt2i = R2top.LLX0s_sd(:,1)+R2top.LLX0s_sd(:,3)*Ixs(2);
+        lamb1i = R1bot.LLX0s_sd(:,1)+R1bot.LLX0s_sd(:,3)*Ixs(2);
+        lamb2i = R2bot.LLX0s_sd(:,1)+R2bot.LLX0s_sd(:,3)*Ixs(2);
+        Xis(2) = Ixs(2);  Wis(2) = 1;
+    end
     lam1i = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./lamt1i+R1bot.NASPS(:,1)./lamb1i);
     lam2i = (R2top.NASPS(:,1)+R2bot.NASPS(:,1))./(R2top.NASPS(:,1)./lamt2i+R2bot.NASPS(:,1)./lamb2i);
     lam = (lam1i+lam2i)/2;
@@ -115,21 +135,31 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     lam = kron(lam, ones(Nq^2, 1));
     z0 = log(Nasps)./lam;
     clear lamt1i lamt2i lamb1i lamb2i lam1i lam2i
-    Xis(2) = xi(Ixs(2));  Wis(2) = wi(Ixs(2));
 
     % 3. Prestress
     Plevels = [12002 12075 12670];
     Psd = 2100;
 %     Psd = 600;
     [xi, wi] = GPHWT(Nq_pces(3));
-    Prestress = mean(Plevels)+Psd*xi(Ixs(3));
-    Xis(3) = xi(Ixs(3));  Wis(3) = wi(Ixs(3));
+    if strcmp(simmode, 'quad')
+        Prestress = mean(Plevels)+Psd*xi(Ixs(3));
+        Xis(3) = xi(Ixs(3));  Wis(3) = wi(Ixs(3));
+    else
+        Prestress = mean(Plevels)+Psd*Ixs(3);
+        Xis(3) = Ixs(3);  Wis(3) = Ixs(3);
+    end
     
     % 4-5. Rotx-Roty
     [xi1, wi1] = GPHWT(Nq_pces(4));
     [xi2, wi2] = GPHWT(Nq_pces(5));
     theta_sd = deg2rad(15);
-    thetas = theta_sd*[xi1(Ixs(4)); xi2(Ixs(5))];
+    if strcmp(simmode, 'quad')
+        thetas = theta_sd*[xi1(Ixs(4)); xi2(Ixs(5))];
+        Xis(4:5) = [xi1(Ixs(4));xi2(Ixs(5))];  Wis(4:5) = [wi1(Ixs(4));wi2(Ixs(5))];
+    else
+        thetas = theta_sd*[Ixs(4); Ixs(5)];
+        Xis(4:5) = [Ixs(4);Ixs(5)];  Wis(4:5) = 1;
+    end
     % 6. Gap
     [xi, wi] = GPHWT(Nq_pces(6));
 
@@ -139,26 +169,36 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
         [cos(thetas(2)), 0, -sin(thetas(2));
          0               , 1,  0;
          sin(thetas(2)), 0,  cos(thetas(2))];  % Transformation for gap
-     gtops = [(R1top.BilinPlaneQPs(:,1)+xi(Ixs(6))*R1top.BilinPlaneQPs(:,2)) (R2top.BilinPlaneQPs(:,1)+xi(Ixs(6))*R2top.BilinPlaneQPs(:,2))];
-     gbots = [(R1bot.BilinPlaneQPs(:,1)+xi(Ixs(6))*R1bot.BilinPlaneQPs(:,2)) (R2bot.BilinPlaneQPs(:,1)+xi(Ixs(6))*R2bot.BilinPlaneQPs(:,2))];
+     if strcmp(simmode, 'quad')
+         gtops = [(R1top.BilinPlaneQPs(:,1)+xi(Ixs(6))*R1top.BilinPlaneQPs(:,2)) (R2top.BilinPlaneQPs(:,1)+xi(Ixs(6))*R2top.BilinPlaneQPs(:,2))];
+         gbots = [(R1bot.BilinPlaneQPs(:,1)+xi(Ixs(6))*R1bot.BilinPlaneQPs(:,2)) (R2bot.BilinPlaneQPs(:,1)+xi(Ixs(6))*R2bot.BilinPlaneQPs(:,2))];
+         Xis(6) = xi(Ixs(6));  Wis(6) = wi(Ixs(6));
+     else
+         gtops = [(R1top.BilinPlaneQPs(:,1)+Ixs(6)*R1top.BilinPlaneQPs(:,2)) (R2top.BilinPlaneQPs(:,1)+Ixs(6)*R2top.BilinPlaneQPs(:,2))];
+         gbots = [(R1bot.BilinPlaneQPs(:,1)+Ixs(6)*R1bot.BilinPlaneQPs(:,2)) (R2bot.BilinPlaneQPs(:,1)+Ixs(6)*R2bot.BilinPlaneQPs(:,2))];
+         Xis(6) = Ixs(6);  Wis(6) = 1;
+     end
      xygs = [MESH.Qm*MESH.Nds gtops gbots];
      gap1r = xygs(:, [1 2 3])*TFM(:, 3) - xygs(:, [1 2 5])*TFM(:, 3);
      gap2r = xygs(:, [1 2 4])*TFM(:, 3) - xygs(:, [1 2 6])*TFM(:, 3);
      
      gapr = (gap1r+gap2r)/2;
      gap = gapr-max(gapr);
-     
-     Xis(4:5) = [xi1(Ixs(4));xi2(Ixs(5))];  Wis(4:5) = [wi1(Ixs(4));wi2(Ixs(5))];
-     Xis(6) = xi(Ixs(6));  Wis(6) = wi(Ixs(6));
+     gap = gap*gapmul;
      
      % 7. Mean Curvature Radius
      [xi, wi] = GPHWT(Nq_pces(7));
-     R1 = ((R1top.CRAD*[1;xi(Ixs(7))]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;xi(Ixs(7))]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
-     R2 = ((R2top.CRAD*[1;xi(Ixs(7))]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;xi(Ixs(7))]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
-
+     if strcmp(simmode, 'quad')
+         R1 = ((R1top.CRAD*[1;xi(Ixs(7))]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;xi(Ixs(7))]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
+         R2 = ((R2top.CRAD*[1;xi(Ixs(7))]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;xi(Ixs(7))]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
+         Xis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
+     else
+         R1 = ((R1top.CRAD*[1;Ixs(7)]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;Ixs(7)]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
+         R2 = ((R2top.CRAD*[1;Ixs(7)]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;Ixs(7)]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
+         Xis(7) = Ixs(7);  Wis(7) = 1;
+     end
      Rad = abs(R1+R2)/2; 
      Rad = kron(Rad, ones(Nq^2,1));
-     Xis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
      
     %% Run Simulations
     tic
@@ -196,7 +236,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     fopts = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
 
     U0 = (K+K0)\(Fv*Prestress);
-    U0 = L*U0;  U0(3:3:MESH.Nn*3) = MESH.Qm\gap;
+    U0 = L*U0;  U0(3:3:MESH.Nn*3) = U0(3:3:MESH.Nn*3) + MESH.Qm\gap;
     U0 = L\U0;
 
     GM.NLTs.func = @(t, u, varargin) EXPROUGHFRICT(t, u, cto*0, cno, lam, mu, gap, varargin{:});
