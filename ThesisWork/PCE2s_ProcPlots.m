@@ -16,7 +16,8 @@ exp(2) = load('./MATFILES/Mode1_Med.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 exp(3) = load('./MATFILES/Mode1_High.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 
 for j=1:3
-    exp(j).AMP_avg = exp(j).AMP_avg/9.81;
+%     exp(j).AMP_avg = exp(j).AMP_avg/9.81;
+    exp(j).AMP_avg = exp(j).AMP_avg./(2*pi*exp(j).FRE_avg).^2;
 end
 
 % ps = [0.05 0.50 0.99];
@@ -157,10 +158,11 @@ for i=1:length(parms)
 end
 
 %% Sobol Indices
-for i=4
+for i=[4 7]
 %     fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
     fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
     load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
+    IJs = IJs(:, dec2base(ids{i}, 10)-'0');
     
     % Variances
     Rvar = (Rcofs(:, 2:end).^2)*Integs(2:end);
@@ -224,7 +226,7 @@ for i=4
     yyaxis right;
     plot(Rcofs(:,1), Z_S1(:,1), 'r.-');
     plot(Rcofs(:,1), Z_S1(:,2), 'g*-');
-    plot(Rcofs(:,1), Z_S2*100, 'm.-');
+    plot(Rcofs(:,1), Z_S2, 'm.-');
     ylim([-0.1 1.1])
     
     ylabel('Sobol Indices')
@@ -287,7 +289,7 @@ end
 Labels = {'$\mu$', '$\lambda$', '$P$', '$\theta_{X,Y}$', '$gap$', '$R$', 'Meso'};
 Labels = {'[F-Coef.]', '[Hgts.]', ...
     '[Prest.]', '[Rotn.]', '[Gap.]', '[Rad.]', '[Top.]'};
-nplot = 2:7;
+nplot = 1:7;
 for i=1:length(mdis)
     figure(i*1000)
     clf()

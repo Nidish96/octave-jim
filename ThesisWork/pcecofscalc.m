@@ -21,15 +21,15 @@ mdis = [1 3 5];
 Nsamps = 100000;
 
 apref = 'nlbb';
-%is = {[1], [2], [3], [4 5], [6], [4 6], [7], [1 2 7], [1 2 3 4 6 7]}; % [1 3 4]
-%Nq_pce = {10, 10, 10, 10, 10, 10, 10, 10, 5};
-%Npce = 9;
+is = {[1], [2], [3], [4 5], [6], [4 6], [7], [1 2 7], [1 2 3 4 6 7]}; % [1 3 4]
+Nq_pce = {10, 10, 10, 10, 10, 10, 10, 10, 5};
+Npce = 5;
 
-is = {[1 2 3 4 6 7]}; % [1 3 4]
-Nq_pce = {5};
-Npce = 4;
+% is = {[1 2 3 4 6 7]}; % [1 3 4]
+% Nq_pce = {5};
+% Npce = 4;
 
-for i=length(is)
+for i=1:length(is)-1
     Nq_pces = ones(1, 7);
     Nq_pces(is{i}) = Nq_pce{i};
 
@@ -111,19 +111,33 @@ for i=length(is)
     for j=1:7
         Psi = Psi.*polfuns{j}(IJs(:,j), xxis(:,j));
     end
-    
-    Wcofs = zeros(size(QPs.Wstats,1), size(IJs,1));
-    for n=1:size(QPs.Wstats,1)
-        Wcofs(n, :) = wxis'*(QPs.Wstats(n ,:)'.*Psi);
-    end
 
     % Regression
     Rregcofs = (Psi\QPs.Rs')';
     Wregcofs = (Psi\QPs.Ws')';
     Zregcofs = (Psi\QPs.Zs')';
     Wstatregcofs = (Psi\QPs.Wstats')';
+    
+    %% PCE Simulations
+    Rsim = EVALPCE(QPs.xxis, Rcofs, IJs, polfuns);
+    Wsim = EVALPCE(QPs.xxis, Wcofs, IJs, polfuns);
+    Zsim = EVALPCE(QPs.xxis, Zcofs, IJs, polfuns);
+    Wstatsim = EVALPCE(QPs.xxis, Wstatcofs, IJs, polfuns);
+    
+    Rsimr = EVALPCE(QPs.xxis, Rregcofs, IJs, polfuns);
+    Wsimr = EVALPCE(QPs.xxis, Wregcofs, IJs, polfuns);
+    Zsimr = EVALPCE(QPs.xxis, Zregcofs, IJs, polfuns);
+    Wstatsimr = EVALPCE(QPs.xxis, Wstatregcofs, IJs, polfuns);
+    
+    Wregsim = EVALPCE(xxis, Wstatregcofs, IJs, polfuns);
 
     %% Save
+    
+    Rcofs = Rregcofs;
+    Wcofs = Wregcofs;
+    Zcofs = Zregcofs;
+    Wstatcofs = Wstatregcofs;
+    
     if length(is{i})==1
         x = sym('x');
         assume(x, 'real')
@@ -147,17 +161,4 @@ for i=length(is)
     else
         save(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
     end
-
-    %% PCE Simulations
-    Rsim = EVALPCE(QPs.xxis, Rcofs, IJs, polfuns);
-    Wsim = EVALPCE(QPs.xxis, Wcofs, IJs, polfuns);
-    Zsim = EVALPCE(QPs.xxis, Zcofs, IJs, polfuns);
-    Wstatsim = EVALPCE(QPs.xxis, Wstatcofs, IJs, polfuns);
-    
-    Rsimr = EVALPCE(QPs.xxis, Rregcofs, IJs, polfuns);
-    Wsimr = EVALPCE(QPs.xxis, Wregcofs, IJs, polfuns);
-    Zsimr = EVALPCE(QPs.xxis, Zregcofs, IJs, polfuns);
-    Wstatsimr = EVALPCE(QPs.xxis, Wstatregcofs, IJs, polfuns);
-    
-    Wregsim = EVALPCE(xxis, Wstatregcofs, IJs, polfuns);
 end
