@@ -101,14 +101,14 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 %     HRC = 10 - 71 (Rockwell C) => (avg. 39.3) -> 1.232e9 Pa
 
 %     s = 190e6;  H = 545e6; % (AISI 304N SS)
-%     s = 0.85;  H = 1.0;
-    s = 358e6;  H = 294e9/94.5;
+    s = 0.85;  H = 1.0;
+%     s = 358e6;  H = 294e9/94.5;
     [xi, wi] = LAGWT(Nq_pces(1));
     if strcmp(simmode, 'quad')
-        mu = xi(Ixs(1))*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
+        mu = xi(Ixs(1))*(s/H)/expinv(0.95)*ones(MESH.Ne*MESH.Nq^2, 1);
         Xis(1) = xi(Ixs(1));  Wis(1) = wi(Ixs(1));
     else
-        mu = Ixs(1)*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
+        mu = Ixs(1)*(s/H)/expinv(0.95)*ones(MESH.Ne*MESH.Nq^2, 1);
         Xis(1) = Ixs(1);  Wis(1) = 1;
     end
     
