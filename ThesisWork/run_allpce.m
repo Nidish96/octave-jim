@@ -11,15 +11,15 @@ Nq_pce = 10;
 %% (i, j, k, ...)^th parameter (N-D) 
 % is = [4; 5; 6];
 % is = [1 2 3 4 6];
-is = [1; 3; 4];
-pref = "nlbb_134";
+% is = [1; 3; 4];
+% pref = "nlbb_134";
 
 %% "Mu" PCE
-% is = 1;
-% pref = "nlbb_mupce";
+is = 1;
+pref = "nlbb_1";
 
 %% Generate Parameter Space
-Nq_pces = ones(1, 6);
+Nq_pces = ones(1, 7);
 Nq_pces(is) = Nq_pce;
 
 Ir = cell(size(is));
@@ -27,12 +27,9 @@ Ir = cell(size(is));
 Ir = cell2mat(cellfun(@(c) c(:)', Ir(:), 'UniformOutput', false))';
 nxis = Ir*Nq_pce.^((1:length(is))'-1);
 
-Irr = zeros(Nq_pce^length(is), 6);
+Irr = zeros(Nq_pce^length(is), 7);
 Irr(:, is) = Ir;
 
-n = 443;
-% [443 454 479]
-for n=[444 455 480]
-    RQNM_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref);
-%     STATRES_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref);
+for n=1:Nq_pce
+    worker(n) = batch("RQNM_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref, 1, [-7.5, -3], 1, 'quad');");
 end

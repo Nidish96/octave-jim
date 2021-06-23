@@ -1,6 +1,19 @@
 function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 %RQNM_EXPRSURF_PCEFUN conducts PCE evaluation for given Design
 % Order of parameters Assumed: [mu, msc, prestress, rotx, roty, gap, rad]
+% 
+%   INPUTS  :
+%       Ixs
+%       nxi
+%       Nq_pces
+%       pref
+%%%%%%%%%% OPTIONAL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%       mdi         : Mode of interest
+%       range       : [AMIN AMX]  Amplitude Range
+%       gapmul      : 0 for switching off gap
+%       simmode     : Simulation type (how to interpret 'Ixs')
+%               'quad'      : As indices of quadrature points
+%               'proper'    : As actual random numbers 
 
     %% Choose Mode
     mds = [1 3 5];

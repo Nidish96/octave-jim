@@ -53,10 +53,10 @@ Pars = {'\mu', '\lambda', 'P', '\theta_X', '\theta_Y', 'gap', 'rad'};
 mdis = [1 3 5];
 Nsamps = 1000000;
 
-% is = {[1 2 7]};
-% Nq_pce = {10};
-is = {[1 2 3 4 6 7]};
-Nq_pce = {5};
+is = {[1 2 7]};
+Nq_pce = {10};
+% is = {[1 2 3 4 6 7]};
+% Nq_pce = {5};
 zeta0 = 1.3841e-4;
 for i=1:length(is)
     Nq_pces = ones(1, length(Pars));
