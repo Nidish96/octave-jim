@@ -8,6 +8,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     mdi = 1;  
 %    AMIN = -7.5;  AMAX = -4.5;  % Default
     AMIN = -7.0;  AMAX = -3.0;  % Default
+    gapmul = 1.0;
     simmode = 'quad';
     if length(varargin)>=1
         mdi = varargin{1};
