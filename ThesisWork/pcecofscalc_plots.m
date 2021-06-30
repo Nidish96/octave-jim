@@ -29,7 +29,7 @@ is = {[1], [2], [3], [4 5], [6], [7]}; % [1 3 4]
 Nq_pce = {10, 10, 10, 10, 10, 10, 10, 10, 5};
 Npce = 4;
 
-for i=1:6
+for i=1
     Nq_pces = ones(1, 7);
     Nq_pces(is{i}) = Nq_pce{i};
 
@@ -142,27 +142,78 @@ for i=1:6
     Zregcofs = (Psi\QPs.Zs')';
     Wstatregcofs = (Psi\QPs.Wstats')';
     
+    %% x points for Simulations
+    Nx = 100;
+    xis = zeros(Nx, length(is{i}));
+    for j=1:length(is{i})
+        if is{i}(j)==1
+            xis(:, j) = linspace(-1, 31, Nx);
+        else
+            xis(:, j) = linspace(-1, 1, Nx)*6;
+        end
+    end
+    switch length(is{i})
+        case 1
+            xis = xis;
+        case 2
+            [xxis, etais] = meshgrid(xis(:, 1), xis(:, 2));
+            xis = [xxis(:) etais(:)];
+        otherwise
+            error('only 2D maximum')
+    end
+    xs = zeros(size(xis,1), 7);
+    xs(:, is{i}) = xis;    
+    
     %% PCE Simulations
     % Projection-Based PCE
-    Rsim = EVALPCE(QPs.xxis, Rcofs, IJs, polfuns);
-    Wsim = EVALPCE(QPs.xxis, Wcofs, IJs, polfuns);
-    Zsim = EVALPCE(QPs.xxis, Zcofs, IJs, polfuns);
+%     Rsim = EVALPCE(QPs.xxis, Rcofs, IJs, polfuns);
+%     Wsim = EVALPCE(QPs.xxis, Wcofs, IJs, polfuns);
+%     Zsim = EVALPCE(QPs.xxis, Zcofs, IJs, polfuns);
     Wstatsim = EVALPCE(QPs.xxis, Wstatcofs, IJs, polfuns);
+    Wstatsim_x = EVALPCE(xs, Wstatcofs, IJs, polfuns);
     
     % Regression-based PCE
-    Rsimr = EVALPCE(QPs.xxis, Rregcofs, IJs, polfuns);
-    Wsimr = EVALPCE(QPs.xxis, Wregcofs, IJs, polfuns);
-    Zsimr = EVALPCE(QPs.xxis, Zregcofs, IJs, polfuns);
+%     Rsimr = EVALPCE(QPs.xxis, Rregcofs, IJs, polfuns);
+%     Wsimr = EVALPCE(QPs.xxis, Wregcofs, IJs, polfuns);
+%     Zsimr = EVALPCE(QPs.xxis, Zregcofs, IJs, polfuns);
     Wstatsimr = EVALPCE(QPs.xxis, Wstatregcofs, IJs, polfuns);
+    Wstatsimr_x = EVALPCE(xs, Wstatregcofs, IJs, polfuns);
     
-    % POD-based PCE
-    asim = EVALPCE(QPs.xxis, POD.acofs, IJs, polfuns);
-    Rsimp = POD.R*asim;
-    Wsimp = POD.W*asim;
-    Zsimp = POD.Z*asim;
+%     % POD-based PCE
+%     asim = EVALPCE(QPs.xxis, POD.acofs, IJs, polfuns);
+%     Rsimp = POD.R*asim;
+%     Wsimp = POD.W*asim;
+%     Zsimp = POD.Z*asim;
 
+    %% Plot Fits
+    switch length(is{i})
+        case 1
+            figure(i)
+            clf()
+            plot(QPs.xxis(:,is{i}), QPs.Wstats(1,:)/2/pi, 'ko', 'MarkerFaceColor', 'k'); hold on
+            plot(xis, Wstatsimr_x(1,:)/2/pi, 'b-');
+            xlabel(sprintf('Germ %d', is{i}))
+            ylabel('Mode 1 Natural Frequency (Hz)')
+            grid on
+        case 2
+            figure(i)
+            clf()
+            plot3(QPs.xxis(:,is{i}(1)), QPs.xxis(:,is{i}(2)), QPs.Wstats(1,:)/2/pi, 'ko', 'MarkerFaceColor', 'k'); hold on
+            surf(reshape(xis(:,1), Nx, Nx), reshape(xis(:,2), Nx, Nx), reshape(Wstatsimr_x(1,:)/2/pi, Nx, Nx), 'EdgeColor', 'none');
+%             surf(reshape(xis(:,1), Nx, Nx), reshape(xis(:,2), Nx, Nx), reshape(Wstatsim_x(1,:)/2/pi, Nx, Nx), 'EdgeColor', 'none');
+            xlabel(sprintf('Germ %d', is{i}(1)))
+            ylabel(sprintf('Germ %d', is{i}(2)))
+            zlabel('Mode 1 Natural Frequency (Hz)')
+            grid on
+        otherwise
+            error('only 2D maximum')
+    end
+    if i==1 || i==4
+        legend('Simulations', 'PCE Fit', 'Location', 'best')
+    end
+    set(gcf, 'Color', 'white')
+    export_fig(sprintf('./FIGS/PCESINGFIT_%d.eps', i), '-depsc')
     %% Save
-    
     Rcofs = Rregcofs;
     Wcofs = Wregcofs;
     Zcofs = Zregcofs;
@@ -187,8 +238,8 @@ for i=1:6
         for iw=1:10
             wsxps(iw, :) = sym2poly(wsx(iw));
         end
-        save(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs', 'rxps', 'wxps', 'zxps', 'wsxps')
+%         save(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs', 'rxps', 'wxps', 'zxps', 'wsxps')
     else
-        save(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
+%         save(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
     end
 end

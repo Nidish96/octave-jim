@@ -360,17 +360,24 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     tol = 1e-6;
     Nits = 2;  % Maximum marching iterations
     Zts = zeros(Nq, 1);
-    % parfor (qi=1:Nq,8)
-    for qi=1:Nq
+    Dfluxes = zeros(MESH.Nq^2*MESH.Ne*3, Nq);
+    parfor (qi=1:Nq,8)
+%     for qi=1:Nq        
+        [~, Fnl] = GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)), tol, Nits);
+        Dfluxes(:, qi) = mean((squeeze(Udot(:, qi, :))*GM.NLTs.L').*Fnl);
+        
         Zts(qi) = GETFOURIERCOEFF(0, sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M +...
             squeeze(Udot(:, qi, :))*GM.C +...
             squeeze(Ut(:, qi, :))*GM.K + ...
-            GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)), tol, Nits)),2))/(Qs(qi)^2*Lams(qi)^1.5);
+            Fnl*GM.NLTs.Lf'),2))/(Qs(qi)^2*Lams(qi)^1.5);
         fprintf('%d\n', qi)
     end
 
     %% Save Information into file
-    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
+    Tstat = GM.NLTs.func(0, GM.NLTs.L*Ustat);
+    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
+        'Tstat', 'Dfluxes');
+%     save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
 
     fprintf('=============================================\n')
     fprintf('Done %d\n', nxi);
