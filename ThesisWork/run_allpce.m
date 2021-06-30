@@ -16,9 +16,10 @@ Nq_pce = 10;
 
 %% "Mu" PCE
 is = 1;
-pref = "nlbb_1";
 
 %% Generate Parameter Space
+pref = sprintf('nlbb_%s', sprintf('%d', is));
+
 Nq_pces = ones(1, 7);
 Nq_pces(is) = Nq_pce;
 
@@ -31,5 +32,6 @@ Irr = zeros(Nq_pce^length(is), 7);
 Irr(:, is) = Ir;
 
 for n=1:Nq_pce
-    worker(n) = batch("RQNM_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref, 1, [-7.5, -3], 1, 'quad');");
+%     worker(n) = batch(@RQNM_EXPRSURF_PCEFUN, 0, {Irr(n,:)+1, nxis(n), Nq_pces, pref, 1, [-7.5, -3], 1, 'quad'});
+    RQNM_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref, 1, [-7.5, -3], 1, 'quad');
 end

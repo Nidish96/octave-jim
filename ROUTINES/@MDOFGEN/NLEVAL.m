@@ -1,4 +1,4 @@
-function [Fnl] = NLEVAL(m, t, U, Udot,tol, varargin)
+function [Fnl, ft] = NLEVAL(m, t, U, Udot,tol, varargin)
 %NLEVAL evaluates the nonlinearities in the time domain for given set of
 %points
 

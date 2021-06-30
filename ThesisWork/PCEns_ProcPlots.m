@@ -18,6 +18,13 @@ for i=1:3
     exp(1) = load(sprintf('./MATFILES/Mode%d_Low.mat',i), 'AMP_avg', 'FRE_avg', 'DAM_avg');
     exp(2) = load(sprintf('./MATFILES/Mode%d_Med.mat',i), 'AMP_avg', 'FRE_avg', 'DAM_avg');
     exp(3) = load(sprintf('./MATFILES/Mode%d_High.mat',i), 'AMP_avg', 'FRE_avg', 'DAM_avg');
+    
+    for j=1:3
+        ni = find(all(isfinite([exp(j).AMP_avg exp(j).FRE_avg exp(j).DAM_avg]), 2));
+        exp(j).AMP_avg = exp(j).AMP_avg(ni);
+        exp(j).FRE_avg = exp(j).FRE_avg(ni);
+        exp(j).DAM_avg = exp(j).DAM_avg(ni);
+    end
 
     fav = robustfit([exp(1).AMP_avg; exp(2).AMP_avg; exp(3).AMP_avg], ...
                     [exp(1).FRE_avg; exp(2).FRE_avg; exp(3).FRE_avg]);
@@ -33,18 +40,23 @@ exp(1) = load('./MATFILES/Mode1_Low.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 exp(2) = load('./MATFILES/Mode1_Med.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 exp(3) = load('./MATFILES/Mode1_High.mat', 'AMP_avg', 'FRE_avg', 'DAM_avg');
 
-for i=1:3
+for j=1:3
+    ni = find(all(isfinite([exp(j).AMP_avg exp(j).FRE_avg exp(j).DAM_avg]), 2));
+    exp(j).AMP_avg = exp(j).AMP_avg(ni);
+    exp(j).FRE_avg = exp(j).FRE_avg(ni);
+    exp(j).DAM_avg = exp(j).DAM_avg(ni);
 %     exp(i).AMP_avg = exp(i).AMP_avg/9.81;
-    exp(i).AMP_avg = exp(i).AMP_avg./(2*pi*exp(i).FRE_avg).^2;
+    exp(j).AMP_avg = exp(j).AMP_avg./(2*pi*exp(j).FRE_avg).^2;
 end
 
 % ps = [0.05 0.50 0.99];
 ps = [0.05 0.25 0.45];
 % ecs = colormap(lines(length(ps)));
 ecs = zeros(length(ps), 3);
+lst = {'-', '--', '-.'};
 % ecs = {'red', 'yellow', 'green'};
 fcs = kron((1-ps(:)), [1 1 1]);
-ecs = fcs;
+% ecs = fcs;
 falph = 1;
 pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal'), makedist('normal')};
 polfuns = {@(ns, xs) PLAGU(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs), @(ns, xs) PHERM(ns, xs)};
@@ -53,10 +65,10 @@ Pars = {'\mu', '\lambda', 'P', '\theta_X', '\theta_Y', 'gap', 'rad'};
 mdis = [1 3 5];
 Nsamps = 1000000;
 
-is = {[1 2 7]};
-Nq_pce = {10};
-% is = {[1 2 3 4 6 7]};
-% Nq_pce = {5};
+% is = {[1 2 7]};
+% Nq_pce = {10};
+is = {[1 2 3 4 6 7]};
+Nq_pce = {5};
 zeta0 = 1.3841e-4;
 for i=1:length(is)
     Nq_pces = ones(1, length(Pars));
@@ -125,10 +137,24 @@ for i=1:length(is)
         end
     end
     
+    % Total Effect Sobol Indices
+    iT1s = [];
+    W_ST1 = zeros(100, length(is{i}));
+    Z_ST1 = zeros(100, length(is{i}));
+    Wstat_ST1 = zeros(10, length(is{i}));
+    for j=1:length(is{i})
+        iT1s = [iT1s find(IJs(2:end, is{i}(j))~=0)+1];
+        W_ST1(:, j)     = ((Wcofs(:, iT1s(:,j)).^2)*Integs(iT1s(:,j)))./Wvar;
+        Z_ST1(:, j)     = ((Zcofs(:, iT1s(:,j)).^2)*Integs(iT1s(:,j)))./Zvar;
+        Wstat_ST1(:, j) = ((Wstatcofs(:, iT1s(:,j)).^2)*Integs(iT1s(:,j)))./Wstatvar;
+    end
+    
     W_S1 = sqrt(W_S1);
     W_S2 = sqrt(W_S2);
+    W_ST1 = sqrt(W_ST1);
     Wstat_S1 = sqrt(Wstat_S1);
     Wstat_S2 = sqrt(Wstat_S2);
+    Wstat_ST1 = sqrt(Wstat_ST1);
     %% S1 Plots    
     % Frequency - S1
     figure((i-1)*10+1)
@@ -138,7 +164,7 @@ for i=1:length(is)
     for j=1:length(ps)
         ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi, fcs(j,:), ...
-            'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
         legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
     end
     set(gca, 'XScale', 'log')
@@ -155,35 +181,66 @@ for i=1:length(is)
         legend(aa(1+k), sprintf('$S_{%s}$', Pars{is{i}(k)}))
     end
     ll=legend([ff;aa], 'Location', 'southwest');
-    ylabel('First Order Sobol Indices')
-%     ylim([-0.1 1.1])
-    set(gca, 'yscale', 'log')
-    ylim([min(ylim) 2e0])
+    set(ll, 'Visible', 'off');
+    ylabel('First Order Sobol Indices (sq. root)')
+    ylim([-0.1 1.1])
     xlim(minmax(Rcofs(:,1)'))
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBW_S1s.png', '-dpng', '-r300')
     
-    % Damping - S1
+    %% Damping - S1
     figure((i-1)*10+5)
     clf()
     for j=1:length(ps)
         fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [ZPI(:, j); ZPI(end:-1:1, j+length(ps))]*100+zeta0*100, fcs(j,:), ...
-            'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
     end
     set(gca, 'XScale', 'log')
     for j=1:length(exp)
         semilogx(exp(j).AMP_avg, exp(j).DAM_avg*100, 'k-', 'LineWidth', 2);
     end
     xlabel('Response Amplitude (m)')
-    ylabel('Natural Frequency (Hz)')
+    ylabel('Damping Factor (\%)')
     yyaxis right
     for k=1:size(Z_S1,2)
         semilogx(Rcofs(:,1), Z_S1(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2)
     end
-    ylabel('First Order Sobol Indices')
-%     ylim([-0.1 1.1])
-    set(gca, 'yscale', 'log')
-    ylim([min(ylim) 2e0])
+    ylabel('First Order Sobol Indices (sq. root)')
+    ylim([-0.1 1.1])
     xlim(minmax(Rcofs(:,1)'))
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBZ_S1s.png', '-dpng', '-r300')
+    %%
+    figure(1000)
+    clf()
+    colos = DISTINGUISHABLE_COLORS(size(W_S1,2));
+    ff = gobjects(length(ps),1);
+    for j=1:length(ps)
+        ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)]*0, ...
+            [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi*0, fcs(j,:), ...
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
+        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
+    end
+    set(gca, 'XScale', 'log')
+    aa = gobjects(size(W_S1,2), 1);
+    for j=1:length(exp)
+        aa(1) = semilogx(exp(j).AMP_avg*0, exp(j).FRE_avg*0, 'k-', 'LineWidth', 2);
+    end
+    legend(aa(1), 'Experimental Data')
+    xlabel('Response Amplitude (m)')
+    ylabel('Natural Frequency (Hz)')
+    yyaxis right
+    for k=1:size(W_S1,2)
+        aa(1+k) = semilogx(Rcofs(:,1)*0, W_S1(:,k)*0, '-', 'Color', colos(k,:), 'LineWidth', 2);
+        legend(aa(1+k), sprintf('$S_{%s}$', Pars{is{i}(k)}))
+    end
+    ll=legend([ff;aa]);
+    set(ll, 'NumColumns', 3);
+    set(ll, 'Position', [0.2 0.5 0.6325 0.1924])
+    axis off
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBL_S1s.png', '-dpng', '-r300')
     
     %% S2 Plots
     % Frequency - S2
@@ -193,7 +250,7 @@ for i=1:length(is)
     for j=1:length(ps)
         ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi, fcs(j,:), ...
-            'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
         legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
     end
     set(gca, 'XScale', 'log')
@@ -209,12 +266,13 @@ for i=1:length(is)
         aa(1+k) = semilogx(Rcofs(:,1), W_S2(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2);
         legend(aa(1+k), sprintf('$S_{%s,%s}$', Pars{j1j2s(k,1)}, Pars{j1j2s(k,2)}))
     end
-    legend([ff;aa], 'Location', 'west')
-    ylabel('Second Order Sobol Indices')
-%     ylim([-0.1 1.1])
-    set(gca, 'yscale', 'log')
-    ylim([min(ylim) 2e0])
+    ll=legend([ff;aa], 'Location', 'west');
+    set(ll, 'Visible', 'off')
+    ylabel('Second Order Sobol Indices (sq. root)')
+    ylim([-0.1 1.1])
     xlim(minmax(Rcofs(:,1)'))
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBW_S2s.png', '-dpng', '-r300')
     
     % Damping - S2
     figure((i-1)*10+6)
@@ -222,23 +280,142 @@ for i=1:length(is)
     for j=1:length(ps)
         fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [ZPI(:, j); ZPI(end:-1:1, j+length(ps))]*100+zeta0*100, fcs(j,:), ...
-            'EdgeColor', ecs(j,:), 'FaceAlpha', falph); hold on
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
     end
     set(gca, 'XScale', 'log')
     for j=1:length(exp)
         semilogx(exp(j).AMP_avg, exp(j).DAM_avg*100, 'k-', 'LineWidth', 2);
     end
     xlabel('Response Amplitude (m)')
-    ylabel('Natural Frequency (Hz)')
+    ylabel('Damping Factor (\%)')
     yyaxis right
     for k=1:size(W_S2,2)
         semilogx(Rcofs(:,1), Z_S2(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2)
     end
-    ylabel('Second Order Sobol Indices')
-%     ylim([-0.1 1.1])
-    set(gca, 'yscale', 'log')
-    ylim([min(ylim) 2e0])
+    ylabel('Second Order Sobol Indices (sq. root)')
+    ylim([-0.1 1.1])
     xlim(minmax(Rcofs(:,1)'))
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBZ_S2s.png', '-dpng', '-r300')
+    
+    figure(1000)
+    clf()
+    colos = DISTINGUISHABLE_COLORS(size(W_S2,2));
+    for j=1:length(ps)
+        ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)]*0, ...
+            [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi*0, fcs(j,:), ...
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
+        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
+    end
+    set(gca, 'XScale', 'log')
+    aa = gobjects(size(W_S2,2)+1, 1);
+    for j=1:length(exp)
+        aa(1)=semilogx(exp(j).AMP_avg*0, exp(j).FRE_avg*0, 'k-', 'LineWidth', 2);
+    end
+    legend(aa(1), 'Experimental Data')
+    xlabel('Response Amplitude (m)')
+    ylabel('Natural Frequency (Hz)')
+    yyaxis right
+    for k=1:size(W_S2,2)
+        aa(1+k) = semilogx(Rcofs(:,1)*0, W_S2(:,k)*0, '-', 'Color', colos(k,:), 'LineWidth', 2);
+        legend(aa(1+k), sprintf('$S_{%s,%s}$', Pars{j1j2s(k,1)}, Pars{j1j2s(k,2)}))
+    end
+    ll=legend([ff;aa], 'Location', 'west');
+    ylabel('Second Order Sobol Indices (sq. root)')
+    ylim([-0.1 1.1])
+    xlim(minmax(Rcofs(:,1)'))
+    set(gcf, 'Color', 'white')
+    axis off
+    set(ll, 'NumColumns', 3);
+    set(ll, 'Position', [0.19 0.5 0.6325 0.1924])
+    export_fig('./FIGS/ALLPCE_BBL_S2s.png', '-dpng', '-r300')
+    
+    %% ST1 Plots    
+    % Frequency - ST1
+    figure((i-1)*10+3)
+    clf()
+    colos = DISTINGUISHABLE_COLORS(size(W_ST1,2));
+    ff = gobjects(length(ps),1);
+    for j=1:length(ps)
+        ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
+            [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi, fcs(j,:), ...
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
+        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
+    end
+    set(gca, 'XScale', 'log')
+    aa = gobjects(size(W_ST1,2), 1);
+    for j=1:length(exp)
+        aa(1) = semilogx(exp(j).AMP_avg, exp(j).FRE_avg, 'k-', 'LineWidth', 2);
+    end
+    legend(aa(1), 'Experimental Data')
+    xlabel('Response Amplitude (m)')
+    ylabel('Natural Frequency (Hz)')
+    yyaxis right
+    for k=1:size(W_ST1,2)
+        aa(1+k) = semilogx(Rcofs(:,1), W_ST1(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2);
+        legend(aa(1+k), sprintf('$S_{T%s}$', Pars{is{i}(k)}))
+    end
+    ll=legend([ff;aa], 'Location', 'southwest');
+    set(ll, 'Visible', 'off')
+    ylabel('Total Sobol Indices (sq. root)')
+    ylim([-0.1 1.1])
+    xlim(minmax(Rcofs(:,1)'))
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBW_STs.png', '-dpng', '-r300')
+    
+    % Damping - ST1
+    figure((i-1)*10+7)
+    clf()
+    for j=1:length(ps)
+        fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
+            [ZPI(:, j); ZPI(end:-1:1, j+length(ps))]*100+zeta0*100, fcs(j,:), ...
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
+    end
+    set(gca, 'XScale', 'log')
+    for j=1:length(exp)
+        semilogx(exp(j).AMP_avg, exp(j).DAM_avg*100, 'k-', 'LineWidth', 2);
+    end
+    xlabel('Response Amplitude (m)')
+    ylabel('Damping Factor (\%)')
+    yyaxis right
+    for k=1:size(Z_ST1,2)
+        semilogx(Rcofs(:,1), Z_ST1(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2)
+    end
+    ylabel('Total Sobol Indices (sq. root)')
+    ylim([-0.1 1.1])
+    xlim(minmax(Rcofs(:,1)'))
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBZ_STs.png', '-dpng', '-r300')
+    
+    figure(1000)
+    clf()
+    colos = DISTINGUISHABLE_COLORS(size(W_S1,2));
+    ff = gobjects(length(ps),1);
+    for j=1:length(ps)
+        ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)]*0, ...
+            [WPI(:, j); WPI(end:-1:1, j+length(ps))]/2/pi*0, fcs(j,:), ...
+            'EdgeColor', ecs(j,:), 'FaceAlpha', falph, 'LineStyle', lst{j}); hold on
+        legend(ff(j), sprintf('$%d^{th}-%d^{th}$ Percentiles', fix(ps(j)*100), fix((1-ps(j))*100)));
+    end
+    set(gca, 'XScale', 'log')
+    aa = gobjects(size(W_S1,2), 1);
+    for j=1:length(exp)
+        aa(1) = semilogx(exp(j).AMP_avg*0, exp(j).FRE_avg*0, 'k-', 'LineWidth', 2);
+    end
+    legend(aa(1), 'Experimental Data')
+    xlabel('Response Amplitude (m)')
+    ylabel('Natural Frequency (Hz)')
+    yyaxis right
+    for k=1:size(W_S1,2)
+        aa(1+k) = semilogx(Rcofs(:,1)*0, W_S1(:,k)*0, '-', 'Color', colos(k,:), 'LineWidth', 2);
+        legend(aa(1+k), sprintf('$S_{T%s}$', Pars{is{i}(k)}))
+    end
+    ll=legend([ff;aa]);
+    set(ll, 'NumColumns', 3);
+    set(ll, 'Position', [0.2 0.5 0.6325 0.1924])
+    axis off
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_BBL_STs.png', '-dpng', '-r300')
     
     %% Modal Frequencies
     figure((i-1)*10+4)
@@ -253,12 +430,40 @@ for i=1:length(is)
         bb(k).FaceColor = colos(k,:);
         legend(bb(k), sprintf('$S_{%s, %s}$', Pars{j1j2s(k-size(Wstat_S1,2),1)}, Pars{j1j2s(k-size(Wstat_S1,2),2)}));
     end
-    set(gca, 'yscale', 'log')
-    legend(bb, 'Location', 'best')
+%     set(gca, 'yscale', 'log')
+    ll = legend(bb, 'Location', 'best');
+    set(ll, 'Visible', 'off')
     xlabel('Bending Mode ID')
-    ylabel('Sobol Indices')
+    ylabel('Sobol Indices (sq. root)')
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_MFREQ_S1s.eps', '-depsc')
     
-    figure((i-1)*10+9)
+    figure(1000)
+    clf()
+    colos = DISTINGUISHABLE_COLORS(size([Wstat_S1 Wstat_S2],2));
+%     bb = bar([Wstat_S1(mdis, :) Wstat_S2(mdis, :)]*nan);
+    bb = gobjects(size(Wstat_S1,2)+size(Wstat_S2,2),1);
+    for k=1:size(Wstat_S1,2)
+        bb(k) = fill(zeros(10,1), zeros(10,1), colos(k,:)); hold on
+%         bb(k).FaceColor = colos(k,:);
+        legend(bb(k), sprintf('$S_{%s}$', Pars{is{i}(k)}));
+    end
+    for k=size(Wstat_S1,2)+(1:size(Wstat_S2,2))
+        bb(k) = fill(zeros(10,1), zeros(10,1), colos(k,:));
+%         bb(k).FaceColor = colos(k,:);
+        legend(bb(k), sprintf('$S_{%s, %s}$', Pars{j1j2s(k-size(Wstat_S1,2),1)}, Pars{j1j2s(k-size(Wstat_S1,2),2)}));
+    end
+%     set(gca, 'yscale', 'log')
+    axis off
+    ll = legend(bb);
+    set(ll, 'NumColumns', 5)
+    set(ll, 'Position', [0.1 0.5 0.8 0.24])
+    xlabel('Bending Mode ID')
+    ylabel('Sobol Indices (sq. root)')
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_MFREQL_S1s.eps', '-depsc')
+    %%
+    figure((i-1)*10+8)
     clf()
     for im=1:length(mdis)
         subplot(length(mdis), 1, im)
@@ -271,4 +476,22 @@ for i=1:length(is)
         plot(Wsex(im)/2/pi*[1 1], ylim, 'k-', 'LineWidth', 2)
     end
     xlabel('Natural Frequency (Hz)')
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_MFREQsims.eps', '-depsc')
+    
+    %%
+    figure((i-1)*10+9)
+    clf()
+    colos = DISTINGUISHABLE_COLORS(size(Wstat_ST1,2));
+    bb = bar(Wstat_ST1(mdis, :));
+    for k=1:size(Wstat_ST1,2)
+        bb(k).FaceColor = colos(k,:);
+        legend(bb(k), sprintf('$S_{T%s}$', Pars{is{i}(k)}));
+    end
+%     set(gca, 'yscale', 'log')
+    legend(bb, 'Location', 'best')
+    xlabel('Bending Mode ID')
+    ylabel('Total Sobol Indices (sq. root)')
+    set(gcf, 'Color', 'white')
+    export_fig('./FIGS/ALLPCE_MFREQ_STs.eps', '-depsc')
 end

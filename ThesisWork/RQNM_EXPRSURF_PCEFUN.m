@@ -62,8 +62,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     % E = 2e11;
     % nu = 0.3;
 
-    top   = 'R05B_After';
-    bot   = 'R05A_After';
+    top   = 'R05B_Before';
+    bot   = 'R05A_Before';
 
     load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'K', 'M', 'R', 'L', 'Fv', 'TFM');
 
@@ -116,14 +116,14 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 %     HRC = 10 - 71 (Rockwell C) => (avg. 39.3) -> 1.232e9 Pa
 
 %     s = 190e6;  H = 545e6; % (AISI 304N SS)
-    s = 0.85;  H = 1.0;
+    s = 0.01;  H = 1.0;
 %     s = 358e6;  H = 294e9/94.5;
     [xi, wi] = LAGWT(Nq_pces(1));
     if strcmp(simmode, 'quad')
-        mu = xi(Ixs(1))*(s/H)/expinv(0.95)*ones(MESH.Ne*MESH.Nq^2, 1);
+        mu = xi(Ixs(1))*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
         Xis(1) = xi(Ixs(1));  Wis(1) = wi(Ixs(1));
     else
-        mu = Ixs(1)*(s/H)/expinv(0.95)*ones(MESH.Ne*MESH.Nq^2, 1);
+        mu = Ixs(1)*(s/H)*ones(MESH.Ne*MESH.Nq^2, 1);
         Xis(1) = Ixs(1);  Wis(1) = 1;
     end
     
@@ -359,17 +359,24 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     tol = 1e-6;
     Nits = 2;  % Maximum marching iterations
     Zts = zeros(Nq, 1);
-    % parfor (qi=1:Nq,8)
-    for qi=1:Nq
+    Dfluxes = zeros(MESH.Nq^2*MESH.Ne*3, Nq);
+    parfor (qi=1:Nq,8)
+%     for qi=1:Nq        
+        [~, Fnl] = GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)), tol, Nits);
+        Dfluxes(:, qi) = mean((squeeze(Udot(:, qi, :))*GM.NLTs.L').*Fnl);
+        
         Zts(qi) = GETFOURIERCOEFF(0, sum(squeeze(Udot(:, qi, :)).*(squeeze(Uddot(:, qi, :))*GM.M +...
             squeeze(Udot(:, qi, :))*GM.C +...
             squeeze(Ut(:, qi, :))*GM.K + ...
-            GM.NLEVAL(t, squeeze(Ut(:, qi,:)), squeeze(Udot(:, qi,:)), tol, Nits)),2))/(Qs(qi)^2*Lams(qi)^1.5);
+            Fnl*GM.NLTs.Lf'),2))/(Qs(qi)^2*Lams(qi)^1.5);
         fprintf('%d\n', qi)
     end
 
     %% Save Information into file
-    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
+    Tstat = GM.NLTs.func(0, GM.NLTs.L*Ustat);
+    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
+        'Tstat', 'Dfluxes');
+%     save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
 
     fprintf('=============================================\n')
     fprintf('Done %d\n', nxi);

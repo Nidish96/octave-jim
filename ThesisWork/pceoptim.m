@@ -34,6 +34,8 @@ Zcofs(:,1) = Zcofs(:,1)+zeta0;
 [dw] = PCECOSTFUN([zeros(1, 6); 0.5*ones(1, 6); ones(1, 6)], Lx, {Rcofs, Wcofs, Zcofs}, EXPdat, IJs, polfuns);
 
 %% gamultiobj
+rng(1)
+
 Npop = 500;
 xs = zeros(Npop, 7);
 for i=1:7
@@ -41,6 +43,7 @@ for i=1:7
 end
 xs = xs(:, inds);
 
+figure(1)
 opt = optimoptions('gamultiobj', 'PopulationSize', Npop, 'UseVectorized', true, 'UseParallel', true, 'InitialPopulationMatrix', xs, 'PlotFcn', {'gaplotpareto', 'gaplotparetodistance', 'gaplotrankhist', 'gaplotspread'});
 [x, fval, ~, op] = gamultiobj(@(x) PCECOSTFUN(x, Lx, {Rcofs, Wcofs, Zcofs}, EXPdat, IJs, polfuns), ...
     6, [], [], [], [], [0 repmat(-nan, 1, 5)], [], [], opt);
@@ -68,11 +71,12 @@ clf()
 plotmatrix(x)
 
 %% Conduct Original Simulations
-xrun = x(1,:);
-[~, mi] = min(x(:,1));
-xrun = x(mi, :);
-pref = 'GADES';
-RQNM_EXPRSURF_PCEFUN(xrun*Lx', 0, ones(1, 7), pref, 1, [-7.5, -3], 1, 'proper');
+xrun = x(1,:)*expinv(0.95);
+for mi=1:size(x,1)
+    xrun = x(mi, :)*expinv(0.95);
+    pref = 'GADES/GADES';
+    RQNM_EXPRSURF_PCEFUN(xrun*Lx', 0, ones(1, 7), pref, 1, [-7.5, -3], 1, 'proper');
+end
 
 %% Plot
 model = 'BRB_Thesis';
