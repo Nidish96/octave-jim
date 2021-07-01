@@ -117,7 +117,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 
 %     s = 190e6;  H = 545e6; % (AISI 304N SS)
 %    s = 0.85;  H = 1.0;
-%     s = 0.01; H = 1.0;
+%    s = 0.01; H = 1.0;
     s = 358e6;  H = 294e9/94.5;
     [xi, wi] = LAGWT(Nq_pces(1));
     if strcmp(simmode, 'quad')
@@ -144,7 +144,11 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
         Xis(2) = Ixs(2);  Wis(2) = 1;
     end
     lam1i = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./lamt1i+R1bot.NASPS(:,1)./lamb1i);
+    lam1i = MESH.FELOLSM(lam1i);
     lam2i = (R2top.NASPS(:,1)+R2bot.NASPS(:,1))./(R2top.NASPS(:,1)./lamt2i+R2bot.NASPS(:,1)./lamb2i);
+    lam2i = MESH.FELOLSM(lam2i);
+    lam1i(lam1i==0) = lam2i(lam1i==0);
+    lam2i(lam2i==0) = lam1i(lam2i==0);
     lam = (lam1i+lam2i)/2;
     
     lam = kron(lam, ones(Nq^2, 1));
@@ -206,12 +210,14 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
      if strcmp(simmode, 'quad')
          R1 = ((R1top.CRAD*[1;xi(Ixs(7))]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;xi(Ixs(7))]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
          R2 = ((R2top.CRAD*[1;xi(Ixs(7))]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;xi(Ixs(7))]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
-         Xis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
+         Xisis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
      else
          R1 = ((R1top.CRAD*[1;Ixs(7)]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;Ixs(7)]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
          R2 = ((R2top.CRAD*[1;Ixs(7)]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;Ixs(7)]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
          Xis(7) = Ixs(7);  Wis(7) = 1;
      end
+    R1 = MESH.FELOLSM(R1);
+    R2 = MESH.FELOLSM(R2);
      Rad = abs(R1+R2)/2; 
      Rad = kron(Rad, ones(Nq^2,1));
      
@@ -375,9 +381,9 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 
     %% Save Information into file
     Tstat = GM.NLTs.func(0, GM.NLTs.L*Ustat);
-    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
-        'Tstat', 'Dfluxes');
-%     save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
+%    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
+%        'Tstat', 'Dfluxes');
+     save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
 
     fprintf('=============================================\n')
     fprintf('Done %d\n', nxi);
