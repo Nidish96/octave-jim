@@ -85,5 +85,30 @@ classdef MESH2D
       
       z = single(m.z);
     end
+
+    function nels = NEIGHBOURELS(m, eid)
+        if m.Ne_Tri~=0
+            error('triangles not supported');
+        end
+
+        eidx = find(m.Quad(:,1)==eid);
+        nids = m.Quad(eidx,2:5);
+        hits = zeros(m.Ne,1);
+        for k=1:4
+            hits = hits + sum(m.Quad(:,2:end)==nids(k),2);
+        end
+        nels = find(hits>=2);
+        nelx = m.Quad(nels,1);
+    end
+
+    function fvec = FELOLSM(fvec)
+        oli = isoutlier(fvec);
+        for kk=oli(:)'
+            nels = m.NEIGHBOURELS(kk);
+            fvec(kk) = mean(fvec(nels));
+        end
+    end
+        
+    end
   end
 end
