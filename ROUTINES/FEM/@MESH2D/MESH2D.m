@@ -102,10 +102,29 @@ classdef MESH2D
     end
 
     function fvec = FELOLSM(m, fvec)
-        oli = isoutlier(fvec);
-        for kk=oli(:)'
-            nels = m.NEIGHBOURELS(kk);
-            fvec(kk) = mean(fvec(nels));
+        if (length(fvec)==m.Ne)
+            oli = find(isoutlier(fvec));
+            for kk=oli(:)'
+                nels = m.NEIGHBOURELS(kk);
+                nels = setdiff(nels, oli);
+                fvec(kk) = mean(fvec(nels));
+            end
+        elseif (length(fvec)==m.Ne*m.Nq^2)
+            qps = full(m.Qm*m.Nds);
+            fvecel = mean(reshape(fvec, 4, []));
+            oli = find(isoutlier(fvecel));
+            for kk=oli(:)'
+                nels = m.NEIGHBOURELS(kk);
+                nels = setdiff(nels, oli);
+                qpnis = (nels-1)*m.Nq^2+(1:m.Nq^2);
+                xyzn = [qps(qpnis(:),:) fvec(qpnis(:))];
+
+                [~, ~, V] = svd([ones(size(xyzn,1),1) xyzn], 'econ');
+
+                xyqps = qps((kk-1)*m.Nq^2+(1:m.Nq^2), :);
+                zs = -[ones(size(xyqps,1),1) xyqps]*V(1:3, end)/V(4,end);
+                fvec((kk-1)*m.Nq^2+(1:m.Nq^2)) = zs;
+            end
         end
     end
   end

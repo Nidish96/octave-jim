@@ -87,7 +87,53 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 
     R1bot = load(sprintf('./MATFILES/%s_R1_AspPDEs.mat', bot), 'BilinPlaneQPs', 'LLX0s_sd', 'CRAD', 'NASPS');
     R2bot = load(sprintf('./MATFILES/%s_R2_AspPDEs.mat', bot), 'BilinPlaneQPs', 'LLX0s_sd', 'CRAD', 'NASPS');
-
+    
+    %% Fill Missing Data
+    vars = {'R1top', 'R2top', 'R1bot', 'R2bot'};
+    qps = MESH.Qm*MESH.Nds;
+    for i=1:length(vars)
+        dt = eval(vars{i});
+        fi = find(mean(reshape(dt.BilinPlaneQPs(:, 1), 4, []))==0);
+        fi = unique([fi(:); find(any(dt.LLX0s_sd==0, 2)); find(any(dt.CRAD==0, 2)); find(any(dt.NASPS==0, 2))]);
+        if isempty(fi)
+            continue; 
+        end
+        repi = str2num(vars{i}(2));
+        srf = vars{i}(3:5);
+        rt = eval(sprintf('R%d%s', mod(repi+1-1, 2)+1, srf));
+        
+        qpnis = (fi(:)-1)*4+(1:4);
+        dt.BilinPlaneQPs(qpnis, :) = rt.BilinPlaneQPs(qpnis, :);
+        
+        dt.LLX0s_sd(fi, :) = rt.LLX0s_sd(fi, :);
+        dt.CRAD(fi, :) = rt.CRAD(fi, :);
+        dt.NASPS(fi, :) = rt.NASPS(fi, :);
+        
+        eval([vars{i} '=dt;']);
+        
+%         qpis = (fi(:)-1)*4+(1:4);
+%         for e=fi
+%             nels = MESH.NEIGHBOURELS(e);
+%             nels = setdiff(nels, fi);
+%             qpnis = (nels-1)*4+(1:4);
+%             
+%             xyzn = [qps(qpnis(:),:) dt.BilinPlaneQPs(qpnis(:),1)];
+%             [~, ~, V] = svd([ones(size(xyzn,1),1) xyzn], 'econ');
+%             xyqps = qps((e-1)*4+(1:4), :);
+%             dt.BilinPlaneQPs((e-1)*4+(1:4), 1) = -[ones(size(xyqps,1),1) xyqps]*V(1:3, end)/V(4,end);
+%             
+%             xyzn = [qps(qpnis(:),:) dt.BilinPlaneQPs(qpnis(:),2)];
+%             [~, ~, V] = svd([ones(size(xyzn,1),1) xyzn], 'econ');
+%             xyqps = qps((e-1)*4+(1:4), :);
+%             dt.BilinPlaneQPs((e-1)*4+(1:4), 2) = -[ones(size(xyqps,1),1) xyqps]*V(1:3, end)/V(4,end);
+%             
+%             dt.LLX0s_sd(e, :) = mean(dt.LLX0s_sd(nels,:));
+%             dt.CRAD(e, :) = mean(dt.CRAD(nels,:));
+%             dt.NASPS(e, :) = mean(dt.NASPS(nels,:));
+%         end
+%         
+%         eval([vars{i} '=dt;']);
+    end
     %% Number of Asperities in Interface
     Nasps1 = R1top.NASPS(:,1)+R1bot.NASPS(:,1);
     Nasps2 = R2top.NASPS(:,1)+R2bot.NASPS(:,1);
@@ -135,17 +181,19 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
         lamt2i = R2top.LLX0s_sd(:,1)+R2top.LLX0s_sd(:,3)*xi(Ixs(2));
         lamb1i = R1bot.LLX0s_sd(:,1)+R1bot.LLX0s_sd(:,3)*xi(Ixs(2));
         lamb2i = R2bot.LLX0s_sd(:,1)+R2bot.LLX0s_sd(:,3)*xi(Ixs(2));
+        
         Xis(2) = xi(Ixs(2));  Wis(2) = wi(Ixs(2));
     else
         lamt1i = R1top.LLX0s_sd(:,1)+R1top.LLX0s_sd(:,3)*Ixs(2);
         lamt2i = R2top.LLX0s_sd(:,1)+R2top.LLX0s_sd(:,3)*Ixs(2);
         lamb1i = R1bot.LLX0s_sd(:,1)+R1bot.LLX0s_sd(:,3)*Ixs(2);
         lamb2i = R2bot.LLX0s_sd(:,1)+R2bot.LLX0s_sd(:,3)*Ixs(2);
+        
         Xis(2) = Ixs(2);  Wis(2) = 1;
     end
     lam1i = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./lamt1i+R1bot.NASPS(:,1)./lamb1i);
-    lam1i = MESH.FELOLSM(lam1i);
     lam2i = (R2top.NASPS(:,1)+R2bot.NASPS(:,1))./(R2top.NASPS(:,1)./lamt2i+R2bot.NASPS(:,1)./lamb2i);
+    lam1i = MESH.FELOLSM(lam1i);
     lam2i = MESH.FELOLSM(lam2i);
     lam1i(lam1i==0) = lam2i(lam1i==0);
     lam2i(lam2i==0) = lam1i(lam2i==0);
@@ -210,7 +258,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
      if strcmp(simmode, 'quad')
          R1 = ((R1top.CRAD*[1;xi(Ixs(7))]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;xi(Ixs(7))]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
          R2 = ((R2top.CRAD*[1;xi(Ixs(7))]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;xi(Ixs(7))]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
-         Xisis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
+         Xis(7) = xi(Ixs(7));  Wis(7) = wi(Ixs(7));
      else
          R1 = ((R1top.CRAD*[1;Ixs(7)]).*R1top.NASPS(:,1)+(R1bot.CRAD*[1;Ixs(7)]).*R1bot.NASPS(:,1))./(R1top.NASPS(:,1)+R1bot.NASPS(:,1));
          R2 = ((R2top.CRAD*[1;Ixs(7)]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;Ixs(7)]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
@@ -218,8 +266,10 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
      end
     R1 = MESH.FELOLSM(R1);
     R2 = MESH.FELOLSM(R2);
-     Rad = abs(R1+R2)/2; 
-     Rad = kron(Rad, ones(Nq^2,1));
+    R1(R1==0) = R2(R1==0);
+    R2(R2==0) = R1(R2==0);
+    Rad = abs(R1+R2)/2; 
+    Rad = kron(Rad, ones(Nq^2,1));
      
     %% Run Simulations
     tic
