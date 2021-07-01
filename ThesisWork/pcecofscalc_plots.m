@@ -16,7 +16,7 @@ load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'R');
 Pars = {'\mu', '\lambda', 'P', '\theta_X', '\theta_Y', 'gap', 'rad'};
 pdists = [makedist('exp') repmat(makedist('normal'), 1, 6)];
 polfuns = [{@(ns, xs) PLAGU(ns, xs)}, repmat({@(ns, xs) PHERM(ns, xs)}, 1, 6)];
-quadfuns = {@(n) LAGWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n)};
+quadfuns = {@(n) LAGWT(n), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n ), @(n) GPHWT(n), @(n) GPHWT(n), @(n) GPHWT(n)};
 mdis = [1 3 5];
 Nsamps = 100000;
 
@@ -26,7 +26,7 @@ apref = 'nlbb';
 % Npce = 4;
 
 is = {[1], [2], [3], [4 5], [6], [7]}; % [1 3 4]
-Nq_pce = {10, 10, 10, 10, 10, 10, 10, 10, 5};
+Nq_pce = {5, 10, 10, 10, 10, 10, 10, 10, 5};
 Npce = 4;
 
 for i=1
@@ -147,7 +147,8 @@ for i=1
     xis = zeros(Nx, length(is{i}));
     for j=1:length(is{i})
         if is{i}(j)==1
-            xis(:, j) = linspace(-1, 31, Nx);
+%             xis(:, j) = linspace(-1, 31, Nx);
+            xis(:, j) = linspace(0, 14, Nx);
         else
             xis(:, j) = linspace(-1, 1, Nx)*6;
         end

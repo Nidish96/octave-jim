@@ -3,7 +3,7 @@ clear all
 % Order of Parameters : [mu, msc, prestress, rotx, roty, gap]
 
 %% Total Number of Quadrature Points
-Nq_pce = 10;
+Nq_pce = 5;
 
 %% "All" PCE
 % is = (1:6)';

@@ -43,7 +43,7 @@ parms = {'mu', 'msc', 'pres', 'rot', 'gap', 'rad', 'rgap'};
 ids = {1, 2, 3, 45, 6, 7, 46};
 pdists = {makedist('exp'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1]), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1])};
 lims = [[0 inf]; repmat([-inf inf], 6, 1)];
-Nsamps = [0; 10000; 50000; 10000; 10000; 10000; 10000];
+Nsamps = [10000; 10000; 50000; 10000; 10000; 10000; 10000];
 ttls = {'Coefficient of Friction', 'Mean Asperity Height', ...
     'Prestress', 'Stage Rotation', 'Meso-Scale Topology', ...
     'Mean Asperity Radius', 'Meso-Scale'};
@@ -60,7 +60,7 @@ lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
 %     'Meso-Scale Topology', 'Prestress', 'Stage Rotation'};
 % lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
 %     '$gap\sim \mathcal{N}(\cdot, \cdot)$', '$P\sim \mathcal{N}(\cdot, \cdot)$', '$\theta_{X,Y}\sim \mathcal{N}^2(\cdot, \cdot)$'};
-Nqps = 10;
+% Nqps = 10;
 for i=1:length(parms)
 % for i=5
 %     if strcmp(parms{i}, 'pres')
