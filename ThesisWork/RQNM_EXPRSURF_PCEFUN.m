@@ -144,9 +144,9 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
         Xis(2) = Ixs(2);  Wis(2) = 1;
     end
     lam1i = (R1top.NASPS(:,1)+R1bot.NASPS(:,1))./(R1top.NASPS(:,1)./lamt1i+R1bot.NASPS(:,1)./lamb1i);
-    lam1i = FELOLSM(lam1i);
+    lam1i = MESH.FELOLSM(lam1i);
     lam2i = (R2top.NASPS(:,1)+R2bot.NASPS(:,1))./(R2top.NASPS(:,1)./lamt2i+R2bot.NASPS(:,1)./lamb2i);
-    lam2i = FELOLSM(lam2i);
+    lam2i = MESH.FELOLSM(lam2i);
     lam1i(lam1i==0) = lam2i(lam1i==0);
     lam2i(lam2i==0) = lam1i(lam2i==0);
     lam = (lam1i+lam2i)/2;
@@ -216,8 +216,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
          R2 = ((R2top.CRAD*[1;Ixs(7)]).*R2top.NASPS(:,1)+(R2bot.CRAD*[1;Ixs(7)]).*R2bot.NASPS(:,1))./(R2top.NASPS(:,1)+R2bot.NASPS(:,1));
          Xis(7) = Ixs(7);  Wis(7) = 1;
      end
-    R1 = FELOLSM(R1);
-    R2 = FELOLSM(R2);
+    R1 = MESH.FELOLSM(R1);
+    R2 = MESH.FELOLSM(R2);
      Rad = abs(R1+R2)/2; 
      Rad = kron(Rad, ones(Nq^2,1));
      

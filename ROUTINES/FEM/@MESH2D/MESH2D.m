@@ -101,14 +101,12 @@ classdef MESH2D
         nelx = m.Quad(nels,1);
     end
 
-    function fvec = FELOLSM(fvec)
+    function fvec = FELOLSM(m, fvec)
         oli = isoutlier(fvec);
         for kk=oli(:)'
             nels = m.NEIGHBOURELS(kk);
             fvec(kk) = mean(fvec(nels));
         end
-    end
-        
     end
   end
 end
