@@ -26,10 +26,10 @@ apref = 'nlbb';
 % Npce = 4;
 
 is = {[1], [2], [3], [4 5], [6], [7]}; % [1 3 4]
-Nq_pce = {5, 10, 10, 10, 10, 10, 10, 10, 5};
+Nq_pce = {10, 10, 10, 10, 10, 10, 10, 10, 5};
 Npce = 4;
 
-for i=1 %:6
+for i=1:6
     Nq_pces = ones(1, 7);
     Nq_pces(is{i}) = Nq_pce{i};
 
@@ -142,6 +142,13 @@ for i=1 %:6
     Zregcofs = (Psi\QPs.Zs')';
     Wstatregcofs = (Psi\QPs.Wstats')';
     
+%     if i==1
+%         Rregcofs = (Psi(2:end,:)\QPs.Rs(:,2:end)')';
+%         Wregcofs = (Psi(2:end,:)\QPs.Ws(:,2:end)')';
+%         Zregcofs = (Psi(2:end,:)\QPs.Zs(:,2:end)')';
+%         Wstatregcofs = (Psi(2:end,:)\QPs.Wstats(:,2:end)')';
+%     end    
+    
     %% PCE Simulations
     % Projection-Based PCE
     Rsim = EVALPCE(QPs.xxis, Rcofs, IJs, polfuns);
@@ -162,11 +169,12 @@ for i=1 %:6
     Zsimp = POD.Z*asim;
 
     %% Save
-    
-    Rcofs = Rregcofs;
-    Wcofs = Wregcofs;
-    Zcofs = Zregcofs;
-    Wstatcofs = Wstatregcofs;
+    if i==1
+        Rcofs = Rregcofs;
+        Wcofs = Wregcofs;
+        Zcofs = Zregcofs;
+        Wstatcofs = Wstatregcofs;
+    end
     
     if length(is{i})==1
         x = sym('x');

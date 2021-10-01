@@ -26,19 +26,19 @@ apref = 'nlbb';
 % Npce = 4;
 
 is = {[1], [2], [3], [4 5], [6], [7]}; % [1 3 4]
-Nq_pce = {5, 10, 10, 10, 10, 10, 10, 10, 5};
+Nq_pce = [10, 10, 10, 10, 10, 10, 10, 10, 5];
 Npce = 4;
 
-for i=1
+for i=4
     Nq_pces = ones(1, 7);
-    Nq_pces(is{i}) = Nq_pce{i};
+    Nq_pces(is{i}) = Nq_pce(i);
 
     Ir = cell(size(is{i}));
-    [Ir{:}] = ndgrid(0:Nq_pce{i}-1);
+    [Ir{:}] = ndgrid(0:Nq_pce(i)-1);
     Ir = cell2mat(cellfun(@(c) c(:)', Ir(:), 'UniformOutput', false))';
-    nxis = Ir*Nq_pce{i}.^((1:length(is{i}))'-1);
+    nxis = Ir*Nq_pce(i).^((1:length(is{i}))'-1);
 
-    Irr = zeros(Nq_pce{i}^length(is{i}), 7);
+    Irr = zeros(Nq_pce(i)^length(is{i}), 7);
     Irr(:, is{i}) = Ir;
 
     % Construct PCE Coefficients
@@ -48,8 +48,8 @@ for i=1
    
     IJs = Irr(sum(Irr, 2)<=Npce, :);  % Polynomial Order
 
-    Xis = zeros(Nq_pce{i}, 7);
-    Wis = zeros(Nq_pce{i}, 7);
+    Xis = zeros(Nq_pce(i), 7);
+    Wis = zeros(Nq_pce(i), 7);
     for j=1:7
         [Xis(:, j), Wis(:, j)] = quadfuns{j}(Nq_pces(j));
     end
@@ -142,13 +142,19 @@ for i=1
     Zregcofs = (Psi\QPs.Zs')';
     Wstatregcofs = (Psi\QPs.Wstats')';
     
+%     if i==1
+%         Rregcofs = (Psi(2:end,:)\QPs.Rs(:,2:end)')';
+%         Wregcofs = (Psi(2:end,:)\QPs.Ws(:,2:end)')';
+%         Zregcofs = (Psi(2:end,:)\QPs.Zs(:,2:end)')';
+%         Wstatregcofs = (Psi(2:end,:)\QPs.Wstats(:,2:end)')';
+%     end
+    
     %% x points for Simulations
     Nx = 100;
     xis = zeros(Nx, length(is{i}));
     for j=1:length(is{i})
         if is{i}(j)==1
-%             xis(:, j) = linspace(-1, 31, Nx);
-            xis(:, j) = linspace(0, 14, Nx);
+            xis(:, j) = linspace(0, 31, Nx);
         else
             xis(:, j) = linspace(-1, 1, Nx)*6;
         end
@@ -192,16 +198,29 @@ for i=1
             figure(i)
             clf()
             plot(QPs.xxis(:,is{i}), QPs.Wstats(1,:)/2/pi, 'ko', 'MarkerFaceColor', 'k'); hold on
-            plot(xis, Wstatsimr_x(1,:)/2/pi, 'b-');
+%             plot(QPs.xxis(2:end,is{i}), QPs.Wstats(1,2:end)/2/pi, 'ko', 'MarkerFaceColor', 'k'); hold on
+            plot(xis, Wstatsim_x(1,:)/2/pi, 'b-', 'LineWidth', 2);
+            plot(xis, Wstatsimr_x(1,:)/2/pi, 'g-', 'LineWidth', 2);
             xlabel(sprintf('Germ %d', is{i}))
             ylabel('Mode 1 Natural Frequency (Hz)')
             grid on
+            ylim((mean(QPs.Wstats(1,:))+std(QPs.Wstats(1,:))*3*[-1 1])/2/pi)
+            yyaxis right;
+            plot(xis, pdf(pdists(is{i}), xis), 'r-')
+            ylabel('Germ PDF')
+            ax = gca;
+            ax.YAxis(2).Color = 'r';
         case 2
             figure(i)
             clf()
             plot3(QPs.xxis(:,is{i}(1)), QPs.xxis(:,is{i}(2)), QPs.Wstats(1,:)/2/pi, 'ko', 'MarkerFaceColor', 'k'); hold on
-            surf(reshape(xis(:,1), Nx, Nx), reshape(xis(:,2), Nx, Nx), reshape(Wstatsimr_x(1,:)/2/pi, Nx, Nx), 'EdgeColor', 'none');
+%             surf(reshape(xis(:,1), Nx, Nx), reshape(xis(:,2), Nx, Nx), reshape(Wstatsimr_x(1,:)/2/pi, Nx, Nx), 'EdgeColor', 'none');
 %             surf(reshape(xis(:,1), Nx, Nx), reshape(xis(:,2), Nx, Nx), reshape(Wstatsim_x(1,:)/2/pi, Nx, Nx), 'EdgeColor', 'none');
+
+            surf(reshape(xis(:,1), Nx, Nx), reshape(xis(:,2), Nx, Nx), reshape(Wstatsimr_x(1,:)/2/pi, Nx, Nx), reshape(pdf(pdists(is{i}(1)), xis(:,1)).*pdf(pdists(is{i}(2)), xis(:,2)),Nx,Nx), 'EdgeColor', 'none');
+            colormap(jet)
+            yy=colorbar;
+            ylabel(yy, 'Germ PDF', 'interpreter', 'latex')
             xlabel(sprintf('Germ %d', is{i}(1)))
             ylabel(sprintf('Germ %d', is{i}(2)))
             zlabel('Mode 1 Natural Frequency (Hz)')
@@ -209,38 +228,12 @@ for i=1
         otherwise
             error('only 2D maximum')
     end
-    if i==1 || i==4
-        legend('Simulations', 'PCE Fit', 'Location', 'best')
+    switch(i)
+        case 1
+            legend('Simulations', 'PCE Projection Fit', 'Regression Fit', 'Location', 'best')
+        case 4
+            legend('Simulations', 'PCE Fit', 'Location', 'best')
     end
     set(gcf, 'Color', 'white')
     export_fig(sprintf('./FIGS/PCESINGFIT_%d.eps', i), '-depsc')
-    %% Save
-    Rcofs = Rregcofs;
-    Wcofs = Wregcofs;
-    Zcofs = Zregcofs;
-    Wstatcofs = Wstatregcofs;
-    
-    if length(is{i})==1
-        x = sym('x');
-        assume(x, 'real')
-        rx = Rcofs*transpose(polfuns{is{i}}(0:Npce, x));
-        wx = Wcofs*transpose(polfuns{is{i}}(0:Npce, x));
-        zx = Zcofs*transpose(polfuns{is{i}}(0:Npce, x));
-        wsx = Wstatcofs*transpose(polfuns{is{i}}(0:Npce, x));
-        rxps = zeros(length(Qs), Npce+1);
-        wxps = zeros(length(Qs), Npce+1);
-        zxps = zeros(length(Qs), Npce+1);
-        wsxps = zeros(10, Npce+1);
-        for iq=1:length(Qs)
-            rxps(iq, :) = sym2poly(rx(iq));
-            wxps(iq, :) = sym2poly(wx(iq));
-            zxps(iq, :) = sym2poly(zx(iq));
-        end
-        for iw=1:10
-            wsxps(iw, :) = sym2poly(wsx(iw));
-        end
-%         save(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs', 'rxps', 'wxps', 'zxps', 'wsxps')
-    else
-%         save(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'Wstatcofs', 'IJs', 'Integs')
-    end
 end

@@ -159,6 +159,7 @@ for i=1:length(is)
     % Frequency - S1
     figure((i-1)*10+1)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size(W_S1,2));
     ff = gobjects(length(ps),1);
     for j=1:length(ps)
@@ -175,6 +176,12 @@ for i=1:length(is)
     legend(aa(1), 'Experimental Data')
     xlabel('Response Amplitude (m)')
     ylabel('Natural Frequency (Hz)')
+    
+    ll=legend([ff;aa(1)], 'Location', 'southwest'); set(ll, 'Visible', 'off')
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
+    
+    export_fig('./FIGS/ALLPCE_BBW_S1s_0.png', '-dpng', '-r300')
+    
     yyaxis right
     for k=1:size(W_S1,2)
         aa(1+k) = semilogx(Rcofs(:,1), W_S1(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2);
@@ -184,13 +191,15 @@ for i=1:length(is)
     set(ll, 'Visible', 'off');
     ylabel('First Order Sobol Indices (sq. root)')
     ylim([-0.1 1.1])
-    xlim(minmax(Rcofs(:,1)'))
+%     xlim(minmax(Rcofs(:,1)'))
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
     set(gcf, 'Color', 'white')
     export_fig('./FIGS/ALLPCE_BBW_S1s.png', '-dpng', '-r300')
     
     %% Damping - S1
     figure((i-1)*10+5)
     clf()
+    set(gcf, 'Color', 'white')
     for j=1:length(ps)
         fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [ZPI(:, j); ZPI(end:-1:1, j+length(ps))]*100+zeta0*100, fcs(j,:), ...
@@ -202,18 +211,25 @@ for i=1:length(is)
     end
     xlabel('Response Amplitude (m)')
     ylabel('Damping Factor (\%)')
+    yl = ylim;
+    ylim([0 yl(2)]);
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
+    export_fig('./FIGS/ALLPCE_BBZ_S1s_0.png', '-dpng', '-r300')
+    
     yyaxis right
     for k=1:size(Z_S1,2)
         semilogx(Rcofs(:,1), Z_S1(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2)
     end
     ylabel('First Order Sobol Indices (sq. root)')
     ylim([-0.1 1.1])
-    xlim(minmax(Rcofs(:,1)'))
+%     xlim(minmax(Rcofs(:,1)'))
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
     set(gcf, 'Color', 'white')
     export_fig('./FIGS/ALLPCE_BBZ_S1s.png', '-dpng', '-r300')
     %%
     figure(1000)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size(W_S1,2));
     ff = gobjects(length(ps),1);
     for j=1:length(ps)
@@ -230,6 +246,7 @@ for i=1:length(is)
     legend(aa(1), 'Experimental Data')
     xlabel('Response Amplitude (m)')
     ylabel('Natural Frequency (Hz)')
+    
     yyaxis right
     for k=1:size(W_S1,2)
         aa(1+k) = semilogx(Rcofs(:,1)*0, W_S1(:,k)*0, '-', 'Color', colos(k,:), 'LineWidth', 2);
@@ -246,6 +263,7 @@ for i=1:length(is)
     % Frequency - S2
     figure((i-1)*10+2)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size(W_S2,2));
     for j=1:length(ps)
         ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
@@ -258,9 +276,12 @@ for i=1:length(is)
     for j=1:length(exp)
         aa(1)=semilogx(exp(j).AMP_avg, exp(j).FRE_avg, 'k-', 'LineWidth', 2);
     end
-    legend(aa(1), 'Experimental Data')
+    ll=legend(aa(1), 'Experimental Data'); set(ll, 'Visible', 'off')
     xlabel('Response Amplitude (m)')
     ylabel('Natural Frequency (Hz)')
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
+    export_fig('./FIGS/ALLPCE_BBW_S2s_0.png', '-dpng', '-r300')
+    
     yyaxis right
     for k=1:size(W_S2,2)
         aa(1+k) = semilogx(Rcofs(:,1), W_S2(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2);
@@ -270,13 +291,15 @@ for i=1:length(is)
     set(ll, 'Visible', 'off')
     ylabel('Second Order Sobol Indices (sq. root)')
     ylim([-0.1 1.1])
-    xlim(minmax(Rcofs(:,1)'))
+%     xlim(minmax(Rcofs(:,1)'))
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
     set(gcf, 'Color', 'white')
     export_fig('./FIGS/ALLPCE_BBW_S2s.png', '-dpng', '-r300')
     
     % Damping - S2
     figure((i-1)*10+6)
     clf()
+    set(gcf, 'Color', 'white')
     for j=1:length(ps)
         fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [ZPI(:, j); ZPI(end:-1:1, j+length(ps))]*100+zeta0*100, fcs(j,:), ...
@@ -288,18 +311,25 @@ for i=1:length(is)
     end
     xlabel('Response Amplitude (m)')
     ylabel('Damping Factor (\%)')
+    yl = ylim;
+    ylim([0 yl(2)]);
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
+    export_fig('./FIGS/ALLPCE_BBZ_S2s_0.png', '-dpng', '-r300')
+    
     yyaxis right
     for k=1:size(W_S2,2)
         semilogx(Rcofs(:,1), Z_S2(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2)
     end
     ylabel('Second Order Sobol Indices (sq. root)')
     ylim([-0.1 1.1])
-    xlim(minmax(Rcofs(:,1)'))
+%     xlim(minmax(Rcofs(:,1)'))
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
     set(gcf, 'Color', 'white')
     export_fig('./FIGS/ALLPCE_BBZ_S2s.png', '-dpng', '-r300')
     
     figure(1000)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size(W_S2,2));
     for j=1:length(ps)
         ff(j) = fill([Rcofs(:,1); Rcofs(end:-1:1,1)]*0, ...
@@ -315,6 +345,7 @@ for i=1:length(is)
     legend(aa(1), 'Experimental Data')
     xlabel('Response Amplitude (m)')
     ylabel('Natural Frequency (Hz)')
+    
     yyaxis right
     for k=1:size(W_S2,2)
         aa(1+k) = semilogx(Rcofs(:,1)*0, W_S2(:,k)*0, '-', 'Color', colos(k,:), 'LineWidth', 2);
@@ -323,7 +354,8 @@ for i=1:length(is)
     ll=legend([ff;aa], 'Location', 'west');
     ylabel('Second Order Sobol Indices (sq. root)')
     ylim([-0.1 1.1])
-    xlim(minmax(Rcofs(:,1)'))
+%     xlim(minmax(Rcofs(:,1)'))
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
     set(gcf, 'Color', 'white')
     axis off
     set(ll, 'NumColumns', 3);
@@ -334,6 +366,7 @@ for i=1:length(is)
     % Frequency - ST1
     figure((i-1)*10+3)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size(W_ST1,2));
     ff = gobjects(length(ps),1);
     for j=1:length(ps)
@@ -347,9 +380,13 @@ for i=1:length(is)
     for j=1:length(exp)
         aa(1) = semilogx(exp(j).AMP_avg, exp(j).FRE_avg, 'k-', 'LineWidth', 2);
     end
-    legend(aa(1), 'Experimental Data')
+    ll=legend(aa(1), 'Experimental Data'); set(ll, 'Visible', 'off')
     xlabel('Response Amplitude (m)')
     ylabel('Natural Frequency (Hz)')
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
+%     export_fig('./FIGS/ALLPCE_BBW_STs_0.png', '-dpng', '-r300')
+    print('./FIGS/ALLPCE_BBW_STs_0.png', '-dpng', '-r300')
+    
     yyaxis right
     for k=1:size(W_ST1,2)
         aa(1+k) = semilogx(Rcofs(:,1), W_ST1(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2);
@@ -359,13 +396,16 @@ for i=1:length(is)
     set(ll, 'Visible', 'off')
     ylabel('Total Sobol Indices (sq. root)')
     ylim([-0.1 1.1])
-    xlim(minmax(Rcofs(:,1)'))
+%     xlim(minmax(Rcofs(:,1)'))
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
     set(gcf, 'Color', 'white')
-    export_fig('./FIGS/ALLPCE_BBW_STs.png', '-dpng', '-r300')
+%     export_fig('./FIGS/ALLPCE_BBW_STs.png', '-dpng', '-r300')
+    print('./FIGS/ALLPCE_BBW_STs.png', '-dpng', '-r300')
     
     % Damping - ST1
     figure((i-1)*10+7)
     clf()
+    set(gcf, 'Color', 'white')
     for j=1:length(ps)
         fill([Rcofs(:,1); Rcofs(end:-1:1,1)], ...
             [ZPI(:, j); ZPI(end:-1:1, j+length(ps))]*100+zeta0*100, fcs(j,:), ...
@@ -377,18 +417,27 @@ for i=1:length(is)
     end
     xlabel('Response Amplitude (m)')
     ylabel('Damping Factor (\%)')
+    yl = ylim;
+    ylim([0 yl(2)]);
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
+%     export_fig('./FIGS/ALLPCE_BBZ_STs_0.png', '-dpng', '-r300')
+    print('./FIGS/ALLPCE_BBZ_STs_0.png', '-dpng', '-r300')
+    
     yyaxis right
     for k=1:size(Z_ST1,2)
         semilogx(Rcofs(:,1), Z_ST1(:,k), '-', 'Color', colos(k,:), 'LineWidth', 2)
     end
     ylabel('Total Sobol Indices (sq. root)')
     ylim([-0.1 1.1])
-    xlim(minmax(Rcofs(:,1)'))
+%     xlim(minmax(Rcofs(:,1)'))
+    xlim([min(Rcofs(:,1)) min(10^(-4.5), max(Rcofs(:,1)))])
     set(gcf, 'Color', 'white')
-    export_fig('./FIGS/ALLPCE_BBZ_STs.png', '-dpng', '-r300')
+%     export_fig('./FIGS/ALLPCE_BBZ_STs.png', '-dpng', '-r300')
+    print('./FIGS/ALLPCE_BBZ_STs.png', '-dpng', '-r300')
     
     figure(1000)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size(W_S1,2));
     ff = gobjects(length(ps),1);
     for j=1:length(ps)
@@ -405,6 +454,7 @@ for i=1:length(is)
     legend(aa(1), 'Experimental Data')
     xlabel('Response Amplitude (m)')
     ylabel('Natural Frequency (Hz)')
+    
     yyaxis right
     for k=1:size(W_S1,2)
         aa(1+k) = semilogx(Rcofs(:,1)*0, W_S1(:,k)*0, '-', 'Color', colos(k,:), 'LineWidth', 2);
@@ -420,6 +470,7 @@ for i=1:length(is)
     %% Modal Frequencies
     figure((i-1)*10+4)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size([Wstat_S1 Wstat_S2],2));
     bb = bar([Wstat_S1(mdis, :) Wstat_S2(mdis, :)]);
     for k=1:size(Wstat_S1,2)
@@ -440,6 +491,7 @@ for i=1:length(is)
     
     figure(1000)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size([Wstat_S1 Wstat_S2],2));
 %     bb = bar([Wstat_S1(mdis, :) Wstat_S2(mdis, :)]*nan);
     bb = gobjects(size(Wstat_S1,2)+size(Wstat_S2,2),1);
@@ -465,6 +517,7 @@ for i=1:length(is)
     %%
     figure((i-1)*10+8)
     clf()
+    set(gcf, 'Color', 'white')
     for im=1:length(mdis)
         subplot(length(mdis), 1, im)
         histogram(rmoutliers(Psixs*Wstatcofs(mdis(im),:)'/2/pi), 'Normalization', 'pdf'); hold on
@@ -482,6 +535,7 @@ for i=1:length(is)
     %%
     figure((i-1)*10+9)
     clf()
+    set(gcf, 'Color', 'white')
     colos = DISTINGUISHABLE_COLORS(size(Wstat_ST1,2));
     bb = bar(Wstat_ST1(mdis, :));
     for k=1:size(Wstat_ST1,2)

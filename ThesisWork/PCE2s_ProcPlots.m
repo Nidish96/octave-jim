@@ -43,7 +43,7 @@ parms = {'mu', 'msc', 'pres', 'rot', 'gap', 'rad', 'rgap'};
 ids = {1, 2, 3, 45, 6, 7, 46};
 pdists = {makedist('exp'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1]), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1])};
 lims = [[0 inf]; repmat([-inf inf], 6, 1)];
-Nsamps = [10000; 10000; 50000; 10000; 10000; 10000; 10000];
+Nsamps = [0; 10000; 50000; 10000; 10000; 10000; 10000];
 ttls = {'Coefficient of Friction', 'Mean Asperity Height', ...
     'Prestress', 'Stage Rotation', 'Meso-Scale Topology', ...
     'Mean Asperity Radius', 'Meso-Scale'};
@@ -52,23 +52,8 @@ lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
     '$gap\sim \mathcal{N}(\cdot, \cdot)$', '$R\sim \mathcal{N}(\cdot, \cdot)$', ...
     '$\theta_X,gap\sim \mathcal{N}^2(\cdot, \cdot)$'};
 
-% parms = {'mu', 'msc', 'gap', 'pres', 'rot'};
-% pdists = {makedist('exp'), makedist('normal'), makedist('normal'), makedist('normal'), gmdistribution([0 0],[1 1])};
-% lims = [[0 inf]; repmat([-inf inf], 4, 1)];
-% Nsamps = [0; 10000; 0; 10000; 10000];
-% ttls = {'Coefficient of Friction', 'Mean Asperity Height', ...
-%     'Meso-Scale Topology', 'Prestress', 'Stage Rotation'};
-% lbls = {'$\mu\sim Exp(\cdot)$', '$\lambda\sim \mathcal{N}(\cdot,\cdot)$', ...
-%     '$gap\sim \mathcal{N}(\cdot, \cdot)$', '$P\sim \mathcal{N}(\cdot, \cdot)$', '$\theta_{X,Y}\sim \mathcal{N}^2(\cdot, \cdot)$'};
-% Nqps = 10;
 for i=1:length(parms)
-% for i=5
-%     if strcmp(parms{i}, 'pres')
-%         fname = sprintf('./%sPCE_25/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
-%     else
-%         fname = sprintf('./%sPCE/%spce_N%d_cofs.mat', upper(parms{i}), parms{i}, Nqps);
-        fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
-%     end
+    fname = sprintf('./ALLPCE/%s_%d_cofs.mat', apref, ids{i});
 
     if ~strcmp(parms{i}, 'rot') && ~strcmp(parms{i}, 'rgap')
         load(fname, 'Qs', 'Rcofs', 'Wcofs', 'Zcofs', 'rxps', 'wxps', 'zxps', 'Integs')
@@ -130,15 +115,6 @@ for i=1:length(parms)
     legend(aa(1:end), 'Location', 'southwest')
     
     export_fig(sprintf('./FIGS/PCEBBW_%d.eps', i), '-depsc')
-    
-%     if strcmp(parms{i}, 'pres')
-%         savefig(sprintf('./%sPCE/%spce_WBB_25.fig', upper(parms{i}), parms{i}));
-%         savefig(sprintf('./SEND/%spce_WBB_25.fig', parms{i}));
-%     else
-%         savefig(sprintf('./%sPCE/%spce_WBB.fig', upper(parms{i}), parms{i}));
-%         savefig(sprintf('./SEND/%spce_WBB.fig', parms{i}));
-%         export_fig(sprintf('./%sPCE/%spce_WBB.png', upper(parms{i}), parms{i}), '-dpng');
-%     end
     %%
     figure((i-1)*2+20)
     clf();
@@ -165,15 +141,6 @@ for i=1:length(parms)
     ylabel('Damping Factor (\%)')
     
     export_fig(sprintf('./FIGS/PCEBBZ_%d.eps', i), '-depsc')
-    
-%     if strcmp(parms{i}, 'pres')
-%         savefig(sprintf('./%sPCE/%spce_ZBB_25.fig', upper(parms{i}), parms{i}));
-%         savefig(sprintf('./SEND/%spce_ZBB_25.fig', parms{i}));
-%     else
-%         savefig(sprintf('./%sPCE/%spce_ZBB.fig', upper(parms{i}), parms{i}));
-%         savefig(sprintf('./SEND/%spce_ZBB.fig', parms{i}));
-%         export_fig(sprintf('./%sPCE/%spce_ZBB.png', upper(parms{i}), parms{i}), '-dpng');
-%     end
 end
 
 %% Sobol Indices
@@ -317,14 +284,15 @@ nplot = 1:6;
 for i=1:length(mdis)
     figure(i*1000)
     clf()
-    boxplot(squeeze(Wstatsamps(i, :, nplot))/2/pi, 'Labels', Labels(nplot), 'Whisker', 3*max(Wstatvars(i, :))/2/pi);
+%     boxplot(squeeze(Wstatsamps(i, :, nplot))/2/pi, 'Labels', Labels(nplot), 'Whisker', 3*max(Wstatvars(i, :))/2/pi);
+    boxplot(rmoutliers(squeeze(Wstatsamps(i, :, nplot))/2/pi), 'Labels', Labels(nplot), 'Whisker', 3*max(Wstatvars(i, :))/2/pi);
     bp = gca;
     bp.XAxis.TickLabelInterpreter = 'latex';
     hold on
     plot(xlim, Wsex(i)*[1 1]/2/pi, 'k-.', 'LineWidth', 2)
     yl = ylim;
     
-    ylim([min(Wsex(i)/2/pi-0.5,yl(1)) yl(2)])
+    ylim([min(Wsex(i)/2/pi-0.5,yl(1)) max(Wsex(i)/2/pi+0.5,yl(2))])
 %     ylim([(Wsex(i)/2/pi-1) yl(2)])
     
     ylabel('Natural Frequency (Hz)')
@@ -333,6 +301,32 @@ for i=1:length(mdis)
     
     set(gcf, 'Color', 'white')
     export_fig(sprintf('./FIGS/PCESING_BOXPLOT_Mode%d.eps', i), '-depsc')
+%     savefig(sprintf('./SEND/Mode%d_W.fig',i));
+%     export_fig(sprintf('./FIGS/Boxplot_Mode%d_W.png',i), '-dpng');
+end
+
+%%
+nplot = 2:6;
+for i=1:length(mdis)
+    figure(i*1000)
+    clf()
+%     boxplot(squeeze(Wstatsamps(i, :, nplot))/2/pi, 'Labels', Labels(nplot), 'Whisker', 3*max(Wstatvars(i, :))/2/pi);
+    boxplot(rmoutliers(squeeze(Wstatsamps(i, :, nplot))/2/pi), 'Labels', Labels(nplot), 'Whisker', 3*max(Wstatvars(i, :))/2/pi);
+    bp = gca;
+    bp.XAxis.TickLabelInterpreter = 'latex';
+    hold on
+    plot(xlim, Wsex(i)*[1 1]/2/pi, 'k-.', 'LineWidth', 2)
+    yl = ylim;
+    
+    ylim([min(Wsex(i)/2/pi-0.5,yl(1)) max(Wsex(i)/2/pi+0.5,yl(2))])
+%     ylim([(Wsex(i)/2/pi-1) yl(2)])
+    
+    ylabel('Natural Frequency (Hz)')
+    xlabel('Factors')
+    grid on
+    
+    set(gcf, 'Color', 'white')
+    export_fig(sprintf('./FIGS/PCESING_BOXPLOT_NOMU_Mode%d.eps', i), '-depsc')
 %     savefig(sprintf('./SEND/Mode%d_W.fig',i));
 %     export_fig(sprintf('./FIGS/Boxplot_Mode%d_W.png',i), '-dpng');
 end

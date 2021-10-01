@@ -1,6 +1,7 @@
 clc
 clear all
 addpath('../ROUTINES/')
+addpath('../ROUTINES/FEM/')
 addpath('../ROUTINES/export_fig/')
 
 set(0,'defaultAxesTickLabelInterpreter', 'default');
@@ -116,27 +117,27 @@ export_fig(sprintf('./FIGS/MM_BBZ_mode%d.eps', mdi), '-depsc')
 % export_fig(sprintf('./MEANMODELRESP/BBFIG_M%d.png', mdi), '-dpng');
 
 %% Dissipation Fluxes
-for pj=1:length(pis)
-    for i=1:3
-        figure((mdi-1)*10+5+pj)
-        clf()
-        set(gcf, 'Color', 'white')
-        MESH.SHOWFIELD2D(abs(MESH.Qm\Dfluxes(i:3:end, pis(pj)))*2*pi/sqrt(Lams(pis(pj))))
-        axis equal
-        xx=colorbar('south');
-        xlabel(xx, sprintf('Cyclic Dissipation Flux %d (J m$^{-2}$)', i), 'interpreter', 'latex')
-        pos = get(xx, 'Position');
-        pos(2) = 0.24;
-        set(xx, 'Position', pos)
-        axis off
-        colormap(jet)
-        set(gca, 'colorscale', 'linear')
-        export_fig(sprintf('./FIGS/MM_M%d_DFLUX_P%d_C%d.eps', mdi, pj, i), '-depsc');
-        
-        set(gca, 'colorscale', 'log')
-        export_fig(sprintf('./FIGS/MM_M%d_DFLUXL_P%d_C%d.eps', mdi, pj, i), '-depsc');
-    end
-end
+% for pj=1:length(pis)
+%     for i=1:3
+%         figure((mdi-1)*10+5+pj)
+%         clf()
+%         set(gcf, 'Color', 'white')
+%         MESH.SHOWFIELD2D(abs(MESH.Qm\Dfluxes(i:3:end, pis(pj)))*2*pi/sqrt(Lams(pis(pj))))
+%         axis equal
+%         xx=colorbar('south');
+%         xlabel(xx, sprintf('Cyclic Dissipation Flux %d (J m$^{-2}$)', i), 'interpreter', 'latex')
+%         pos = get(xx, 'Position');
+%         pos(2) = 0.24;
+%         set(xx, 'Position', pos)
+%         axis off
+%         colormap(jet)
+%         set(gca, 'colorscale', 'linear')
+%         export_fig(sprintf('./FIGS/MM_M%d_DFLUX_P%d_C%d.eps', mdi, pj, i), '-depsc');
+%         
+%         set(gca, 'colorscale', 'log')
+%         export_fig(sprintf('./FIGS/MM_M%d_DFLUXL_P%d_C%d.eps', mdi, pj, i), '-depsc');
+%     end
+% end
 
 %% Linear (Low-Amplitude) Parameters
 fav = robustfit([exp(1).AMP_avg; exp(2).AMP_avg; exp(3).AMP_avg], ...

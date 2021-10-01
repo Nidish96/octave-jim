@@ -52,6 +52,6 @@ function [z1s, z2s, Zsamps] = PCE1_PCONTOURS(zxps, perc, pdist, lims, Nsamp)
                Zsamps(iq, :) = rz;
         end
         
-        fprintf('%d\n', iq);
+%         fprintf('%d\n', iq);
     end
 end

@@ -3,7 +3,7 @@ clear all
 % Order of Parameters : [mu, msc, prestress, rotx, roty, gap]
 
 %% Total Number of Quadrature Points
-Nq_pce = 5;
+Nq_pce = 10;
 
 %% "All" PCE
 % is = (1:6)';
@@ -15,7 +15,10 @@ Nq_pce = 5;
 % pref = "nlbb_134";
 
 %% "Mu" PCE
-is = 1;
+% is = 1;
+
+%% "Rot" PCE
+is = [4 5];
 
 %% Generate Parameter Space
 pref = sprintf('nlbb_%s', sprintf('%d', is));
@@ -31,7 +34,8 @@ nxis = Ir*Nq_pce.^((1:length(is))'-1);
 Irr = zeros(Nq_pce^length(is), 7);
 Irr(:, is) = Ir;
 
-for n=1:Nq_pce
+n = 34;
+% for n=1:Nq_pce
 %     worker(n) = batch(@RQNM_EXPRSURF_PCEFUN, 0, {Irr(n,:)+1, nxis(n), Nq_pces, pref, 1, [-7.5, -3], 1, 'quad'});
     RQNM_EXPRSURF_PCEFUN(Irr(n,:)+1, nxis(n), Nq_pces, pref, 1, [-7.5, -3], 1, 'quad');
-end
+% end

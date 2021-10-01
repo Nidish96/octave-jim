@@ -62,8 +62,8 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     % E = 2e11;
     % nu = 0.3;
 
-    top   = 'R05B_Before';
-    bot   = 'R05A_Before';
+    top   = 'R05B_After2'; % 'R05B_Before';
+    bot   = 'R05B_After2'; % 'R05A_Before';
 
     load(sprintf('../MODELS/%s/MATRICES_NR.mat', model), 'K', 'M', 'R', 'L', 'Fv', 'TFM');
 
@@ -250,6 +250,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
      gap2r = xygs(:, [1 2 4])*TFM(:, 3) - xygs(:, [1 2 6])*TFM(:, 3);
      
      gapr = (gap1r+gap2r)/2;
+     
      gap = gapr-max(gapr);
      gap = gap*gapmul;
      
@@ -269,6 +270,7 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
     R1(R1==0) = R2(R1==0);
     R2(R2==0) = R1(R2==0);
     Rad = abs(R1+R2)/2; 
+    
     Rad = kron(Rad, ones(Nq^2,1));
      
     %% Run Simulations
@@ -431,9 +433,9 @@ function [] = RQNM_EXPRSURF_PCEFUN(Ixs, nxi, Nq_pces, pref, varargin)
 
     %% Save Information into file
     Tstat = GM.NLTs.func(0, GM.NLTs.L*Ustat);
-%    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
-%        'Tstat', 'Dfluxes');
-     save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
+   save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
+       'Tstat', 'Dfluxes');
+%      save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', 'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis');
 
     fprintf('=============================================\n')
     fprintf('Done %d\n', nxi);
