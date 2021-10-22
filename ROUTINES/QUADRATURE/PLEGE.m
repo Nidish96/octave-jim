@@ -14,13 +14,13 @@ function [p, intp] = PLEGE(n, x)
             intp = 2/(2*n+1);
         end
     else
-        h = zeros(length(x), length(n));
-        inth = zeros(length(n), 1);
+        p = zeros(length(x), length(n));
+        intp = zeros(length(n), 1);
         if strcmp(class(x), 'sym')
-            h = sym(h);
+            p = sym(p);
         end
         for in=1:length(n)
-            [h(:, in), inth(in)] = PLEGE(n(in), x);
+            [p(:, in), intp(in)] = PLEGE(n(in), x);
         end
     end
 end
