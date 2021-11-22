@@ -68,31 +68,31 @@ for iw=1:size(sol,2)
     
     figure(3)
     clf()
-    plot(T, U, '.-'); hold on
+    plot(T*sol(end,iw), U, '.-'); hold on
     if stab(iw)==0
         title('Stable')
     else
         title('Unstable')
     end
     grid on
+    ylim(0.5*[-1 1])
     pause(0.1)
     
 end
-
 %%
 
 figure(1)
-hold on
-% clf()
-plot(sol(end,:), Amps, '.-')
-plot(sol(end, find(stab)), Amps(find(stab)), 'o')
+% hold on
+clf()
+plot(sol(end,:)./(1-stab'), Amps./(1-stab'), '-'); hold on
+plot(sol(end, :)./stab', Amps./stab', '--')
 xlabel('Frequency (rad/s)')
 ylabel('Max Amplitude')
 
 
 %%
 figure(2)
-% clf()
+clf()
 
 plot(eVs(:, 1), '.-'); hold on
 plot(eVs(:, 2), '.-'); 
