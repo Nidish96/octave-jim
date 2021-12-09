@@ -28,7 +28,8 @@ Wst = sqrt(k/m)*0.5;
 Wen = sqrt(k/m)*1.5;
 dw = 0.01;
 
-Copt = struct('Nmax', 1000, 'DynScale', 0);  % Dynamic Scaling Improves solver tolerance but sometimes makes it too difficult to converge unnecessarily
+Copt = struct('Nmax', 1000, 'DynScale', 1);  % Dynamic Scaling Improves solver tolerance but sometimes makes it too difficult to converge unnecessarily
+Copt.solverchoice = 2;
 
 %% Calculate and Plot
 figure(1)
@@ -39,10 +40,6 @@ for famp = [0.01 0.05 0.10 0.15 0.20]*mul
     GM.Rsc = max(abs(U0), min(abs(U0(U0~=0)))); 
     UCs = PRECOCONT(@(Uw) GM.HBRESFUN(Uw, Fl*famp, h, Nt), U0, Wst, Wen, dw, Copt);
 
-%     %% NLVib Continuation (If above doesn't work use this)
-%     Sopt = struct('jac', 'full', 'dynamicDscale', 1);
-%     UCs = solve_and_continue(U0, @(Uw) GM.HBRESFUN(Uw, Fl*famp, h, Nt, 1e-6, 1), Wst, Wen, dw, Sopt);
-
     %% Plot
     Urms = sqrt([1, 0.5*ones(1,Nhc-1)]*UCs(1:end-1,:).^2);  % RMS Amplitude from Parseval's Thm.
     Uamp1 = abs(UCs(2,:)-1j*UCs(3,:));  % First Harmonic Amplitude
@@ -50,14 +47,14 @@ for famp = [0.01 0.05 0.10 0.15 0.20]*mul
 
     figure(1)
     subplot(2,2,1)
-    plot(UCs(end,:), Uamp1, '-'); hold on
+    plot(UCs(end,:), Uamp1, 'o-'); hold on
     ylabel('Displacement')
 
     subplot(2,2,2)
-    semilogx(Urms, UCs(end,:), '-'); hold on 
+    semilogx(Urms, UCs(end,:), 'o-'); hold on 
     
     subplot(2,2,3)
-    plot(UCs(end,:), Uph1, '-'); hold on
+    plot(UCs(end,:), Uph1, 'o-'); hold on
     ylabel('Phase (degs)')
     xlabel('Frequency (rad/s)')
 end

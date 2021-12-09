@@ -88,14 +88,14 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
   %% Extract gradient information
   [~, J0(1:end-1,1:end-1), J0(1:end-1,end)] = func(U(:, 1));
   J0 = J0*diag(Copt.opts.Dscale);
-  dUdlam(:, 1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];
+  dUdlam(:, 1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];  % Scaled Tangent
   
   %% Evaluate Callback if necessary
   if callback
       Scall{1} = Copt.callbackfun(U(:,1), J0, dUdlam);
   end
   
-  %% Initial tangent
+  %% Initial tangent (scaled spapce)
   dxn = Copt.startdir;
   z = dUdlam(1:end-1, 1);
   al = dxn/sqrt(1+z'*z);
@@ -111,11 +111,11 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
   
   oopts = optimset('Jacobian', 'on', 'Display', 'off');  % options for fsolve if NSOLVE fails 
   
-  dUdlam(:, 1) = Copt.opts.Dscale.*dUdlam(:, 1);
+  dUdlam(:, 1) = Copt.opts.Dscale.*dUdlam(:, 1);  % Physical tangent
   
   dUn = [z;1];
   Ss(1, :) = [0 al];
-  u0 = U(:, 1) + ds*(al*dUn);
+  u0 = U(:, 1) + ds*al*(Copt.opts.Dscale.*dUn);
   while ( (lam-lam1)*(lamp-lam1) >= 0 && n<Copt.Nmax )
       if Copt.DynDscale
           Copt.opts.Dscale = max(abs(U(:, n+1)), Copt.opts.Dscale);
@@ -138,9 +138,9 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
 
     switch Copt.solverchoice
         case 1
-            [U(:, n+1), ~, eflag, its, J0, ~] = ELIMSEQSOLVE(func, u0, U(:, n), al*dUn, ds, Copt.arclengthparm, Copt.opts);
+            [U(:, n+1), ~, eflag, its, J0, ~] = ELIMSEQSOLVE(func, u0, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.opts);
         case 2
-            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), u0, Copt.opts);
+            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.Dscale), u0, Copt.opts);
         otherwise
             error('Unknown Solver choice')
     end
@@ -160,7 +160,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
                     fprintf('resetting step-size\n')
                     ds = ds0;
                 end
-                u0 = U(:, n) + ds*al*dUn;
+                u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUn);
             case {2, 3}
                 fprintf('trying eigenvector update\n');
                 
@@ -187,7 +187,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
                     fprintf('maxing step-size\n')
                     ds = Copt.dsmax;
                 end
-                u0 = U(:, n) + ds*al*dUn;
+                u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUn);
             otherwise
                 fprintf('Stopping\n');
                 break;
@@ -237,7 +237,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     
     dUn = [z; 1];
 
-    u0 = U(:, n) + ds*al*dUn;
+    u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUn);
   end
   U = U(:, 1:n);
   dUdlam = dUdlam(:, 1:n);
@@ -295,33 +295,32 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSEQSOLVE(func, ul, ul0, ulp0, 
       while its_tot<ITMAX
           % Newton update on "u" with "l" fixed
           [R, dRdU, dRdL] = func(ul); 
-          u1 = ul(1:end-1) - dRdU\R;
-          dudL = -dRdU\dRdL;
+          dRdU = dRdU*diag(opts.Dscale(1:end-1));  % scale the Jacobian
+          u1 = ul(1:end-1) - opts.Dscale(1:end-1).*(dRdU\R);
+          dudL = -opts.Dscale(1:end-1).*(dRdU\dRdL);  % gradient of u wrt lambda
 
           % Evaluate Constraint
+          du = [u1; ul(end)]-ul0;
           switch parm
               case {'orthogonal' , 'Orthogonal'}
-                  du = [u1; ul(end)]-ul0;
+                  cs = (ulp0./opts.Dscale.^2)'*du-ds;
+                  dcdL = (ulp0./opts.Dscale.^2)'*[dudL; 1.0];
+                  dcR = (ulp0./opts.Dscale.^2)';
 
-                  cs = ulp0'*du-ds;
-                  dcdL = ulp0'*[dudL; 1.0];
-                  dcR = ulp0';
-
-                  l1 = ul(end) - cs/dcdL;
+                  l1 = ul(end) - (cs/dcdL);
     %               l = ul(end);
 
                   du = [du(1:end-1); (l1-l0)];
 
-                  coefu = (ds-ulp0(end)*(l1-l0))/(ulp0(1:end-1)'*du(1:end-1));
+                  coefu = (ds-ulp0(end)*(l1-l0)/opts.Dscale(end)^2)/((ulp0(1:end-1)./opts.Dscale(1:end-1).^2)'*du(1:end-1));
                   coefl = 1;
               case {'arclength' , 'Arclength'}
-                  du = [u1; ul(end)]-ul0;
-
+                  error('This has to be checked for consistency')
                   cs = du'*du-ds^2;
                   dcdL = 2*du'*[dudL; 1.0];
                   dcR = 2*du';
 
-                  l1 = ul(end) - cs/dcdL;
+                  l1 = ul(end) - opts.Dscale(end)*(cs/dcdL);
     %               l = ul(end);              
 
                   du = [du(1:end-1); (l1-l0)];
@@ -329,7 +328,7 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSEQSOLVE(func, ul, ul0, ulp0, 
                   coef = sqrt(ds^2/(du'*du));
                   % Determine sign
 
-                  [~, mi] = min([vecnorm((ul0-coef*du)-[u1;l1]), vecnorm((ul0+coef*du)-[u1;l1])]);              
+                  [~, mi] = min([vecnorm((ul0./opts.Dscale-coef*du)-[u1;l1]), vecnorm((ul0./opts.Dscale+coef*du)-[u1;l1])]);
     %               coefu = sqrt((ds^2-(l1-l0)^2)/(du(1:end-1)'*du(1:end-1)));
 
                   coefu = (-1)^mi*coef;
@@ -362,7 +361,7 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSEQSOLVE(func, ul, ul0, ulp0, 
 
           its_tot = its_tot + 1;
 
-    %       fprintf('%d %e %e\n', its_tot, abs(lp-ul(end)), abs(cs))
+%           fprintf('%d %e %e\n', its_tot, abs(lp-ul(end)), abs(cs))
 
           % Update
           if abs((ul(end)-lp)/lp)<opts.reletol
@@ -438,7 +437,7 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSOLVE(func, ul, ul0, ulp0, ds,
       [un, ~, eflag, its] = NSOLVE(@(u) func([u; l]), ul(1:end-1), opts);
       
       if eflag<=0  % Try direct solve
-        [unl, ~, eflag, its] = NSOLVE(@(ul) EXRES(func, ul, ul0, ulp0, ds, parm), ul0+ulp0*ds/2, opts);
+        [unl, ~, eflag, its] = NSOLVE(@(ul) EXRES(func, ul, ul0, ulp0, ds, parm, Copt.Dscale), ul0+ulp0*ds/2, opts);
         if eflag<=0
             if swch==1
                 break;
@@ -531,7 +530,7 @@ function [Re, Je, l, dRe] = ELRES(func, u, ul0, ulp0, ds, parm)
 end
 
 %%
-function [Re, Je] = EXRES(func, u, u0, up0, ds, parm)
+function [Re, Je] = EXRES(func, u, u0, up0, ds, parm, Dscale)
 %EXRES is the residual function along with the continuation constraint
 %(without elimination)
 
@@ -539,11 +538,11 @@ function [Re, Je] = EXRES(func, u, u0, up0, ds, parm)
   [Re, dRdUe, dRdLe] = func(u);
   switch parm
     case {'orthogonal' , 'Orthogonal'}
-      Re = [Re; up0'*(u-u0)-ds];
-      Je = [dRdUe dRdLe; up0'];
+      Re = [Re; (up0./Dscale.^2)'*(u-u0)-ds];
+      Je = [dRdUe dRdLe; (up0./Dscale.^2)'];
     case {'arclength' , 'Arclength'}
-      Re = [Re; (u-u0)'*(u-u0)-ds^2];
-      Je = [dRdUe dRdLe; 2*(u-u0)'];
+      Re = [Re; ((u-u0)./Dscale.^2)'*(u-u0)-ds^2];
+      Je = [dRdUe dRdLe; 2*(u-u0)./Dscale.^2'];
     otherwise        
       b = 0.5;
       c = (1-b)/(dRdLe0'*dRdUe0*dRdLe0);

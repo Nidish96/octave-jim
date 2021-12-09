@@ -132,8 +132,9 @@ function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
     end
   end
   
-  % Rescale Solution
+  % Rescale Solution & Jacobian
   U = opts.Dscale(1:Nu).*U;
+  dRc = dRc*diag(1./opts.Dscale(1:Nu));
   
   if eflag == 0
     disp('No Convergence : Returning')
