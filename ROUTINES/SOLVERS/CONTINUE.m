@@ -33,7 +33,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
 %                           of u(1:end-1). However, giving small or 0 
 %                           weight to lam may result in NaN. Also, if the
 %                           curve has dL/ds = 0 or approx 0, the predictor
-%                           will be bad.
+%                           will be poorly conditioned.
 
   %% Default options
   Copt = struct('Nmax', 100, 'dsmax', ds*5, 'dsmin', ds/5, ...
@@ -67,7 +67,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
       if ~isfield(Copt.arcsettings, 'K0') || isempty(Copt.arcsettings.K0)
           Copt.arcsettings.K0 = sparse(diag(1./Copt.Dscale(1:end-1).^2));
           
-          Copt.arcsettings.normc = (u0(1:end-1))'*Copt.arcsettings.K0*(u0(1:end-1));
+          Copt.arcsettings.normc = (u0)'*Copt.arcsettings.K0*(u0);
       end
       
       if ~isfield(Copt.arcsettings, 'normb') || isempty(Copt.arcsettings.normb)
