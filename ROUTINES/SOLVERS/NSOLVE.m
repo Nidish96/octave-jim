@@ -26,7 +26,7 @@ function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
   if nargin==3
       nflds = fieldnames(varargin{1});
       for i = 1:length(nflds)
-	opts.(nflds{i}) = varargin{1}.(nflds{i});
+          opts.(nflds{i}) = varargin{1}.(nflds{i});
       end
   end  
 

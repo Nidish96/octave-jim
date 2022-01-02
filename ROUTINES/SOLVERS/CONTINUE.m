@@ -30,7 +30,14 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
   if nargin==6
     nflds = fieldnames(varargin{1});
     for i=1:length(nflds)
-      Copt.(nflds{i}) = varargin{1}.(nflds{i});
+        if ~strcmp(nflds{i}, 'opts')
+            Copt.(nflds{i}) = varargin{1}.(nflds{i});
+        else
+            nnflds = fieldnames(varargin{1}.(nflds{i}));
+            for j=1:length(nnflds)
+                Copt.opts.(nnflds{j}) = varargin{1}.(nflds{i}).(nnflds{j});
+            end
+        end
     end
   end
   Copt.opts.lsrch = Copt.lsrch;
@@ -118,7 +125,9 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
   u0 = U(:, 1) + ds*al*(Copt.opts.Dscale.*dUn);
   while ( (lam-lam1)*(lamp-lam1) >= 0 && n<Copt.Nmax )
       if Copt.DynDscale
-          Copt.opts.Dscale = max(abs(U(:, n+1)), Copt.opts.Dscale);
+          Copt.opts.Dscale = max(abs(U(:,n+1)), Copt.opts.Dscale);
+%           Copt.opts.Dscale = max(abs(U(:, n+1)), min(Copt.opts.Dscale));
+%             Copt.opts.Dscale = abs(U(:,n+1))+1e-8;
       end
         
 %     [U(:, n+1), ~, eflag, op, J0] = fsolve(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), u0, oopts);
