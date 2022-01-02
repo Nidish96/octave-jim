@@ -71,10 +71,13 @@ As = -1.8;
 Ae = 0.6;
 da = 0.01;
 
+% Copt.solverchoice = 2; 
+% Copt.arclengthparm = 'K0NormalizedArcLength';
+
 Uwx0 = zeros(Nhc, 1);
 Uwx0(2:3) = 1/sqrt(m*mul);  % "Mode" Initialization
 Uwx0 = [Uwx0; sqrt(k/m); c/mul];
-[UwxC, dUwxC] = PRECOCONT(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt, 1e-6), Uwx0, As, Ae, da, Copt);
+[UwxC, dUwxC] = CONTINUE(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt, 1e-6), Uwx0, As, Ae, da, Copt);
 
 %% Plot EPMC Solution Over Freps
 Ubb = (10.^UwxC(end, :)).*UwxC(1:end-3,:);
