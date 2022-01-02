@@ -1,4 +1,4 @@
-function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
+function [T, U, Ud, Udd, m, PHI] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
 %HHTAMARCH conducts time series marching using HHTA. Member of
 %MDOFGEN class.
 %
@@ -56,13 +56,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
   U(:, 1) = U0;  Ud(:, 1) = Ud0;   
   
   % Initialize acceleration
-  [Fnl, ~, ~, m] = m.NLFORCE(T0, U0, Ud0, T0-dt);
-%   if strcmp(typeinfo(Fex), 'function handle')
-%     Udd(:,1) = m.M\(Fex(T0)-m.C*Ud0-m.K*U0-Fnl);
-%   elseif strcmp(typeinfo(Fex), 'matrix')
-%     Udd(:,1) = m.M\(Fex(:,1)-m.C*Ud0-m.K*U0-Fnl);
-%   end 
-  
+  [Fnl, dFnldu, dFnldud, m] = m.NLFORCE(T0, U0, Ud0, T0-dt);  
   if strcmp(class(Fex), 'function_handle')
     Udd(:,1) = m.M\(Fex(T0)-m.C*Ud0-m.K*U0-Fnl);
   elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
@@ -70,6 +64,8 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
   else
       error('wth');
   end
+  dUdd0 = -m.M\[m.K+dFnldu m.C+dFnldud];
+  dUdd0(~isfinite(Udd(:,1)), :) = 0;
   Udd(~isfinite(Udd(:,1)), 1) = 0;
   clear U0 Ud0
   
@@ -77,24 +73,18 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       wb = waitbar(T(1)/T1, sprintf('Progress: %.4e/%.4e dt: %.4e', T(1), T1, dt), ...
           'createcancelbtn', "setappdata(gcbf, 'interrupt', true)");
   end
+  
+  PHI = eye(2*m.Ndofs);  % State Transition Matrix
   for i=2:Nt
       %% Explicit Predictor
       Udd(:, i) = Udd(:, i-1);
+      dUdd1 = dUdd0;
       
       %% Corrector Iterations
-      [FnlP, dFnldu, dFnldud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
+      [FnlP, dFnlPdu, dFnlPdud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
           U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
           Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
       % Residual, Jacobian, and Update
-%       if strcmp(typeinfo(Fex), 'function handle')
-%         R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
-%             (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
-%       elseif strcmp(typeinfo(Fex), 'matrix')
-%         R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
-%             (FnlP-Fnl) - (1+a)*(Fex(:,i)-Fex(:,i-1));
-%       else
-%         error('wth');        
-%       end
       if strcmp(class(Fex), 'function_handle')
         R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
             (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
@@ -105,7 +95,11 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
         error('wth');
       end
 
-      J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
+      dR = Z1*dUdd1 - Z2*dUdd0 + [zeros(m.Ndofs) Z3] + ...
+          [dFnlPdu (1+a)*dt*dFnlPdu] + (1+a)*dt^2*((.5-b)*dFnlPdu*dUdd0+b*dFnlPdu*dUdd1) +...
+          [zeros(m.Ndofs) dFnlPdud] + (1+a)*dt*((1-g)*dFnlPdud*dUdd0+g*dFnlPdud*dUdd1) -...
+          [dFnldu dFnldud];
+      J = Z1 + (1+a)*(b*dt^2*dFnlPdu + g*dt*dFnlPdud);
 
       if ~isempty(m.NLTs)  % Nonlinear Case, Need to iterate
           du = -J\R;
@@ -127,9 +121,10 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
           end
           while ((flag<7) || (it==0))
               Udd(:, i) = Udd(:, i) + du;
+              dUdd1 = dUdd1 - J\dR;
               it = it+1;
 
-              [FnlP, dFnldu, dFnldud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
+              [FnlP, dFnlPdu, dFnlPdud, ~] = m.NLFORCE(T(i-1)+(1+a)*dt, ...
                   U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
                   Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
               % Residual, Jacobian, and Updates
@@ -142,7 +137,11 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
               else
                 error('wth');
               end
-              J = Z1 + (1+a)*(b*dt^2*dFnldu + g*dt*dFnldud);
+              dR = Z1*dUdd1 - Z2*dUdd0 + [zeros(m.Ndofs) Z3] + ...
+                  [dFnlPdu (1+a)*dt*dFnlPdu] + (1+a)*dt^2*((.5-b)*dFnlPdu*dUdd0+b*dFnlPdu*dUdd1) +...
+                  [zeros(m.Ndofs) dFnlPdud] + (1+a)*dt*((1-g)*dFnlPdud*dUdd0+g*dFnlPdud*dUdd1) -...
+                  [dFnldu dFnldud];
+              J = Z1 + (1+a)*(b*dt^2*dFnlPdu + g*dt*dFnlPdud);
               du = -J\R;
               % Error norms
               e = abs(R'*du);
@@ -166,20 +165,22 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       else  % Linear Case, No need iterations
           flag = 8+4+2+1;
           if strcmp(class(Fex), 'function_handle')
-              Udd(:, i) = Z1\(Z2*Udd(:, i-1) - Z3*Ud(:, i-1) - ...
-                  (FnlP-Fnl) + (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1))));
+              Udd(:, i) = Z1\(Z2*Udd(:, i-1) - Z3*Ud(:, i-1) + ...
+                   (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1))));
               
 %               R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
 %                   (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));
           elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
-              Udd(:, i) = Z1\(Z2*Udd(:, i-1) - Z3*Ud(:, i-1) - ...
-                  (FnlP-Fnl) + (1+a)*(Fex(:,i)-Fex(:,i-1)));
+              Udd(:, i) = Z1\(Z2*Udd(:, i-1) - Z3*Ud(:, i-1) + ...
+                  (1+a)*(Fex(:,i)-Fex(:,i-1)));
               
 %               R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
 %                   (FnlP-Fnl) - (1+a)*(Fex(:,i)-Fex(:,i-1));
           else
               error('wth');
           end
+          
+          dUdd1 = Z1\(Z2*dUdd0 - [zeros(m.Ndofs) Z3]);
       end
       
       if flag == 0 || any(~isfinite(abs(Udd(:, i))))
@@ -197,7 +198,11 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       Ud(:, i) = Ud(:, i-1) + dt*((1-g)*Udd(:, i-1)+g*Udd(:, i));
       U(:, i) = U(:, i-1) + dt*Ud(:, i-1) + dt^2*((0.5-b)*Udd(:, i-1)+b*Udd(:, i));
       
-      [Fnl, ~, ~, m] = m.NLFORCE(T(i), U(:, i), Ud(:, i), T(i-1));
+      [Fnl, dFnldu, dFnldud, m] = m.NLFORCE(T(i), U(:, i), Ud(:, i), T(i-1));
+      
+      PHI = [[eye(m.Ndofs) dt*eye(m.Ndofs)] + dt^2*((0.5-b)*dUdd0+b*dUdd1);
+          [zeros(m.Ndofs) eye(m.Ndofs)] + dt*((1-g)*dUdd0+g*dUdd1)]*PHI;
+      dUdd0 = -m.M\[m.K+dFnldu m.C+dFnldud];
       
       if strcmp(opts.Display, 'progress') || strcmp(opts.Display, 'both')
           fprintf('%d: %.4e/%.4e %.4e\n', i, T(i), T1, dt);
@@ -207,7 +212,7 @@ function [T, U, Ud, Udd, m] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, varargin)
       end
       
       %% Check for kill
-      if strcmp(opts.Display, 'waitbar')
+      if strcmp(opts.Display, 'waitbar') && mod(i, fix(Nt/10))==0
           waitbar(T(i)/T1, wb, sprintf('Progress: %.4e/%.4e dt: %.4e', T(i), T1, dt))
           
           if (~ishandle(wb))

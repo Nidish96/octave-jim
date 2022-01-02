@@ -13,27 +13,6 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
 % OUTPUTS:
 %   U		: (Nu+1, Np) Solution vector
 %   dUdlam	: (Nu+1, Np) Solution derivative wrt parameter
-%
-%
-% Solver List: 
-%   orthogonal
-%   arclength             : Measures arclength based on norm(u./Dscale)
-%                           If one has many unknowns, the relative
-%                           weighting of 'lam' can become very small. 
-%                           In these cases, use 'K0NormalizedArcLength'
-%                           instead.
-%   K0NormalizedArcLength : Allows for a general stiffness matrix and 
-%                           measures vector length as u(1:end-1)'*K0*u(1:end-1).
-%                           Default options use Dscale to construct a
-%                           diagonal K0.
-%                           A diagonal K0 differs from 'arclength' only in
-%                           that the relative weights of the unknowns can
-%                           be more appropriately controlled. 
-%                           Allows variable weighting between lam and norm
-%                           of u(1:end-1). However, giving small or 0 
-%                           weight to lam may result in NaN. Also, if the
-%                           curve has dL/ds = 0 or approx 0, the predictor
-%                           will be poorly conditioned.
 
   %% Default options
   Copt = struct('Nmax', 100, 'dsmax', ds*5, 'dsmin', ds/5, ...
@@ -47,45 +26,16 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
                               1e-6, 'utol', 1e-6, ...
                               'Display', false, 'lsrch', 0), ...
         'solverchoice', 1, ...
-        'callbackfun', [], ...
-        'arcsettings', struct());
+        'callbackfun', []);
   if nargin==6
     nflds = fieldnames(varargin{1});
     for i=1:length(nflds)
-        if ~strcmp(nflds{i}, 'opts')
-            Copt.(nflds{i}) = varargin{1}.(nflds{i});
-        else
-            nnflds = fieldnames(varargin{1}.(nflds{i}));
-            for j=1:length(nnflds)
-                Copt.opts.(nnflds{j}) = varargin{1}.(nflds{i}).(nnflds{j});
-            end
-        end
+      Copt.(nflds{i}) = varargin{1}.(nflds{i});
     end
   end
   Copt.opts.lsrch = Copt.lsrch;
   Copt.opts.Display = Copt.itDisplay;
   Copt.opts.ITMAX = Copt.ITMAX;  
-  
-  if isequal(Copt.arclengthparm, 'K0NormalizedArcLength')
-      % Copy over and initialize parameters specific to this
-      % parameterization. 
-      % K0 can be large, so only initialize if needed.
-      
-      if ~isfield(Copt.arcsettings, 'K0') || isempty(Copt.arcsettings.K0)
-          Copt.arcsettings.K0 = sparse(diag(1./Copt.Dscale(1:end-1).^2));
-          
-          Copt.arcsettings.normc = (u0)'*Copt.arcsettings.K0*(u0);
-      end
-      
-      if ~isfield(Copt.arcsettings, 'normb') || isempty(Copt.arcsettings.normb)
-          Copt.arcsettings.normb = Copt.Dscale(end)^2;
-      end
-      
-      if ~isfield(Copt.arcsettings, 'b') || isempty(Copt.arcsettings.b)
-          Copt.arcsettings.b = 0.5;
-      end
-            
-  end
   
   %% Allocations
   U = zeros(length(u0)+1, Copt.Nmax);
@@ -135,35 +85,20 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     func = @(ul) REVRES(ul, ofunc, (lam1-lam0)/1e4);
   end
   
-  %% Extract gradient information 
-  [~, J0(1:end-1,1:end-1), J0(1:end-1,end)] = func(U(:, 1)); % (This could be eliminated by saving the Jacobian from NSOLVE)
+  %% Extract gradient information
+  [~, J0(1:end-1,1:end-1), J0(1:end-1,end)] = func(U(:, 1));
   J0 = J0*diag(Copt.opts.Dscale);
-  dUdlam(:, 1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];  % Scaled Tangent
+  dUdlam(:, 1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];
   
   %% Evaluate Callback if necessary
   if callback
       Scall{1} = Copt.callbackfun(U(:,1), J0, dUdlam);
   end
   
-  %% Initial tangent (scaled space)
+  %% Initial tangent
   dxn = Copt.startdir;
   z = dUdlam(1:end-1, 1);
-  
-  if isequal(Copt.arclengthparm, 'K0NormalizedArcLength')
-    b = Copt.arcsettings.b/Copt.arcsettings.normb;
-    c = (1-Copt.arcsettings.b)/Copt.arcsettings.normc;
-
-    % Change in L that exactly satisfies arc length constraint for initial guess
-    % Have to convert z from scaled to physical for the norm. This is 
-    % d(arc Length) / d (scaled space L).
-    dsdL = sqrt(c*((z.*Copt.opts.Dscale(1:end-1))'*Copt.arcsettings.K0*(z.*Copt.opts.Dscale(1:end-1)))...
-            +b*Copt.opts.Dscale(end).^2 );
-
-    al = dxn/dsdL;
-  else
-    al = dxn/sqrt(1+z'*z);
-  end
-  
+  al = dxn/sqrt(1+z'*z);
   alp = al;
   Ss = zeros(Copt.Nmax,2);
   
@@ -176,16 +111,14 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
   
   oopts = optimset('Jacobian', 'on', 'Display', 'off');  % options for fsolve if NSOLVE fails 
   
-  dUdlam(:, 1) = Copt.opts.Dscale.*dUdlam(:, 1);  % Physical tangent
+  dUdlam(:, 1) = Copt.opts.Dscale.*dUdlam(:, 1);
   
   dUn = [z;1];
   Ss(1, :) = [0 al];
-  u0 = U(:, 1) + ds*al*(Copt.opts.Dscale.*dUn);
+  u0 = U(:, 1) + ds*(al*dUn);
   while ( (lam-lam1)*(lamp-lam1) >= 0 && n<Copt.Nmax )
       if Copt.DynDscale
-          Copt.opts.Dscale = max(abs(U(:,n+1)), Copt.opts.Dscale);
-%           Copt.opts.Dscale = max(abs(U(:, n+1)), min(Copt.opts.Dscale));
-%             Copt.opts.Dscale = abs(U(:,n+1))+1e-8;
+          Copt.opts.Dscale = max(abs(U(:, n+1)), Copt.opts.Dscale);
       end
         
 %     [U(:, n+1), ~, eflag, op, J0] = fsolve(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), u0, oopts);
@@ -205,9 +138,9 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
 
     switch Copt.solverchoice
         case 1
-            [U(:, n+1), ~, eflag, its, J0, ~] = ELIMSEQSOLVE(func, u0, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.opts);
+            [U(:, n+1), ~, eflag, its, J0, ~] = ELIMSEQSOLVE(func, u0, U(:, n), al*dUn, ds, Copt.arclengthparm, Copt.opts);
         case 2
-            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.Dscale, Copt.arcsettings), u0, Copt.opts);
+            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), u0, Copt.opts);
         otherwise
             error('Unknown Solver choice')
     end
@@ -227,7 +160,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
                     fprintf('resetting step-size\n')
                     ds = ds0;
                 end
-                u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUn);
+                u0 = U(:, n) + ds*al*dUn;
             case {2, 3}
                 fprintf('trying eigenvector update\n');
                 
@@ -254,7 +187,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
                     fprintf('maxing step-size\n')
                     ds = Copt.dsmax;
                 end
-                u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUn);
+                u0 = U(:, n) + ds*al*dUn;
             otherwise
                 fprintf('Stopping\n');
                 break;
@@ -268,6 +201,8 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     
     J0 = J0*diag(Copt.opts.Dscale);
     dUdlam(:, n+1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];
+    dxn = sign(dxn*dUn'*dUdlam(:, n+1));
+%     dxn = sign((U(end,n+1)-U(end,n))*dUdlam(:, n)'*dUdlam(:, n+1));
     
     %% Callback Function
     if callback
@@ -279,44 +214,13 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     lam  = U(end, n+1);
     % tangent and predictor
     z = dUdlam(1:end-1, n+1);
-    
-    if isequal(Copt.arclengthparm, 'K0NormalizedArcLength')
-        b = Copt.arcsettings.b/Copt.arcsettings.normb;
-        c = (1-Copt.arcsettings.b)/Copt.arcsettings.normc;
-        
-        % Change in L that exactly satisfies arc length constraint for initial guess
-        % Have to convert z from scaled to physical for the norm. This is 
-        % d(arc Length) / d (scaled space L).
-        dsdL = sqrt(c*((z.*Copt.opts.Dscale(1:end-1))'*Copt.arcsettings.K0*(z.*Copt.opts.Dscale(1:end-1)))...
-                    +b*Copt.opts.Dscale(end).^2 );
-        
-        al = 1/dsdL;
-        
-        % Inner product using the norm that measures the arc length
-        % z is the current derivative
-        % dUn is the previous one
-        innerprod = al*alp*(c*((z.*Copt.opts.Dscale(1:end-1))'*Copt.arcsettings.K0*(dUn(1:end-1).*Copt.opts.Dscale(1:end-1))) ...
-                        + b*Copt.opts.Dscale(end).^2*1*1);
-        
-        dxn = sign(innerprod);
-        
-        al = dxn/dsdL;
-        
-        theta = acos(abs(innerprod)); 
-        
-    else
-    
-        dxn = sign(dxn*dUn'*dUdlam(:, n+1));
-%         dxn = sign((U(end,n+1)-U(end,n))*dUdlam(:, n)'*dUdlam(:, n+1));
-        al = dxn/sqrt(1+z'*z);
-
-        theta = acos(alp*al*dUn'*[z; 1]);
-    end
+    al = dxn/sqrt(1+z'*z);
     
     dUdlam(:, n+1) = Copt.opts.Dscale.*dUdlam(:, n+1);
     Ss(n+1,:) = [Ss(n)+ds al];
     
     %% Step size adaptation
+    theta = acos(alp*al*dUn'*[z; 1]);
     if Copt.Display
       fprintf('%d %f %f %e %d (%d)\n', n+1, U(end,n+1), ds, theta, its, eflag);
     end
@@ -333,7 +237,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     
     dUn = [z; 1];
 
-    u0 = U(:, n) + ds*al*(Copt.opts.Dscale.*dUn);
+    u0 = U(:, n) + ds*al*dUn;
   end
   U = U(:, 1:n);
   dUdlam = dUdlam(:, 1:n);
@@ -391,32 +295,33 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSEQSOLVE(func, ul, ul0, ulp0, 
       while its_tot<ITMAX
           % Newton update on "u" with "l" fixed
           [R, dRdU, dRdL] = func(ul); 
-          dRdU = dRdU*diag(opts.Dscale(1:end-1));  % scale the Jacobian
-          u1 = ul(1:end-1) - opts.Dscale(1:end-1).*(dRdU\R);
-          dudL = -opts.Dscale(1:end-1).*(dRdU\dRdL);  % gradient of u wrt lambda
+          u1 = ul(1:end-1) - dRdU\R;
+          dudL = -dRdU\dRdL;
 
           % Evaluate Constraint
-          du = [u1; ul(end)]-ul0;
           switch parm
               case {'orthogonal' , 'Orthogonal'}
-                  cs = (ulp0./opts.Dscale.^2)'*du-ds;
-                  dcdL = (ulp0./opts.Dscale.^2)'*[dudL; 1.0];
-                  dcR = (ulp0./opts.Dscale.^2)';
+                  du = [u1; ul(end)]-ul0;
 
-                  l1 = ul(end) - (cs/dcdL);
+                  cs = ulp0'*du-ds;
+                  dcdL = ulp0'*[dudL; 1.0];
+                  dcR = ulp0';
+
+                  l1 = ul(end) - cs/dcdL;
     %               l = ul(end);
 
                   du = [du(1:end-1); (l1-l0)];
 
-                  coefu = (ds-ulp0(end)*(l1-l0)/opts.Dscale(end)^2)/((ulp0(1:end-1)./opts.Dscale(1:end-1).^2)'*du(1:end-1));
+                  coefu = (ds-ulp0(end)*(l1-l0))/(ulp0(1:end-1)'*du(1:end-1));
                   coefl = 1;
               case {'arclength' , 'Arclength'}
-                  error('This has to be checked for consistency')
+                  du = [u1; ul(end)]-ul0;
+
                   cs = du'*du-ds^2;
                   dcdL = 2*du'*[dudL; 1.0];
                   dcR = 2*du';
 
-                  l1 = ul(end) - opts.Dscale(end)*(cs/dcdL);
+                  l1 = ul(end) - cs/dcdL;
     %               l = ul(end);              
 
                   du = [du(1:end-1); (l1-l0)];
@@ -424,7 +329,7 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSEQSOLVE(func, ul, ul0, ulp0, 
                   coef = sqrt(ds^2/(du'*du));
                   % Determine sign
 
-                  [~, mi] = min([vecnorm((ul0./opts.Dscale-coef*du)-[u1;l1]), vecnorm((ul0./opts.Dscale+coef*du)-[u1;l1])]);
+                  [~, mi] = min([vecnorm((ul0-coef*du)-[u1;l1]), vecnorm((ul0+coef*du)-[u1;l1])]);              
     %               coefu = sqrt((ds^2-(l1-l0)^2)/(du(1:end-1)'*du(1:end-1)));
 
                   coefu = (-1)^mi*coef;
@@ -457,7 +362,7 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSEQSOLVE(func, ul, ul0, ulp0, 
 
           its_tot = its_tot + 1;
 
-%           fprintf('%d %e %e\n', its_tot, abs(lp-ul(end)), abs(cs))
+    %       fprintf('%d %e %e\n', its_tot, abs(lp-ul(end)), abs(cs))
 
           % Update
           if abs((ul(end)-lp)/lp)<opts.reletol
@@ -533,7 +438,7 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSOLVE(func, ul, ul0, ulp0, ds,
       [un, ~, eflag, its] = NSOLVE(@(u) func([u; l]), ul(1:end-1), opts);
       
       if eflag<=0  % Try direct solve
-        [unl, ~, eflag, its] = NSOLVE(@(ul) EXRES(func, ul, ul0, ulp0, ds, parm, Copt.Dscale), ul0+ulp0*ds/2, opts);
+        [unl, ~, eflag, its] = NSOLVE(@(ul) EXRES(func, ul, ul0, ulp0, ds, parm), ul0+ulp0*ds/2, opts);
         if eflag<=0
             if swch==1
                 break;
@@ -626,35 +531,20 @@ function [Re, Je, l, dRe] = ELRES(func, u, ul0, ulp0, ds, parm)
 end
 
 %%
-function [Re, Je] = EXRES(func, u, u0, up0, ds, parm, Dscale, varargin)
+function [Re, Je] = EXRES(func, u, u0, up0, ds, parm)
 %EXRES is the residual function along with the continuation constraint
 %(without elimination)
 
+  [Re0, dRdUe0, dRdLe0] = func(u0);
   [Re, dRdUe, dRdLe] = func(u);
   switch parm
     case {'orthogonal' , 'Orthogonal'}
-      Re = [Re; (up0./Dscale.^2)'*(u-u0)-ds];
-      Je = [dRdUe dRdLe; (up0./Dscale.^2)'];
+      Re = [Re; up0'*(u-u0)-ds];
+      Je = [dRdUe dRdLe; up0'];
     case {'arclength' , 'Arclength'}
-      Re = [Re; ((u-u0)./Dscale.^2)'*(u-u0)-ds^2];
-      Je = [dRdUe dRdLe; 2*(u-u0)./Dscale.^2'];
-            
-    case {'K0NormalizedArcLength'}
-
-        b = varargin{1}.b/varargin{1}.normb;
-        c = (1-varargin{1}.b)/varargin{1}.normc;
-
-        du = (u(1:end-1)-u0(1:end-1));
-        dL = (u(end)-u0(end));
-        Re = [Re; 
-            c*(du'*varargin{1}.K0*du)+b*dL^2-ds^2];
-        Je = [dRdUe dRdLe;
-            c*(2*du'*varargin{1}.K0), 2*b*dL];
-
+      Re = [Re; (u-u0)'*(u-u0)-ds^2];
+      Je = [dRdUe dRdLe; 2*(u-u0)'];
     otherwise        
-        
-      [Re0, dRdUe0, dRdLe0] = func(u0);
-  
       b = 0.5;
       c = (1-b)/(dRdLe0'*dRdUe0*dRdLe0);
     
