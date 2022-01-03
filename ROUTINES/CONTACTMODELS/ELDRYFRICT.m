@@ -30,13 +30,13 @@ function [fxyn, DfxynDuxyn] = ELDRYFRICT(t, uxyn, Kt, kn, mu, gap, varargin)
       uxynp  = zeros(Np*3, 1);
       fxynp  = zeros(Np*3, 1);
       dfxynp = zeros(Np*3, Np*3);
-      dfxynp(1:3:end, 1:3:end, :) = Kt(1,:);
-      dfxynp(1:3:end, 2:3:end, :) = Kt(3,:);
-      dfxynp(2:3:end, 1:3:end, :) = Kt(3,:);
-      dfxynp(2:3:end, 2:3:end, :) = Kt(2,:);
-      dfxynp(3:3:end, 3:3:end, :) = kn;
+      dfxynp(1:3:end, 1:3:end, :) = diag(Kt(1,:));
+      dfxynp(1:3:end, 2:3:end, :) = diag(Kt(3,:));
+      dfxynp(2:3:end, 1:3:end, :) = diag(Kt(3,:));
+      dfxynp(2:3:end, 2:3:end, :) = diag(Kt(2,:));
+      dfxynp(3:3:end, 3:3:end, :) = diag(kn);
   elseif nargin==11
-      tp = varargin{1};
+      tp     = varargin{1};
       uxynp  = varargin{2};
       fxynp  = varargin{3};
       dfxynp = varargin{4};
@@ -120,5 +120,5 @@ function [fxyn, DfxynDuxyn] = ELDRYFRICT(t, uxyn, Kt, kn, mu, gap, varargin)
                   (dfSlipdn/fT).*fxystick;
           end
       end
- 
+  end
 end

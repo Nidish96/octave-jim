@@ -33,8 +33,8 @@ function [F, dFdU, dFdUd, m] = NLFORCE(m, t, U, Ud, tp, varargin)
             if ~isfield(m.NLTs(ni), 'up') || ~isfield(m.NLTs(ni), 'fp') || ~isfield(m.NLTs(ni), 'dfdup') || init 
                 [f, dfdu] = m.NLTs(ni).func(t, m.NLTs(ni).L*U);
             else
-                [f, dfdu] = m.NLTs(ni).func(t, m.NLTs(ni).L*U, 0, tp, m.NLTs(ni).up, ...
-                    m.NLTs(ni).fp, m.NLTs(ni).dfdup);
+                [f, dfdu] = m.NLTs(ni).func(t, m.NLTs(ni).L*U, tp, m.NLTs(ni).up, ...
+                    m.NLTs(ni).fp, m.NLTs(ni).dfdup, 0);
             end
 
             dfdu = sparse(dfdu);

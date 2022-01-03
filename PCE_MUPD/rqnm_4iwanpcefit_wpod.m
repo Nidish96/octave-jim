@@ -222,6 +222,42 @@ subplot(2,1,2);
 hold on
 semilogx(Qs, Dpce*Lr(Nx+(1:Nx),:)', 'o-')
 
+%% Optimize True Model
+pars0 = [klin.mu, clin.mu, fs.mu, kt.mu, chi.mu, bt.mu];
+
+r2lfun = @(pars) [log10(pars(1:4)) pars(5:6)];
+l2rfun = @(lpars) [10.^lpars(1:4) lpars(5:6)];
+lbs = [-1, -1, -1, -1, -1, 0];
+ubs = [inf, inf, inf, inf, 1, inf];
+
+% r2lfun = @(pars) pars;
+% l2rfun = @(lpars) lpars;
+% lbs = [0, 0, 0, 0, -1, 0];
+% ubs = [inf, inf, inf, inf, 1, inf];
+
+resfun = @(pars) [rms(sqrt(lam(Qs, l2rfun(pars)))./Wse-1), ...
+    rms(log10(ztx(Qs, l2rfun(pars)))./log10(Zse)-1)];
+
+% %%
+Npop = 100;
+opt = optimoptions('gamultiobj', 'PopulationSize', Npop, ...
+    'UseVectorized', false, 'UseParallel', true, ...
+    'PlotFcn', {'gaplotpareto', 'gaplotparetodistance', 'gaplotrankhist', 'gaplotspread'});
+    
+rng(1);
+inpop = abs(randn(Npop, 6).*[klin.sigma clin.sigma fs.sigma kt.sigma chi.sigma bt.sigma]+[klin.mu, clin.mu, fs.mu, kt.mu, chi.mu, bt.mu]);
+for i=1:Npop
+    inpop(i, :) = r2lfun(inpop(i,:));
+end
+opt.InitialPopulationMatrix = inpop;
+
+[parsol, objsol] = gamultiobj(@(x) resfun(x), ...
+    6, [], [], [], [], lbs, ubs, [], opt);
+
+trSolz = zeros(Nx, size(parsol,1)*2);
+for i=1:size(parsol,1)
+    trSolz(:, i+[0 size(parsol,1)]) = [sqrt(lam(Qs, l2rfun(parsol(i,:))))' ztx(Qs, l2rfun(parsol(i,:)))'];
+end
 
 %% Initialize RLS
 P_0 = eye(size(D_As, 1))*1e-3;
@@ -246,6 +282,11 @@ errs = zeros(NITs,1);
 Objs = cell(NITs, 1);
 Sols = cell(NITs, 1); 
 
+opt = optimoptions('gamultiobj', 'PopulationSize', Npop, ...
+    'UseVectorized', true, 'UseParallel', true, ...
+    'InitialPopulationMatrix', xs, ...
+    'PlotFcn', {'gaplotpareto', 'gaplotparetodistance', 'gaplotrankhist', 'gaplotspread'});
+    
 for it=1:NITs
     %%  Conduct Optimization with gamultiobj
     costfun = @(x) PCECOSTFUN(x, eye(6), Dcs_0, Lr(1:Nx,:), Lr(Nx+1:end,:), [Wse(:), Zse(:)], Is, repmat({polfun}, 1, 6));
@@ -253,11 +294,7 @@ for it=1:NITs
     % costfun(kron((0:2)'/2, ones(1, 4)));
     figure(1);
 
-    opt = optimoptions('gamultiobj', 'PopulationSize', Npop, ...
-        'UseVectorized', true, 'UseParallel', true, ...
-        'InitialPopulationMatrix', xs, ...
-        'PlotFcn', {'gaplotpareto', 'gaplotparetodistance', 'gaplotrankhist', 'gaplotspread'});
-
+    opt.InitialPopulationMatrix = xs;
     [xs, Objs{it}, ~, op] = gamultiobj(@(x) costfun(x), ...
         6, [], [], [], [], zeros(1, 6), [], [], opt);
     xd = tformfun(xs, klin, clin, fs, kt, chi, bt);
@@ -345,25 +382,31 @@ xlabel('Amplitude (m)')
 ylabel('Damping Factor (%)')
 
 set(gcf, 'Color', 'white')
-export_fig('./FIGS/converged_bbs.eps', '-depsc')
+% export_fig('./FIGS/converged_bbs.eps', '-depsc')
 
 %%
 cols = DISTINGUISHABLE_COLORS(im);
 
-figure(11)
+figure(110)
 clf()
-aa = gobjects(im, 1);
+aa = gobjects(im+1, 1);
 for it=1:im
-    aa(it) = plot(Objs{it}(si,1), Objs{it}(si, 2), 'h', ...
+    [~, si] = sort(Objs{it}(:,1));
+    
+    aa(it) = plot(Objs{it}(si,1), Objs{it}(si, 2), '-', ...
         'Color', cols(it,:), 'MarkerFaceColor', cols(it,:)); hold on
     legend(aa(it), sprintf('It. %d', it))
 end
+[~, si] = sort(objsol(:,1));
+aa(im+1) = plot(objsol(si, 1), objsol(si, 2), 'k-.');
+legend(aa(im+1), 'True NDS')
+
 legend(aa, 'Location', 'eastoutside');
 xlabel('Rel-RMS Frequency Deviation')
 ylabel('Rel-RMS Log-Damping Deviation')
 
 set(gcf, 'Color', 'white')
-export_fig('./FIGS/Paretofronts.eps', '-depsc')
+% export_fig('./FIGS/Paretofronts.eps', '-depsc')
 
 %%
 figure(12)
@@ -373,7 +416,7 @@ xlabel('Iteration Index');
 ylabel('Max. Relative Surrogate Model Deviation')
 
 set(gcf, 'Color', 'white')
-export_fig('./FIGS/convergence.eps', '-depsc')
+% export_fig('./FIGS/convergence.eps', '-depsc')
 
 %% PCE Cost Function
 function [wzres] = PCECOSTFUN(x, Lx, Dcofs, Lrw, Lrz, WZexp, Is, polfuns)    

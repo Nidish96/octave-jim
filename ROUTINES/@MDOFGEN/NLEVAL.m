@@ -57,7 +57,7 @@ function [Fnl, ft] = NLEVAL(m, t, U, Udot,tol, varargin)
                 for ti=1:Nt
                     tm1 = mod(ti-2, Nt)+1;
                     ft(ti,:) = m.NLTs(ni).func(t(ti), unlt(ti,:)', ...
-                        t(tm1), unlt(tm1,:)', ft(tm1,:), 0, 0);
+                        t(tm1), unlt(tm1,:)', ft(tm1,:)', squeeze(dfdu(1, :, :, :)), 0);
 %                     fprintf('%d, ', ti);
                 end
 %                 fprintf('\n');

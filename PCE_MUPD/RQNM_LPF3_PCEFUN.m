@@ -42,7 +42,7 @@ function [outputs] = RQNM_LPF3_PCEFUN(Ixs, nxi, parprops, Nq_pces, pref, varargi
         simmode = varargin{3};
     end
     
-    Load Model
+    %% Load Model
     model = 'BRB_Thesis';
     E = 1.9231e11;
     nu = 0.3;
@@ -65,22 +65,24 @@ function [outputs] = RQNM_LPF3_PCEFUN(Ixs, nxi, parprops, Nq_pces, pref, varargi
     kn = zeros(1, MESH.Ne*MESH.Nq^2);
     mu = zeros(1, MESH.Ne*MESH.Nq^2);
     gap = zeros(1, MESH.Ne*MESH.Nq^2);
-    parslist = {'kt', 'kn', 'mu', 'gap'};
+%     parslist = {'kt', 'kn', 'mu', 'gap'};
+
+    Xis = zeros(length(parprops), 1);
+    Wis = zeros(length(parprops), 1);
     for pi=1:length(parprops)
         [xi, wi] = parprops(pi).quadfun(Nq_pces(pi));
+        
         if strcmp(simmode, 'quad')
+            Xis(pi) = xi(Ixs(pi));  Wis(pi) = wi(Ixs(pi));
             
+            eval([parprops(pi).par '(:) = ' num2str(parprops(pi).map(Xis(pi)),'%.100e') ';']);
         else
+            Xis(pi) = Ixs(pi);  Wis(pi) = 1.0;
             
+            eval([parprops(pi).par '(:) = ' num2str(Xis(pi),'%.100e') ';']);
         end
     end
-    
-    Kt = zeros(3, MESH.Ne*MESH.Nq^2);
-    
-    Kt = [1e12; 1e12; 0];
-    kn = 1e12;
-    mu = 0.25;
-    gap = 0;
+    Kt = [kt; kt; zeros(1, MESH.Ne*MESH.Nq^2)];
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % 3. Create MDOFGEN MODEL & Assign Contact Model %
@@ -105,7 +107,7 @@ function [outputs] = RQNM_LPF3_PCEFUN(Ixs, nxi, parprops, Nq_pces, pref, varargi
     Prestress = Plevels(1);
     
     % Initial Guess Fully Engaged Stiffness
-    Kmatt = [Kt(1) Kt(3) 0; Kt(3) Kt(2) 0; 0 0 kn];
+    Kmat = [kt(1) 0 0; 0 kt(1) 0; 0 0 kn(1)];
     K0 = L(1:MESH.Nn*3,:)'*kron(MESH.Tm,eye(3))*...
          kron(eye(MESH.Ne*MESH.Nq^2),Kmat)*...
          kron(MESH.Qm, eye(3))*L(1:MESH.Nn*3,:);    
@@ -136,7 +138,7 @@ function [outputs] = RQNM_LPF3_PCEFUN(Ixs, nxi, parprops, Nq_pces, pref, varargi
     
     %% March
     Na = 10;
-    As = logspace(AMIN, AMAX, Na);
+    As = logspace(min(Arange), max(Arange), Na);
     As = [-As(end:-1:1) As]';
     Eflags = zeros(1, 2*Na);
 
@@ -149,7 +151,6 @@ function [outputs] = RQNM_LPF3_PCEFUN(Ixs, nxi, parprops, Nq_pces, pref, varargi
         [UlC(:, Na+ia), ~, Eflags(Na+ia), ~, dRdUl] = ...
             NSOLVE(@(ul) GM.RQMRESFUN([ul; log10(As(Na+ia))], 1, ...
                                       Fv*Prestress, Ustat), ul0, opts);
-        
         if eflag<=0
             error('No Convergence')
         end
@@ -190,7 +191,7 @@ function [outputs] = RQNM_LPF3_PCEFUN(Ixs, nxi, parprops, Nq_pces, pref, varargi
     Ln = reshape([UlC(end,:); dUdalC(end,:)], 2*size(UlC,2), 1);
 
     Nq = 100;
-    Qs = logspace(QMIN, QMAX, Nq)';
+    Qs = logspace(min(Qrange), max(Qrange), Nq)';
 
     Nt = 2^7;
     t = linspace(0, 2*pi, Nt+1)'; t(end) = [];
@@ -231,15 +232,14 @@ function [outputs] = RQNM_LPF3_PCEFUN(Ixs, nxi, parprops, Nq_pces, pref, varargi
     end
 
     %% Create output structure & save to file
-    outputs = struct('Qs', Qs, 'Phi', Phi, 'Lams', Lams, 'Zts', Zts, ... 
-                    'Wstat', Wstat, 'Ustat', Ustat, 'Xis', Xis, ...
-                    'Wis', Wis, 'Tstat', Tstat, ...
-                    'Dfluxes', Dfluxes);
     
-    save(sprintf('./ALLPCE/%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', ...
-         'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
-         'Tstat', 'Dfluxes')
-    
+    save(sprintf('./%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', ...
+        'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
+        'Tstat', 'Dfluxes');
+    outputs = load(sprintf('./%s_%d_m%d.mat', pref, nxi, mdi), 'Qs', ...
+        'Phi', 'Lams', 'Zts', 'Wstat', 'Ustat', 'Xis', 'Wis', ...
+        'Tstat', 'Dfluxes');   
+        
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fprintf('=============================================\n')
     fprintf('Done %d\n', nxi);

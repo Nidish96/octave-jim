@@ -1,5 +1,5 @@
 clc
-clear all
+% clear all
 
 addpath('../ROUTINES/')
 addpath('../ROUTINES/FEM/')
@@ -25,6 +25,9 @@ Kt = [1e12; 1e12; 0];
 kn = 1e12;
 mu = 0.25;
 gap = 0;
+
+Kt = [1e5; 1e5; 0];
+kn = 1e5;
 
 fnl = @(t, u, varargin) ELDRYFRICT(t, u, Kt, kn, mu, gap, varargin{:});
 GM = GM.SETNLFUN(2+5, ...
