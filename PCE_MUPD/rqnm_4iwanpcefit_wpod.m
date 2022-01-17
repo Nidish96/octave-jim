@@ -260,10 +260,10 @@ for i=1:size(parsol,1)
 end
 
 %% Initialize RLS
-P_0 = eye(size(D_As, 1))*1e-3;
+P_0 = eye(size(D_As, 1))*1e-1;  %1e-3
 Dcs_0 = D_As;
 
-rls_lamb = 1;  % forgetfulness
+rls_lamb = 0.9;  % forgetfulness
 
 rng(1)
 
@@ -389,23 +389,24 @@ cols = DISTINGUISHABLE_COLORS(im);
 
 figure(110)
 clf()
+set(gcf, 'Color', 'white')
 aa = gobjects(im+1, 1);
+[~, si] = sort(objsol(:,1));
+aa(1) = plot(objsol(si, 1), objsol(si, 2), 'k-', 'LineWidth', 2); hold on
+legend(aa(1), 'True NDS')
 for it=1:im
     [~, si] = sort(Objs{it}(:,1));
     
-    aa(it) = plot(Objs{it}(si,1), Objs{it}(si, 2), '-', ...
+    aa(1+it) = plot(Objs{it}(si,1), Objs{it}(si, 2), 'h', ...
         'Color', cols(it,:), 'MarkerFaceColor', cols(it,:)); hold on
-    legend(aa(it), sprintf('It. %d', it))
+    legend(aa(it+1), sprintf('It. %d', it))
+    legend(aa(1:(it+1)), 'Location', 'eastoutside');
+    
+    xlabel('Rel-RMS Frequency Deviation')
+    ylabel('Rel-RMS Log-Damping Deviation')
+    
+%     export_fig(sprintf('./FIGS/PARANIM/paranim_%02d.png', it), '-dpng')
 end
-[~, si] = sort(objsol(:,1));
-aa(im+1) = plot(objsol(si, 1), objsol(si, 2), 'k-.');
-legend(aa(im+1), 'True NDS')
-
-legend(aa, 'Location', 'eastoutside');
-xlabel('Rel-RMS Frequency Deviation')
-ylabel('Rel-RMS Log-Damping Deviation')
-
-set(gcf, 'Color', 'white')
 % export_fig('./FIGS/Paretofronts.eps', '-depsc')
 
 %%
