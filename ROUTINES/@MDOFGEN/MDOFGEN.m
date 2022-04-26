@@ -28,7 +28,7 @@ classdef MDOFGEN
             m.Ndofs = size(m.M,1);
         end
         
-        function m = SETNLFUN(m, type, Ls, func, Lf)
+        function m = SETNLFUN(m, type, Ls, func, Lf, varargin)
         %SETNLFUN sets nonlinear functions to be applied to the model. Two
         %types are allowed: 'inst' and 'hyst' (see below)
         %
@@ -57,6 +57,11 @@ classdef MDOFGEN
                 nlfun.Lf = Lf;
             else
                 nlfun.Lf = [];
+            end
+            if isempty(varargin)
+                nlfun.qptype = 2;
+            else
+                nlfun.qptype = varargin{1};
             end
             
             m.NLTs = [m.NLTs; nlfun];

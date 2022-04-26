@@ -40,8 +40,9 @@ function [R, dRdU, dRdw, FNL] = HBRESFUN(m, Uw, Fl, h, Nt, tol, varargin)
 			% (Nt,Ndnl); (Nt,Ndnl); (Nt,Ndnl) (point-wise)
       F = GETFOURIERCOEFF(h, ft);
       J = zeros(size(m.NLTs(ni).L,1)*Nhc, size(m.NLTs(ni).L,1)*Nhc);
-      dFdU = reshape(GETFOURIERCOEFF(h, reshape(dfdu.*permute(cst, [1, 3, 2]), Nt, Ndnl*Nhc)),...
+      dFdU = reshape(GETFOURIERCOEFF(h, reshape(dfdu.*permute(cst, [1, 3, 2]) + dfdud.*permute(sct, [1, 3, 2]), Nt, Ndnl*Nhc)),...
                      Nhc, Ndnl, Nhc);
+     % NEED TO INCORPORATE dfdud in DFnlDw
       for di=1:Ndnl
         J(di:Ndnl:end, di:Ndnl:end) = dFdU(:, di, :);
       end

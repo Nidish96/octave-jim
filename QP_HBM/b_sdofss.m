@@ -10,7 +10,7 @@ m = 1;
 c = 0.5;
 k = 4;
 
-Nc = 3;  % Number of components
+Nc = 2;  % Number of components
 Nhmax = 3;  % Number of harmonics
 %% Harmonic Selection
 hall = cell(1, Nc);
@@ -23,8 +23,13 @@ h = [zeros(1,Nc); h];
 
 figure(1)
 clf()
-plot(hall(:,1), hall(:,2), 'ko', 'MarkerFaceColor', 'w'); hold on
-plot(h(:,1), h(:,2), '*'); hold on
+if Nc==2
+    plot(hall(:,1), hall(:,2), 'ko', 'MarkerFaceColor', 'w'); hold on
+    plot(h(:,1), h(:,2), '*'); hold on
+elseif Nc==3
+    plot3(hall(:,1), hall(:,2), hall(:,3), 'ko', 'MarkerFaceColor', 'w'); hold on
+    plot3(h(:,1), h(:,2), h(:,3), '*'); hold on
+end
 grid on
 axis equal
 legend('All Harmonics', 'Selected Harmonic', 'Location', 'northoutside')
@@ -35,9 +40,13 @@ GM = MDOFGEN(m, k, c, 1.0);
 %% Forcing
 % ws = [pi sqrt(2)];
 ws = pi.^(1:Nc);
-rng(1);
-hid = randi(length(h)-1,2,1)
-hfrc = h(1+hid, :)
+% rng(1);
+% hid = randi(length(h)-1,2,1)
+% hfrc = h(1+hid, :)
+
+hid = [find(h(:,1)==0 & h(:,2)==1); find(h(:,1)==1 & h(:,2)==0)]-1;
+hfrc = h(1+hid, :);
+
 amps = [20; 30];
 fext = @(t) cos(t(:).*(hfrc*ws(:))')*amps;
 

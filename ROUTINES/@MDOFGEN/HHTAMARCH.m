@@ -57,9 +57,9 @@ function [T, U, Ud, Udd, m, PHI] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, vararg
   
   % Initialize acceleration
   [Fnl, dFnldu, dFnldud, m] = m.NLFORCE(T0, U0, Ud0, T0-dt);  
-  if strcmp(class(Fex), 'function_handle')
+  if isa(Fex, 'function_handle')
     Udd(:,1) = m.M\(Fex(T0)-m.C*Ud0-m.K*U0-Fnl);
-  elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
+  elseif isa(Fex, 'double') || isa(Fex, 'single')
     Udd(:,1) = m.M\(Fex(:,1)-m.C*Ud0-m.K*U0-Fnl);
   else
       error('wth');
@@ -85,10 +85,10 @@ function [T, U, Ud, Udd, m, PHI] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, vararg
           U(:, i-1) + (1+a)*dt*Ud(:, i-1) + (1+a)*dt^2*((.5-b)*Udd(:, i-1)+b*Udd(:,i)), ...
           Ud(:, i-1) + (1+a)*dt*((1-g)*Udd(:, i-1)+g*Udd(:, i)), T(i-1));
       % Residual, Jacobian, and Update
-      if strcmp(class(Fex), 'function_handle')
+      if isa(Fex, 'function_handle')
         R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
             (FnlP-Fnl) - (Fex(T(i-1)+(1+a)*dt)-Fex(T(i-1)));  
-      elseif strcmp(class(Fex), 'double') || strcmp(class(Fex), 'single')
+      elseif isa(Fex, 'double') || isa(Fex, 'single')
         R = Z1*Udd(:, i) - Z2*Udd(:, i-1) + Z3*Ud(:, i-1) + ...
             (FnlP-Fnl) - (1+a)*(Fex(:,i)-Fex(:,i-1));
       else

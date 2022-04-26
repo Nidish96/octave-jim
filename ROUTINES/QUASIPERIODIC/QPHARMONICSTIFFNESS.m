@@ -1,4 +1,4 @@
-function [E,dEdw] = QPHARMONICSTIFFNESS(M, C, K, w, h)
+function [E, dEdw] = QPHARMONICSTIFFNESS(M, C, K, w, h)
 %QPHARMONICSTIFFNESS
 %
 %   USAGE :
@@ -7,7 +7,7 @@ function [E,dEdw] = QPHARMONICSTIFFNESS(M, C, K, w, h)
 %       h       : (Nh,Nc)
 %   OUTPUT :
 %       E       : (Nd*Nhc,Nd*Nhc)
-
+%       dEdw    : {Nc,1} of (Nd*Nhc,Nd*Nhc)
     if sum(all(h==0, 2)) && ~all(h(1,:)==0)
         error('If you want the dc term, put it in the beginning of h')
     end

@@ -21,8 +21,8 @@ function [y] = QPTIMETRANS(Y, h, Nt)
    
     Ny = size(Y, 2);
     y = zeros(Nt^Nc,Ny);
-    for yi=1:Ny
-        yf = zeros(repmat(Nt, 1, Nc));
+    for yi=1:Ny  % can be task-parallelized
+        yf = zeros([repmat(Nt, 1, Nc) ones(1,Nc==1)]);
         k = 1;
         for hi=1:Nh
             if all(h(hi,:)==0)

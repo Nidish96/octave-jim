@@ -23,7 +23,7 @@ function [Y] = QPFOURIERCOEFF(y, h)
     
     Y = zeros(Nhc, Ny);
     for yi=1:Ny
-        yt = reshape(y(:, yi), repmat(Nt, 1, Nc));
+        yt = reshape(y(:, yi), [repmat(Nt, 1, Nc) ones(1, Nc==1)]);
         
         % Fourier Transform & Scale
         yf = fftshift(fftn(yt))*2/(Nt^Nc);
