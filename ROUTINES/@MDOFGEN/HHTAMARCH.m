@@ -9,6 +9,8 @@ function [T, U, Ud, Udd, m, PHI] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, vararg
 %    T0, T1, dt	: Starting, ending, and interval times
 %    U0, Ud0 	: Ndx1 displacement and velocity initial conditions
 %    Fex	: (1x1)->(Ndx1) forcing function
+%               (or)
+%             (Nd x Nt) (each column is instantaneous force)
 %    opts	: [optional] Structure with parameters
 %    	alpha [0], beta [1/4], gamma [1/2], reletol [1e-6], etol
 %    	[1e-6], utol [1e-6], rtol [1e-6], Display ['progress'],

@@ -29,7 +29,7 @@ function [F, dFdU, dFdUd, m] = NLFORCE(m, t, U, Ud, tp, varargin)
     for ni=1:length(m.NLTs)
         if mod(m.NLTs(ni).type,2)==0  % Inst. force
             [f, dfdu, dfdud] = m.NLTs(ni).func(t, m.NLTs(ni).L*U, m.NLTs(ni).L*Ud);
-        else
+        else  % Hysteretic force
             if ~isfield(m.NLTs(ni), 'up') || ~isfield(m.NLTs(ni), 'fp') || ~isfield(m.NLTs(ni), 'dfdup') || init 
                 [f, dfdu] = m.NLTs(ni).func(t, m.NLTs(ni).L*U);
             else

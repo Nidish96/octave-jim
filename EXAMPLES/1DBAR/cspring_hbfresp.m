@@ -60,7 +60,7 @@ Wst = 7500;
 Wen = 9000;
 dw = 200;
 
-Copt = struct('Nmax', 1000, 'DynScale', 1);
+Copt = struct('Nmax', 500, 'DynScale', 0);
 % Dscale = [1e-3*ones(Nhc*GM.Ndofs,1); Wsp(1)];
 % Copt.Dscale = Dscale;
 
@@ -72,8 +72,8 @@ for fi=1:length(Fas)
     fa = Fas(fi);
     U0 = HARMONICSTIFFNESS(GM.M, GM.C, GM.K, Wst, h)\(Fl*fa);
 
-%     UCs{fi} = CONTINUE(@(Uw) GM.HBRESFUN(Uw, Fl*fa, h, Nt), U0, Wst, Wen, dw, Copt);
-    UCs{fi} = PRECOCONT(@(Uw) GM.HBRESFUN(Uw, Fl*fa, h, Nt), U0, Wst, Wen, dw, Copt);
+    UCs{fi} = CONTINUE(@(Uw) GM.HBRESFUN(Uw, Fl*fa, h, Nt), U0, Wst, Wen, dw, Copt);
+%     UCs{fi} = PRECOCONT(@(Uw) GM.HBRESFUN(Uw, Fl*fa, h, Nt), U0, Wst, Wen, dw, Copt);
 end
 %% Save
 % save('./DATA/Duffing_FRESP.mat', 'UCs', 'Fl', 'Fas', 'Wst', 'Wen', 'h', 'Nhc');
@@ -87,7 +87,8 @@ Ae = 2;
 da = 0.25;
 
 Uwx0 = [kron([0; 0; 1; zeros(Nhc-3,1)], V(:,1)); Wsp(1); 2*Zetas(1)*Wsp(1)];
-[UwxC, dUwxC] = PRECOCONT(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt), Uwx0, As, Ae, da, Copt);
+% [UwxC, dUwxC] = PRECOCONT(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt), Uwx0, As, Ae, da, Copt);
+[UwxC, dUwxC] = CONTINUE(@(uwxa) GM.EPMCRESFUN(uwxa, Fl, h, Nt), Uwx0, As, Ae, da, Copt);
 
 Ubb = UwxC(1:end-3, :).*(10.^UwxC(end,:));  % Displacements
 Feff = (HARMONICSTIFFNESS(zeros(GM.Ndofs), GM.M, zeros(GM.Ndofs), 1, h)*Ubb).*(UwxC(end-1,:).*UwxC(end-2,:));  % "Effective Modal Forces"
