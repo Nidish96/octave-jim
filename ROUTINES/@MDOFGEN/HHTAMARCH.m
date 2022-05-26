@@ -47,8 +47,8 @@ function [T, U, Ud, Udd, m, PHI] = HHTAMARCH(m, T0, T1, dt, U0, Ud0, Fex, vararg
   U0  = reshape(U0, m.Ndofs, 1);
   Ud0 = reshape(Ud0, m.Ndofs, 1);
   
-  Z1 = m.M + (1+a)*g*dt*m.C + (1+a)*b*dt^2*m.K;
-  Z2 = m.M - (1+a)*(1-g)*dt*m.C - (1+a)*(0.5-b)*dt^2*m.K;
+  Z1 = (1+a)*m.M + (1+a)*g*dt*m.C + (1+a)*b*dt^2*m.K;
+  Z2 = (1+a)*m.M - (1+a)*(1-g)*dt*m.C - (1+a)*(0.5-b)*dt^2*m.K;
   Z3 = (1+a)*dt*m.K;
   
   T = T0:dt:T1;    Nt = length(T);
