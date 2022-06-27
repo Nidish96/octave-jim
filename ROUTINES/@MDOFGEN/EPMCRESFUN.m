@@ -1,4 +1,18 @@
 function [R, dRdUwx, dRda] = EPMCRESFUN(m, Uwxa, Fl, h, Nt, tol, varargin)
+%EPMCRESFUN
+%
+%   USAGE: 
+%       [R, dRdUwx, dRda] = EPMCRESFUN(m, Uwxa, Fl, h, Nt, tol, varargin)
+%   INPUTS:
+%       Uwxa    :
+%       Fl      :
+%       h       :
+%       Nt      :
+%       tol     :
+%   OUTPUTS:    
+%       R       :
+%       dRdUwx  :
+%       dRda    :
 
     Nhc = sum((h==0)+2*(h~=0));
 
