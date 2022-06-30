@@ -1,3 +1,5 @@
+% testing different versions of hysteretic force evaluation for elastic dry
+% friction
 clc
 clear all
 addpath('../ROUTINES/export_fig/')

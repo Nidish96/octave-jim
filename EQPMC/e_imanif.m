@@ -37,16 +37,17 @@ Fl(sum(h==0)+2) = 1;
 
 Astart = -2;
 Aend = 4;
-da = 0.1;
-Copt = struct('Nmax', 2000, 'Display', 1, 'DynDscale', 1, 'dsmin', ...
-              0.0001, 'angopt', 1e-1, 'dsmax', 0.5);
-Copt.Dscale = [kron([1e-8; 1e-1*ones(Nhc-1,1)],[1;1]); 1.0; 0.01; 1.0];
+da = 0.01;
+% Copt = struct('Nmax', 2000, 'Display', 1, 'DynDscale', 1, 'dsmin', ...
+%                 0.0001, 'angopt', 1e-1, 'dsmax', 0.5);
+Copt = struct('Nmax', 2000, 'Display', 1, 'DynDscale', 1, 'angopt', 1e-1, ...
+    'solverchoice', 2);
+% Copt.Dscale = [kron([1e-8; 1e-1*ones(Nhc-1,1)],[1;1]); 1.0; 1e-8; 1.0];
 % Copt.Dscale = [ones(Nhc*2,1)*1e-1; 1; 1e-2; 1.0];
 
 BB = cell(2,1);
 if analyze
     U0 = kron([zeros(h(1)==0,1); 1; 1; zeros(Nhc-2-sum(h==0),1)], V(:, 1));
-    da = 0.001;
     BB{1} = CONTINUE(@(Uwxa) MDL.EPMCRESFUN(Uwxa, Fl, h, Nt, 1e-6), [U0; sqrt(D(1)); 0.01], Astart, Aend, da, Copt);
     
     U0 = kron([0; 1; 1; zeros(Nhc-3,1)], V(:, 2));
@@ -71,7 +72,7 @@ for mi=1:2
     xd = TIMESERIES_DERIV(Nt, h, Xdot, 0);
     yd = TIMESERIES_DERIV(Nt, h, Ydot, 0);
 
-    ai = 95*mi;
+    ai = min(95*mi, size(x,2));
     figure(mi)
     clf()
     surf(x([1:end 1], 1:ai), xd([1:end 1], 1:ai), y([1:end 1], 1:ai), 'EdgeColor', 'none'); hold on
@@ -102,11 +103,11 @@ end
 % xlims = [10 800];
 % xlims = [300 4e5];
 xlims = [10 450];
-ylims = [1.35 1.42];
+ylims = [1.375 1.415];
 
 figure(10)
 clf()
-semilogx(10.^BB{1}(end,:), BB{1}(end-2,:), '-', 'LineWidth', 2); hold on
+semilogx(10.^BB{1}(end,:), BB{1}(end-2,:), '-', 'LineWidth', 1); hold on
 semilogx(10.^BB{1}(end,locis), BB{1}(end-2,locis), 'o', 'LineWidth', 2); hold on
 
 % semilogx(10.^BB{2}(end,:), BB{2}(end-2,:)/5, '-', 'LineWidth', 2)
@@ -117,7 +118,7 @@ ylim([0.975 1.425])
 plot(xlims([1 2 2 1 1]), ylims([1 1 2 2 1]), 'k-')
 
 axes('Position', [.52 .2 .325 .325])
-semilogx(10.^BB{1}(end,:), BB{1}(end-2,:), '-', 'LineWidth', 2); hold on
+semilogx(10.^BB{1}(end,:), BB{1}(end-2,:), '-', 'LineWidth', 1); hold on
 xlim(xlims)
 ylim(ylims)
 set(gca, 'XTick', xlims);
@@ -197,12 +198,20 @@ bb2 = interp1(EN2, BB{2}', comgrid)';
 
 figure(14)
 clf()
-semilogx(comgrid, bb1(end-2,:), '-'); hold on
-semilogx(comgrid, bb2(end-2,:)/3, '-')
+% semilogx(comgrid, bb1(end-2,:), '.-'); hold on
+% semilogx(comgrid, bb2(end-2,:)/3, '.-')
 
-plot(comgrid(locis(1))*[1 1], ylim, 'k--')
-plot(comgrid(locis(1)), bb1(end-2,locis(1)), 'ko')
-plot(comgrid(locis(1)), bb2(end-2,locis(1))/3, 'k*')
+% plot(comgrid(locis(1))*[1 1], ylim, 'k--')
+% plot(comgrid(locis(1)), bb1(end-2,locis(1)), 'ko')
+% plot(comgrid(locis(1)), bb2(end-2,locis(1))/3, 'k*')
+
+semilogx(comgrid, bb1(end-2,:), '-'); hold on
+semilogx(comgrid, bb2(end-2,:)*1/5, '-')
+% 
+% plot(comgrid(locis(1))*[1 1], ylim, 'k--')
+% plot(comgrid(locis(1)), bb1(end-2,locis(1)), 'ko')
+% plot(comgrid(locis(1)), bb2(end-2,locis(1))/3, 'k*')
+
 ylim([0.975 1.425])
 xlabel('Energy (J)')
 ylabel('Natural Frequency')

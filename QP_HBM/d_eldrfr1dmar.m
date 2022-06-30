@@ -1,3 +1,4 @@
+%1D marching for the elastic dry friction
 clc
 clear all
 addpath('../ROUTINES/export_fig/')

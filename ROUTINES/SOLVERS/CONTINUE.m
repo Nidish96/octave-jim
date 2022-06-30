@@ -178,14 +178,14 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
   
   dUdlam(:, 1) = Copt.opts.Dscale.*dUdlam(:, 1);  % Physical tangent
   
-  dUn = [z;1];
+  dUn = [z;1];  % Scaled tangent
   Ss(1, :) = [0 al];
   u0 = U(:, 1) + ds*al*(Copt.opts.Dscale.*dUn);
   while ( (lam-lam1)*(lamp-lam1) >= 0 && n<Copt.Nmax )
       if Copt.DynDscale
-          Copt.opts.Dscale = max(abs(U(:,n+1)), Copt.opts.Dscale);
+          Copt.opts.Dscale = max(abs(U(:,n)), Copt.opts.Dscale);
 %           Copt.opts.Dscale = max(abs(U(:, n+1)), min(Copt.opts.Dscale));
-%             Copt.opts.Dscale = abs(U(:,n+1))+1e-8;
+%             Copt.opts.Dscale = abs(U(:,n))+min(abs(U(U(:,n)~=0,n)))
       end
         
 %     [U(:, n+1), ~, eflag, op, J0] = fsolve(@(u) EXRES(func, u, U(:, n), al*dUdlam(:, n), ds, Copt.arclengthparm), u0, oopts);
@@ -205,9 +205,12 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
 
     switch Copt.solverchoice
         case 1
-            [U(:, n+1), ~, eflag, its, J0, ~] = ELIMSEQSOLVE(func, u0, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.opts);
+            [U(:, n+1), ~, eflag, its, J0, ~] = ELIMSEQSOLVE(func, u0, U(:, n), al*Copt.opts.Dscale.*dUn, ds, Copt.arclengthparm, Copt.opts);
         case 2
-            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.Dscale, Copt.arcsettings), u0, Copt.opts);
+            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*Copt.opts.Dscale.*dUn, ds, Copt.arclengthparm, Copt.opts.Dscale, Copt.arcsettings), u0, Copt.opts);
+        case 3
+            [U(:, n+1), ~, eflag, op, J0] = fsolve(@(u) EXRES(func, u, U(:, n), al*Copt.opts.Dscale.*dUn, ds, Copt.arclengthparm, Copt.opts.Dscale, Copt.arcsettings), u0, oopts);
+            its = op.iterations;                  
         otherwise
             error('Unknown Solver choice')
     end
@@ -267,7 +270,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     end
     
     J0 = J0*diag(Copt.opts.Dscale);
-    dUdlam(:, n+1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];
+    dUdlam(:, n+1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];  % scaled tangent
     
     %% Callback Function
     if callback
@@ -313,7 +316,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
         theta = acos(alp*al*dUn'*[z; 1]);
     end
     
-    dUdlam(:, n+1) = Copt.opts.Dscale.*dUdlam(:, n+1);
+    dUdlam(:, n+1) = Copt.opts.Dscale.*dUdlam(:, n+1);  % tangent in physical space
     Ss(n+1,:) = [Ss(n)+ds al];
     
     %% Step size adaptation
@@ -418,7 +421,6 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSEQSOLVE(func, ul, ul0, ulp0, 
 
                   l1 = ul(end) - opts.Dscale(end)*(cs/dcdL);
     %               l = ul(end);              
-
                   du = [du(1:end-1); (l1-l0)];
 
                   coef = sqrt(ds^2/(du'*du));
@@ -494,7 +496,7 @@ function [ul, Re, eflag, its_tot, Je, ulp0] = ELIMSOLVE(func, ul, ul0, ulp0, ds,
 %   Je  : (Nd, Nd)
 %   dRe : (Nd+1, Nd+1)
 
-  l0 = ul0(end);
+  l0 = ul0(end);oopts
   lp = ul(end);
 
   sgn = sign(ulp0(end));
@@ -631,10 +633,13 @@ function [Re, Je] = EXRES(func, u, u0, up0, ds, parm, Dscale, varargin)
 %(without elimination)
 
   [Re, dRdUe, dRdLe] = func(u);
+  ups = up0./Dscale; 
   switch parm
     case {'orthogonal' , 'Orthogonal'}
-      Re = [Re; (up0./Dscale.^2)'*(u-u0)-ds];
-      Je = [dRdUe dRdLe; (up0./Dscale.^2)'];
+%       Re = [Re; (up0./Dscale.^2)'*(u-u0)-ds];
+%       Je = [dRdUe dRdLe; (up0./Dscale.^2)'];
+      Re = [Re; ups'*((u-u0)./Dscale)-ds];
+      Je = [dRdUe dRdLe; (ups./Dscale)'];
     case {'arclength' , 'Arclength'}
       Re = [Re; ((u-u0)./Dscale.^2)'*(u-u0)-ds^2];
       Je = [dRdUe dRdLe; 2*(u-u0)./Dscale.^2'];

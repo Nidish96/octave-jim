@@ -1,4 +1,4 @@
-function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varargin)
+function [U, dUdlam, Ss, flag, Scall] = CONTINUE_N(func, u0, lam0, lam1, ds, varargin)
 %CONTINUE Conducts the continuation and solves the system
 %
 % USAGE:

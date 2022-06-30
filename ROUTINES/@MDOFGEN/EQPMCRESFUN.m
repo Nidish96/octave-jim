@@ -34,9 +34,13 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     A = 10^lA;
     dAdlA = A*log(10);
     
+    h0 = double(all(h(1,:)==0));
+    Asc = kron([ones(h0,1); A*ones(Nhc-h0,1)], ones(m.Ndofs,1));
+    dAscdA = kron([zeros(h0,1); ones(Nhc-h0,1)], ones(m.Ndofs,1));
+    
     As = A*ash;  % List of modal amplitudes
     
-    Uh = A*UwxiA(1:end-2*Nc-1);  % Harmonic Coefficients of Mode Shape
+    Uh = Asc.*UwxiA(1:end-2*Nc-1);  % Harmonic Coefficients of Mode Shape
 
     Cg = m.CAUGHYMATS(Nc, 0);  % Caughy Matrices
     xiM = sum(reshape(xis, [1 1 Nc]).*Cg, 3);
@@ -136,9 +140,7 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
         end
     end
     
-    % Residue    
-    h0 = double(all(h(1,:)==0));
-    
+    % Residue        
     acons = zeros(Nc, 1);
     d_acons = zeros(Nc, Nhc*m.Ndofs+2*Nc);
     d_acons_lA = zeros(Nc, 1);
@@ -153,25 +155,25 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
         acons(ci) = (Uh(ampis)'*m.M*Uh(ampis) + Uh(m.Ndofs+ampis)'*m.M*Uh(m.Ndofs+ampis)) - As(ci)^2;
         d_acons(ci, ampis) = 2*Uh(ampis)'*m.M*A;
         d_acons(ci, m.Ndofs+ampis) = 2*Uh(m.Ndofs+ampis)'*m.M*A;
-        d_acons_lA(ci) = (2*(Uh(ampis)'*m.M*Uh(ampis) + Uh(m.Ndofs+ampis)'*m.M*Uh(m.Ndofs+ampis))/A - 2*As(ci)*ash(ci))*dAdlA;
+        d_acons_lA(ci) = (2*(Uh(ampis)'*m.M*Uh(ampis) + Uh(m.Ndofs+ampis)'*m.M*Uh(m.Ndofs+ampis))/A - 2*As(ci)*ash(ci)^2)*dAdlA;
     
         d_acons_ash(ci, ci) = 2*A^2*ash(ci);
     end
     
     R = [E*Uh+FNL;    % balance equations     (Nhc*Nd)
         acons;          % amplitude constrains  (Nc)
-        Fls'*Uh/A];      % phase constraints     (Nc)
+        Fls'*(Uh./Asc)];      % phase constraints     (Nc)
     dRwx = zeros(Nhc*m.Ndofs, 2*Nc);
     for ci=1:Nc
         dRwx(:, ci) = dEdws(:, :, ci)*Uh;  % Needs an additional dFNLdws term for velocity dependent nls
         dRwx(:, Nc+ci) = dEdxi(:, :, ci)*Uh;
     end
     
-    dRdUwxi = [(E+dFNL)*A, dRwx;
+    dRdUwxi = [(E+dFNL)*diag(Asc), dRwx;
         d_acons;
         Fls', zeros(Nc, 2*Nc)];
     
-    dRdlA = [(E+dFNL)*(Uh/A)*dAdlA;
+    dRdlA = [(E+dFNL)*(Uh./Asc).*dAscdA*dAdlA;
         d_acons_lA;
         zeros(Nc, 1)];
     
@@ -180,9 +182,9 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
               zeros(Nc, 2)];
 
     % All Gradient terms in one matrix
-%     if ~isempty(varargin)
-%         dRdU = [dRdU dRdw];
-%     end
+    if ~isempty(varargin)
+        dRdUwxi = [dRdUwxi dRdlA];
+    end
 end
 
 %%

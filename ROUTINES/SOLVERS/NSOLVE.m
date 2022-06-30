@@ -29,13 +29,15 @@ function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
           opts.(nflds{i}) = varargin{1}.(nflds{i});
       end
   end  
+%   opts.Dscale = ones(size(U0));
 
   %% Starting Point Residual, Jacobian, and error metrics
   Nu = length(U0);
   U0 = U0./opts.Dscale(1:Nu);
   
   [R0, dR0] = func(opts.Dscale(1:Nu).*U0);
-  dU0 = -(dR0*diag(opts.Dscale(1:Nu)))\R0;
+  dRc = dR0*diag(opts.Dscale(1:Nu));
+  dU0 = -dRc\R0;
   e0  = abs(R0'*dU0);
   
   if (e0 < eps)
@@ -56,7 +58,6 @@ function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
 
   reu = [r e u];
   
-  dRc = dR0*diag(opts.Dscale(1:Nu));
   R   = R0;
   U   = U0;
   dU  = dU0;
@@ -66,8 +67,6 @@ function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
   if opts.Display
     fprintf('ITN, E, E/E0, r, du\n%d, %e, %e, %e, %e: %d\n', it, e, e/e0, r, u, eflag);
   end
-  eflagp = 0;
-
   %% Start Iterations  
   while (eflag<opts.crit || it<1) && it<=opts.ITMAX
       % Line search code 

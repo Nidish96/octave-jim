@@ -1,3 +1,4 @@
+% QP marching approach for force estimation
 clc
 clear all
 addpath('../ROUTINES/export_fig/')
@@ -7,6 +8,8 @@ set(0,'defaultAxesTickLabelInterpreter', 'default');
 set(0,'defaultTextInterpreter','latex');
 set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13);
+
+plotfigs = false;
 
 Nmtype = 1;  % 1-interpolation ; 2-fdm
 %% Frequency configuration
@@ -77,6 +80,7 @@ switch Nmtype
     case 2
         Nmat = Nmat2;
 end
+
 %% Displacement (first harmonic displacement for each component)
 hid = eye(Nc);
 
@@ -166,7 +170,9 @@ set(ll, 'NumColumns', 2)
 xlabel('Time (s)')
 ylabel('Force (N)')
 set(gcf, 'Color', 'white')
-export_fig(sprintf('./FIGS/F_transientforce_%d.png', Nc), '-dpng')
+if plotfigs
+    export_fig(sprintf('./FIGS/F_transientforce_%d.png', Nc), '-dpng')
+end
 
 %%
 figure(2)
@@ -216,29 +222,37 @@ for i=1:2
     end
 end
 set(gcf, 'Color', 'white')
-export_fig(sprintf('./FIGS/F_transientforcesurf_%d.png', Nc), '-dpng')
+if plotfigs
+    export_fig(sprintf('./FIGS/F_transientforcesurf_%d.png', Nc), '-dpng')
+end
 
-% %%
-% figure(3)
-% clf()
-% spy(Nmat1, 30/Nc)
-% set(gca, 'XTick', fix(linspace(1, Nt^Nc, Nt)))
-% set(gca, 'YTick', fix(linspace(1, Nt^Nc, Nt)))
-% xlim([1 Nt^Nc]); ylim([1 Nt^Nc])
-% grid on
-% set(gcf, 'Color', 'white')
-% export_fig(sprintf('./FIGS/F_Nmat1_%d.png', Nc), '-dpng')
-% 
-% %%
-% figure(4)
-% clf()
-% spy(Nmat2, 30/Nc)
-% set(gca, 'XTick', fix(linspace(1, Nt^Nc, Nt)))
-% set(gca, 'YTick', fix(linspace(1, Nt^Nc, Nt)))
-% xlim([1 Nt^Nc]); ylim([1 Nt^Nc])
-% grid on
-% set(gcf, 'Color', 'white')
-% export_fig(sprintf('./FIGS/F_Nmat2_%d.png', Nc), '-dpng')
+%%
+recs = [1 Nt^(Nc-1) 1 Nt^(Nc-1);
+    Nt^Nc-Nt^(Nc-1) Nt^Nc 1 Nt^(Nc-1)];
+figure(3)
+clf()
+spy(Nmat1, 30/Nc); hold on
+plot(recs(2, [1 2 2 1 1])+[-1 1 1 -1 -1], recs(2, [3 3 4 4 3])+[-1 -1 1 1 -1], 'k-')
+set(gca, 'XTick', fix(linspace(1, Nt^Nc, Nt)))
+set(gca, 'YTick', fix(linspace(1, Nt^Nc, Nt)))
+xlim([1 Nt^Nc]); ylim([1 Nt^Nc])
+grid on
+set(gcf, 'Color', 'white')
+if plotfigs
+    export_fig(sprintf('./FIGS/F_Nmat1_%d.png', Nc), '-dpng')
+end
+%%
+figure(4)
+clf()
+spy(Nmat2, 30/Nc)
+set(gca, 'XTick', fix(linspace(1, Nt^Nc, Nt)))
+set(gca, 'YTick', fix(linspace(1, Nt^Nc, Nt)))
+xlim([1 Nt^Nc]); ylim([1 Nt^Nc])
+grid on
+set(gcf, 'Color', 'white')
+if plotfigs
+    export_fig(sprintf('./FIGS/F_Nmat2_%d.png', Nc), '-dpng')
+end
 
 %%
 % figure(5)

@@ -1,3 +1,4 @@
+%Playing around with fftn
 clc
 clear all
 addpath('../ROUTINES/QUASIPERIODIC')

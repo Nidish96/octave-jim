@@ -11,7 +11,7 @@ set(0,'defaultTextInterpreter','latex');
 set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13);
 
-analyze = false;
+analyze = true;
 plotout = false;
 %% Parameters
 M = eye(2);
@@ -27,7 +27,7 @@ MDL = MDL.SETNLFUN(1+3, [1 0], @(t, u, ud) deal(b*u.^3, 3*b*u.^2, ud*0));
 V = V(:,si);
 
 Nc = 2;  % Number of components
-Nhmax = 5;  % Number of harmonics
+Nhmax = 1;  % Number of harmonics
 %% Harmonic Selection
 hall = cell(1, Nc);
 [hall{:}] = ndgrid(-Nhmax:Nhmax);
@@ -90,6 +90,32 @@ Uwx0 = NSOLVE(@(X) MDL.EQPMCRESFUN([X; Xv(end)],  [1; 1], Fls, h, Nt, eps), Xv(1
 % fopt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
 % Uwx = fsolve(@(X) MDL.EQPMCRESFUN([X; Xv(end)],  [1; 1], Fls, h, Nt, eps), Xv(1:end-1), fopt);
 
+%% Do only ti = 1
+Copt = struct('Nmax', 200, 'Display', 1, 'DynDscale', 0, 'solverchoice', 2, 'angopt', 1e2);
+% Copt.Dscale = [kron([1e-2; 1e-1*ones(Nhc-1,1)], ones(2,1)); Wr; 1e-1*ones(2,1); 1.0];
+% Copt.Dscale = [kron([1e-4; ones(Nhc-1,1)], ones(2,1)); 1e-2*ones(4,1); 1];
+
+Astart = -2;
+Aend = 2;
+da = 0.1;
+
+theta = pi/2/8;
+
+UwxLs = CONTINUE(@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(theta); sin(theta)], Fls, h, Nt, eps), ...
+    Uwx0, Astart, Aend, da, Copt);
+
+% Sopt = struct('stepmax', 100, 'dynamicDscale', 0);
+% UwxLs = solve_and_continue(Uwx0,@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(theta); sin(theta)], Fls, h, Nt, eps,1),...
+%     Astart, Aend, da,Sopt);
+
+figure(2000)
+clf()
+% plot3((10.^UwxL{ti}(end,:))*cos(thetas(ti)), (10.^UwxL{ti}(end,:))*sin(thetas(ti)), UwxL{ti}(end-5+i,:), '.-', 'LineWidth', 2); hold on
+semilogx((10.^UwxLs(end,:))*cos(theta), UwxLs(end-4,:), '.-', 'LineWidth', 1); hold on
+grid on
+xlabel('Modal Amp $Q_1$')
+zlabel('Mode 1 Freq')
+
 %% Continuation
 Copt = struct('Nmax', 200, 'Display', 1, 'DynDscale', 0, 'solverchoice', 2, 'angopt', 1e-1);
 Copt.Dscale = [kron([1e-2; 1e-1*ones(Nhc-1,1)], ones(2,1)); Wr; 1e-1*ones(2,1); 1.0];
@@ -99,6 +125,7 @@ Astart = -2;
 Aend = 2;
 da = 0.05;
 Copt.dsmax = 0.4;
+
 
 if analyze
     thetas = linspace(0, pi/2, 8); thetas = thetas(2:end-1);
@@ -127,3 +154,15 @@ for i=1:2
     ylabel('Modal Amp $Q_2$')
     zlabel(sprintf('Mode %d Freq', i))
 end
+
+%%
+ti = 1;
+
+figure(2000)
+clf()
+% plot3((10.^UwxL{ti}(end,:))*cos(thetas(ti)), (10.^UwxL{ti}(end,:))*sin(thetas(ti)), UwxL{ti}(end-5+i,:), '.-', 'LineWidth', 2); hold on
+plot((10.^UwxL{ti}(end,:))*cos(thetas(ti)), UwxL{ti}(end-5+i,:), '.-', 'LineWidth', 2); hold on
+set(gca, 'XScale', 'log')
+grid on
+xlabel('Modal Amp $Q_1$')
+zlabel('Mode 1 Freq')

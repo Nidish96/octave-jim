@@ -13,6 +13,7 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13);
 
 anim = false; 
+plotfigs = false;
 %%
 m = 1;
 % c = 0.5;
@@ -26,7 +27,7 @@ fnl = @(t, u, varargin) JENKNL(t, u, kt, muN, varargin{:});
 % fnl = @(t,u,ud) deal(bt*u.^3, 3*bt*u.^2, zeros(size(u)));
 % fnl = @(t,u,ud) deal(bt*u.^3 + c*ud, 3*bt*u.^2, c*ones(size(u)));
 
-Nc = 2;  % Number of components
+Nc = 3;  % Number of components
 Nhmax = 7;  % Number of harmonics
 %% Harmonic Selection
 hall = cell(1, Nc);
@@ -50,12 +51,14 @@ switch Nc
         axis equal
         legend('All Harmonics', 'Selected Harmonic', 'Location', 'northoutside')
         set(gcf, 'Color', 'white')
-        export_fig('./FIGS/G_selharms.png', '-dpng')
+        if plotfigs
+            export_fig('./FIGS/G_selharms.png', '-dpng')
+        end
 end
 
 %% Setup Model
 GM = MDOFGEN(m, k, c, 1.0);
-GM = GM.SETNLFUN(2+3, 1.0, fnl, 1);
+GM = GM.SETNLFUN(2+3, 1.0, fnl, [], 3);
 
 %% Forcing
 % ws = [pi sqrt(2)];

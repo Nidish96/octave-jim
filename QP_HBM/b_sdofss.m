@@ -1,3 +1,4 @@
+%QPHB for linear second order dynamical system
 clc
 clear all
 addpath('../ROUTINES/')

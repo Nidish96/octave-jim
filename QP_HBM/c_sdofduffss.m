@@ -1,3 +1,4 @@
+%QPHB for a duffing oscillator
 clc
 clear all
 addpath('../ROUTINES/')
