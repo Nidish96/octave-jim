@@ -9,7 +9,7 @@ set(0,'defaultTextInterpreter','latex');
 set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13);
 
-plotfigs = false;
+plotfigs = true;
 
 Nmtype = 3;  % 1-interpolation ; 2-fdm; 3-exclusive interpolation
 %% Frequency configuration
@@ -119,7 +119,7 @@ for ti=1:Nt  % march over the diagonal
         Nsfs = abs(prod(xis(end:-1:1,:)-dt_loc,2)'/Lm);  % Lagrangian Shape Functions
         
         ptsb = zeros(2^(Nc-1), Nc);
-        ptsb(:, cinds) = n1s_loc+ptsbm;
+        ptsb(:, cinds) = n1s_loc+ptsbm+1;  % this +1 is important. Because.
 
         bpevijs = mod(repmat(ijs(evns(sinds),:), 1, 1, 2^(Nc-1)) + permute(ptsb, [3 2 1])-1, Nt)+1;  % indices of points forming the relevant cell
         bpjs{ti}((ci-1)*(Nt-ti+1)^(Nc-1)+(1:(Nt-ti+1)^(Nc-1)),:) = squeeze(sum((Nt.^(0:Nc-1)).*(bpevijs(:, 1:end, :)-1),2)+1);  % vertex IDs (according to list in ijs) 
@@ -183,7 +183,7 @@ opt = struct('Display', true, 'ITMAX', 20);
 fsol = NSOLVE(fsp, kt*utau(:), opt);
 toc
 
-figure(Nmtype); surf(reshape(fsol, [repmat(Nt, 1, Nc) ones(1,Nc==1)]))
+% figure(Nmtype); surf(reshape(fsol, [repmat(Nt, 1, Nc) ones(1,Nc==1)]))
 
 % Q: DOES FSOLVE HANDLE SPARSE JACOBIANS BETTER THAN A VANILLA IMPLEMENTATION?!
 
@@ -194,108 +194,102 @@ figure(Nmtype); surf(reshape(fsol, [repmat(Nt, 1, Nc) ones(1,Nc==1)]))
 % fsol = fsolve(fspr, kt*utau(:), opt);
 
 %% Explicit Sequential March with Nmat3
-Nmat = Nmat3;
-
-fsol_m = zeros(Nt^Nc,1);
-utau_m = utau(:);
-it = 0;
-ress = [];
-while 1
-    fprev = fsol_m(bpis{1});
-    for ti=1:Nt
-        ics = bpis{ti};
+if Nc==2
+    Nmat = Nmat3;
+    
+    fsol_m = zeros(Nt^Nc,1);
+    utau_m = utau(:);
+    it = 0;
+    ress = [];
+    while it==0 || ress(end)>eps
+        fprev = fsol_m(bpis{1});
+        for ti=1:Nt
+            ics = bpis{ti};
+            
+            fsp = kt*(utau_m(ics) - Nmat(ics, :)*utau_m) + Nmat(ics, :)*fsol_m; % stick prediction
+    
+            fsol_m(ics) = fsp.*(abs(fsp)<muN) + muN*sign(fsp).*(abs(fsp)>muN);
+    
+    %         clf()
+    %         plot(taus{1}, taus{2}, 'k.'); hold on
+    %         plot(taus{1}(ics), taus{2}(ics), 'ro')
+    %         keyboard
+        end
+        it = it+1;
+        ress = [ress; vecnorm(fprev-fsol_m(bpis{1}))];
+        fprintf('%d %e\n', it, ress(it))
+    
+        fmx = reshape(fsol_m, [repmat(Nt, 1, Nc) ones(1,Nc==1)]);  % f in matrix form (in tau space)
         
-        fsp = kt*(utau_m(ics) - Nmat(ics, :)*utau_m) + Nmat(ics, :)*fsol_m; % stick prediction
+        repinds = mat2cell(repmat([1:Nt 1]', 1, Nc), Nt+1, ones(1, Nc));
+        fmxp = fmx(repinds{:});
+        
+        figure(3)
+        clf()
+        set(gcf, 'Color', 'white')
+        surf(taus{1}, taus{2}, fmx);
+        colormap(jet)
+        tics = (0:.25:1);
+        ticls = {'0', '\pi/2', '\pi', '3\pi/2', '2\pi'};
+        set(gca, 'XTick', tics*2*pi)
+        set(gca, 'XTickLabel', ticls)
+        set(gca, 'YTick', tics*2*pi)
+        set(gca, 'YTickLabel', ticls)
+        xlabel('Time $\tau_1$', 'Rotation', 28)
+        ylabel('Time $\tau_2$', 'Rotation', -38)
+        zlabel('Force (N)')
+        if plotfigs
+            export_fig(sprintf('./FIGS/F_marchsurf_%d.png', it), '-dpng')
+        end
 
-        fsol_m(ics) = fsp.*(abs(fsp)<muN) + muN*sign(fsp).*(abs(fsp)>muN);
-
-%         clf()
-%         plot(taus{1}, taus{2}, 'k.'); hold on
-%         plot(taus{1}(ics), taus{2}(ics), 'ro')
-%         keyboard
+    %     plot(fmx, '.-')
+        figure(200)
+        clf()
+        semilogy(ress, '.-')
+        grid on
+    
+        keyboard
     end
-    it = it+1;
-    ress = [ress; vecnorm(fprev-fsol_m(bpis{1}))];
-    fprintf('%d %e\n', it, ress(it))
-
-    fmx = reshape(fsol_m, [repmat(Nt, 1, Nc) ones(1,Nc==1)]);  % f in matrix form (in tau space)
-    
-    repinds = mat2cell(repmat([1:Nt 1]', 1, Nc), Nt+1, ones(1, Nc));
-    fmxp = fmx(repinds{:});
-    
-    figure(2)
-    clf()
-    surf(fmx);
-%     plot(fmx, '.-')
-    figure(200)
-    clf()
-    semilogy(ress, '.-')
-    grid on
-
-    keyboard
 end
-
-
-%% Extract Bottom Points & march only on them
-% Boundary faces
-bpis = cell2mat(cellfun(@(c) find(c==1), tausn, 'UniformOutput', false))';  
-% % Boundary Edges
-% bpis = zeros(Nt*Nc,1);
-% for ci=1:Nc
-%     bpis((ci-1)*Nt+(1:Nt)) = 1:Nt^(Nc-ci):Nt^(Nc-ci+1);
-% end
-% Time direction vector
-nhat = ws(:)/vecnorm(ws);
-
-% inds = reshape(1:Nt^Nc, [repmat(Nt, 1, Nc) ones(Nc==1)]);
-% Construct with subsref
-
-% boundary faces
-inds = reshape((1:Nt^Nc)', [repmat(Nt, 1, Nc) ones(Nc==1)]);
-bpis = zeros(Nt^(Nc-1)*Nc,1);
-S.subs = repmat({':'}, 1, Nc);
-S.type = '()';
-for ci=1:Nc
-    S.subs = repmat({':'}, 1, Nc);
-    S.subs{ci} = 1;
-
-    bpis((ci-1)*Nt^(Nc-1)+(1:Nt^(Nc-1))) = subsref(inds, S);
-end
-
-bpis = zeros((Nt-1)^(Nc-1)*Nc,1);
-for ci=1:Nc
-    S.subs = repmat({2:Nt}, 1, Nc);
-    S.subs{ci} = 2;
-
-    bpis((ci-1)*(Nt-1)^(Nc-1)+(1:(Nt-1)^(Nc-1))) = subsref(inds, S);
-end
-% % Boundary edges
-% bpis = zeros(Nt*Nc, 1);
-% for ci=1:Nc
-%     S.subs = repmat({1}, 1, Nc);
-%     S.subs{ci} = ':';
-% 
-%     bpis((ci-1)*Nt+(1:Nt)) = subsref(inds, S);
-% end
-
-% % Check
-% bpis = cell2mat(cellfun(@(c) find(c==2), tausn, 'UniformOutput', false))';  
-% bpis([1 Nt+1]) = [];
-
-figure(1)
+figure(200)
 clf()
-switch Nc
-    case 2
-        plot(taus{1}, taus{2}, 'k.'); hold on
-        plot(taus{1}(bpis), taus{2}(bpis), 'ro', 'LineWidth', 2);
-        plot([0 nhat(1)*(Nt+1)]*2*pi/Nt, [0, nhat(2)*(Nt+1)]*2*pi/Nt)
-    case 3
-        plot3(taus{1}(:), taus{2}(:), taus{3}(:), 'k.'); hold on
-        plot3(taus{1}(bpis), taus{2}(bpis), taus{3}(bpis),'ro', 'LineWidth', 2);
-end
+set(gcf, 'Color', 'white')
+semilogy(ress, 'o-', 'LineWidth', 2, 'MarkerFaceColor', 'w')
 grid on
-set(gca, 'XTick', (1:Nt)*2*pi/Nt); set(gca, 'YTick', (1:Nt)*2*pi/Nt); set(gca, 'ZTick', (1:Nt)*2*pi/Nt)
-set(gca, 'XTickLabel', []); set(gca, 'YTickLabel', []); set(gca, 'ZTickLabel', []);
-% xlim([0 2*pi]); ylim([0 2*pi]); zlim([0 2*pi])
-xlabel('$\tau_1$')
-ylabel('$\tau_2$')
+xlabel('Iterations')
+ylabel('First front deviation ($L_2$)')
+if plotfigs
+    export_fig('./FIGS/F_marchconv.png', '-dpng')
+end
+
+% %%
+% figure(100)
+% clf()
+% plot(taus{1}, taus{2}, 'k.'); hold on
+% plot(taus{1}(bpis{3}), taus{2}(bpis{3}), 'ro')
+% plot(Nmat3(bpis{3},:)*taus{1}(:), Nmat3(bpis{3},:)*taus{2}(:), 'b*')
+% 
+% pti = 3;
+% plot(taus{1}(bpis{3}(pti)), taus{2}(bpis{3}(pti)), 'ro', 'MarkerFaceColor', 'r')
+% plot(Nmat3(bpis{3}(pti),:)*taus{1}(:), Nmat3(bpis{3}(pti),:)*taus{2}(:), 'bo', 'MarkerFaceColor', 'b')
+% 
+% plot(taus{1}(bpis{3})'+ws(1)*[-1 1]'*10, taus{2}(bpis{3})'+ws(2)*[-1 1]'*10, 'g-')
+% 
+% xlim([-deltau 2*pi])
+% ylim([-deltau 2*pi])
+% 
+% axis equal
+% axis off
+
+%% Matrix Sparsity
+figure(4)
+clf()
+spy(Nmat3, 30/Nc)
+set(gca, 'XTick', fix(linspace(1, Nt^Nc, Nt)))
+set(gca, 'YTick', fix(linspace(1, Nt^Nc, Nt)))
+xlim([1 Nt^Nc]); ylim([1 Nt^Nc])
+grid on
+set(gcf, 'Color', 'white')
+if plotfigs
+    export_fig(sprintf('./FIGS/F_Nmat3_%d.png', Nc), '-dpng')
+end

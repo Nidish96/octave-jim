@@ -67,46 +67,67 @@ function [R, dRdU, FNL] = QPHBRESFUN(m, Up, ws, Fl, h, Nt, tol, varargin)
                 error('Not implemented for multi-DOF dependent multi-force nonlinearities yet')
             end
 
-%             % Solve using NSOLVE or fsolve
-%             % Construct Nmat
-%             Nmat = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
-%             ft = ones(Nt^Nc, Nnlf);
-%             
-%             opt = struct('Display', false);
-% %             tic
-%             ft = NSOLVE(@(ft) QPMARCHRESFUN(ft, unlt, ...
-%                 @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-%                 Nmat), ft, opt);
-% %             toc
-% %             opt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'off');
-% %             ft = fsolve(@(ft) QPMARCHRESFUN(ft, unlt, ...
-% %                 @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-% %                 Nmat), ft, opt);
-
-            % Sequential Solution: Only possible for Nmtype=3
-            [Nmat, bpis] = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
-
-            its = 0;
-            ft = zeros(Nt^Nc, Nnlf);
-            fprev = ft(bpis{1},:);
-%             tic
-            while its==0 || max(abs(ft(bpis{1})-fprev))>tol
-                fprev = ft(bpis{1},:);
-                for ti=1:Nt
-                    ft(bpis{ti}) = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},:)*unlt, Nmat(bpis{ti},:)*ft);
-                end
-                its = its+1;
+            switch m.NLTs(ni).qptype
+                case {1,2}  % Option 1: Solve using NSOLVE or fsolve
+                    % Construct Nmat
+                    Nmat = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
+                    ft = ones(Nt^Nc, Nnlf);
+                    
+                    opt = struct('Display', false);
+        %             tic
+                    ft = NSOLVE(@(ft) QPMARCHRESFUN(ft, unlt, ...
+                        @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
+                        Nmat), ft, opt);
+        %             toc
+        %             opt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'off');
+        %             ft = fsolve(@(ft) QPMARCHRESFUN(ft, unlt, ...
+        %                 @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
+        %                 Nmat), ft, opt);
+        
+                    % Get Jacobians
+                    [~, dresdf, dresdu] = QPMARCHRESFUN(ft, unlt, ...
+                        @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
+                        Nmat);
+                    dfdut = -dresdf\dresdu;
+                    
+                    F = QPFOURIERCOEFF(ft, h);
+                    J = QPFOURIERCOEFF(dfdut*cst, h);
+                case 3  % Option 2: Sequential Solution: Only possible for Nmtype=3
+                    [Nmat, bpis, bpjs] = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
+                    bpjs = cellfun(@(c) unique(c), bpjs, 'UniformOutput', false);
+        
+                    its = 0;
+                    ft = zeros(Nt^Nc, Nnlf);
+                    dfdai = zeros(Nt^Nc, Nhc);
+                    fprev = ft(bpis{1},:);
+        %             tic
+                    while its==0 || max(abs(ft(bpis{1})-fprev))>tol 
+                        fprev = ft(bpis{1},:);
+                        for ti=1:Nt
+                            % Only force estimation
+                            ft(bpis{ti}) = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
+        
+        %                     % Force & Jacobian estimation - Naive version
+        %                     [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},:)*unlt, Nmat(bpis{ti},:)*ft);
+        %                     dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},:)*dfdai + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},:)*cst;
+        
+        %                     % Force & Jacobian estimation - respectful of sparsity in Nmat
+        %                     [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
+        %                     dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:) + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:);
+                        end
+                        its = its+1;
+                    end
+                    % Iterate and just estimate the Jacobians
+                    for ti=1:Nt  % Run the iterations once more
+                        [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
+                        dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:) + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:);
+                    end
+%                     fprintf('%d\n',its)
+                    F = QPFOURIERCOEFF(ft, h);
+                    J = QPFOURIERCOEFF(dfdai, h);
+        %             toc
             end
-%             toc
-
-            % Get Jacobians
-            [~, dresdf, dresdu] = QPMARCHRESFUN(ft, unlt, ...
-                @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-                Nmat);
-            dfdut = -dresdf\dresdu;
             
-            F = QPFOURIERCOEFF(ft, h);
-            J = QPFOURIERCOEFF(dfdut*cst, h);
 %             J = zeros(size(m.NLTs(ni).L,1)*Nhc, size(m.NLTs(ni).L,1)*Nhc);
 %             for di=1:Ndnl
 %                 for dj=1:Ndnl
@@ -232,7 +253,7 @@ function [Nmat, varargout] = CONSTRUCTNMAT(ws, Nc, Nt, varargin)  % Need to thin
                     Nsfs = abs(prod(xis(end:-1:1,:)-dt_loc,2)'/Lm);  % Lagrangian Shape Functions
                     
                     ptsb = zeros(2^(Nc-1), Nc);
-                    ptsb(:, cinds) = n1s_loc+ptsbm;
+                    ptsb(:, cinds) = n1s_loc+ptsbm+1;
             
                     bpevijs = mod(repmat(ijs(evns(sinds),:), 1, 1, 2^(Nc-1)) + permute(ptsb, [3 2 1])-1, Nt)+1;  % indices of points forming the relevant cell
                     bpjs{ti}((ci-1)*(Nt-ti+1)^(Nc-1)+(1:(Nt-ti+1)^(Nc-1)),:) = squeeze(sum((Nt.^(0:Nc-1)).*(bpevijs(:, 1:end, :)-1),2)+1);  % vertex IDs (according to list in ijs) 
@@ -243,6 +264,7 @@ function [Nmat, varargout] = CONSTRUCTNMAT(ws, Nc, Nt, varargin)  % Need to thin
                 vals{ti} = vals{ti}(indtis,:);
             end
             varargout{1} = bpis;
+            varargout{2} = bpjs;
             [bpis, uinds] = unique(cell2mat(bpis));
             bpjs = cell2mat(bpjs);  bpjs = bpjs(uinds,:);
             vals = cell2mat(vals);  vals = vals(uinds,:);

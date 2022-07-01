@@ -13,7 +13,7 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13);
 
 anim = false; 
-plotfigs = false;
+plotfigs = true;
 %%
 m = 1;
 % c = 0.5;
@@ -26,6 +26,8 @@ muN = 0.5;
 fnl = @(t, u, varargin) JENKNL(t, u, kt, muN, varargin{:});
 % fnl = @(t,u,ud) deal(bt*u.^3, 3*bt*u.^2, zeros(size(u)));
 % fnl = @(t,u,ud) deal(bt*u.^3 + c*ud, 3*bt*u.^2, c*ones(size(u)));
+
+Nmtype = 3;  % Type of previous point jacobian construction
 
 Nc = 3;  % Number of components
 Nhmax = 7;  % Number of harmonics
@@ -58,7 +60,7 @@ end
 
 %% Setup Model
 GM = MDOFGEN(m, k, c, 1.0);
-GM = GM.SETNLFUN(2+3, 1.0, fnl, [], 3);
+GM = GM.SETNLFUN(2+3, 1.0, fnl, [], Nmtype);
 
 %% Forcing
 % ws = [pi sqrt(2)];
@@ -136,16 +138,19 @@ switch Nc
     case 3
         xl = [0 20];
 end
-mesh([xl(:) xl(:)], [yl;yl], zeros(2), 'FaceColor', 'none', 'EdgeColor', 'k')
+mm=mesh([xl(:) xl(:)], [yl;yl], zeros(2), 'FaceColor', 'none', 'EdgeColor', 'k');
 ylim(yl); 
 
 ll = legend([aa bb], 'Transient', 'QP-HBM', 'Location', 'northoutside');
 set(ll, 'NumColumns', 2);
-% export_fig(sprintf('./FIGS/G_ut_%d.png', Nc), '-dpng')
+if plotfigs
+%     delete(mm)
+    export_fig(sprintf('./FIGS/G_ut_%d_nm%d.png', Nc, Nmtype), '-dpng')
 
-% xlim(xl)
-% ylim(yl)
-% export_fig(sprintf('./FIGS/G_utzoom_%d.png', Nc), '-dpng')
+    xlim(xl)
+    ylim(yl)
+    export_fig(sprintf('./FIGS/G_utzoom_%d_nm%d.png', Nc, Nmtype), '-dpng')
+end
 
 %%
 figure(3)
@@ -157,7 +162,9 @@ ll = legend('Transient', 'QP-HBM', 'Location', 'northeast');
 xlabel('Displacement ($m$)')
 ylabel('Velocity ($m/s$)')
 set(gcf, 'Color', 'white')
-% export_fig(sprintf('./FIGS/G_uv_%d.png', Nc), '-dpng')
+if plotfigs
+    export_fig(sprintf('./FIGS/G_uv_%d_nm%d.png', Nc, Nmtype), '-dpng')
+end
 %% Torus
 if Nc==2 || Nc==3
     Nt = 64;
@@ -193,7 +200,9 @@ if Nc==2 || Nc==3
     ll = legend('Transient', 'QP-HBM', 'Location', 'northeast');
     set(gca, 'View', [-22 85])
     set(gcf, 'Color', 'white')
-%     export_fig(sprintf('./FIGS/G_torus_%d.png', Nc), '-dpng')
+    if plotfigs
+        export_fig(sprintf('./FIGS/G_torus_%d_nm%d.png', Nc, Nmtype), '-dpng')
+    end
 end
 
 %% Frequency Content
@@ -227,11 +236,13 @@ switch Nc
 end
 mesh([xl(:) xl(:)], [yl;yl], zeros(2), 'FaceColor', 'none', 'EdgeColor', 'k')
 legend('Transient', 'QP-HBM')
-% export_fig(sprintf('./FIGS/G_fcont_%d.png', Nc), '-dpng')
-
-xlim(xl)
-ylim(yl)
-% export_fig(sprintf('./FIGS/G_fcontzoom_%d.png', Nc), '-dpng')
+if plotfigs
+    export_fig(sprintf('./FIGS/G_fcont_%d_nm%d.png', Nc, Nmtype), '-dpng')
+    
+    xlim(xl)
+    ylim(yl)
+    export_fig(sprintf('./FIGS/G_fcontzoom_%d_nm%d.png', Nc, Nmtype), '-dpng')
+end
 
 %% Animate
 if Nc==2 && anim
