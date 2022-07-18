@@ -37,6 +37,8 @@ h = hall(sum(abs(hall),2)<=Nhmax & sum(hall,2)>=0,:);
 
 h(sum(h,2)==0 & h(:,1)<=0, :) = [];
 h = [zeros(1,Nc); h];
+[~, shi] = sort(sum(abs(h),2)); h = h(shi,:);
+
 Nhc = sum(all(h==0, 2)+2*any(h~=0, 2));
 
 figure(1)

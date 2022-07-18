@@ -345,28 +345,32 @@ if figsaves
 end
 
 %%
-Ncs = unique(fix(logspace(0, 5, 10)));  Ncs(1) = [];
-Nt = 4;
+% Ncs = unique(fix(logspace(0, 5, 10)));  Ncs(1) = [];
+% Nt = 4;
+% 
+% Ncss = [1 3 6 8];
+% nnz3s = zeros(length(Ncss), 3);
+% for ci=1:length(Ncss)
+%     for ni=1:3
+%         nnz3s(ci,ni) = nnz(CONSTRUCTNMATHERE(rand(1,Ncss(ci)), Ncss(ci), Nt, ni));
+%     end
+% end
 
-Ncss = [1 3 6 8];
-nnz3s = zeros(length(Ncss), 3);
-for ci=1:length(Ncss)
-    for ni=1:3
-        nnz3s(ci,ni) = nnz(CONSTRUCTNMATHERE(rand(1,Ncss(ci)), Ncss(ci), Nt, ni));
-    end
-end
+Ncs = unique(fix(logspace(0, 5, 100)));  Ncs(1) = [];
+Nt = 16;
 
 figure(200)
 clf()
-% loglog(Nt.^Ncs, (2.^Ncs)./(Nt.^Ncs), 'r-', 'LineWidth', 2); hold on
-% loglog(Nt.^Ncs, Ncs./(Nt.^Ncs), 'b-', 'LineWidth', 2); hold on
-loglog(Nt.^Ncss, nnz3s./(Nt.^(2*Ncss')), 'o-', 'LineWidth', 2)
+loglog(Nt.^Ncs, (2./Nt).^Ncs, 'r-', 'LineWidth', 2); hold on
+loglog(Nt.^Ncs, Ncs./(Nt.^Ncs), 'b-', 'LineWidth', 2); hold on
+loglog(Nt.^Ncs, (2./Nt).^Ncs/2, 'g-.', 'LineWidth', 2); hold on
+% loglog(Nt.^Ncss, nnz3s./(Nt.^(2*Ncss')), 'o-', 'LineWidth', 2)
 xlabel('$N_t^{N_c}$')
 ylabel('Sparsity ($\%$)')
 
 legend('Approach 1', 'Approach 2', 'Approach 3')
 grid on
-set(gca, 'XTick', Nt.^Ncss)
+% set(gca, 'XTick', Nt.^Ncss)
 set(gcf, 'Color', 'white')
 if figsaves
     export_fig('./FIGS/E_nmapsps.png', '-dpng')
