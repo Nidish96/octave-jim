@@ -13,27 +13,6 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
 % OUTPUTS:
 %   U		: (Nu+1, Np) Solution vector
 %   dUdlam	: (Nu+1, Np) Solution derivative wrt parameter
-%
-%
-% Solver List: 
-%   orthogonal
-%   arclength             : Measures arclength based on norm(u./Dscale)
-%                           If one has many unknowns, the relative
-%                           weighting of 'lam' can become very small. 
-%                           In these cases, use 'K0NormalizedArcLength'
-%                           instead.
-%   K0NormalizedArcLength : Allows for a general stiffness matrix and 
-%                           measures vector length as u(1:end-1)'*K0*u(1:end-1).
-%                           Default options use Dscale to construct a
-%                           diagonal K0.
-%                           A diagonal K0 differs from 'arclength' only in
-%                           that the relative weights of the unknowns can
-%                           be more appropriately controlled. 
-%                           Allows variable weighting between lam and norm
-%                           of u(1:end-1). However, giving small or 0 
-%                           weight to lam may result in NaN. Also, if the
-%                           curve has dL/ds = 0 or approx 0, the predictor
-%                           will be poorly conditioned.
 
   %% Default options
   Copt = struct('Nmax', 100, 'dsmax', ds*5, 'dsmin', ds/5, ...
@@ -47,8 +26,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
                               1e-6, 'utol', 1e-6, ...
                               'Display', false, 'lsrch', 0), ...
         'solverchoice', 1, ...
-        'callbackfun', [], ...
-        'arcsettings', struct());
+        'callbackfun', []);
   if nargin==6
     nflds = fieldnames(varargin{1});
     for i=1:length(nflds)
@@ -65,27 +43,6 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
   Copt.opts.lsrch = Copt.lsrch;
   Copt.opts.Display = Copt.itDisplay;
   Copt.opts.ITMAX = Copt.ITMAX;  
-  
-  if isequal(Copt.arclengthparm, 'K0NormalizedArcLength')
-      % Copy over and initialize parameters specific to this
-      % parameterization. 
-      % K0 can be large, so only initialize if needed.
-      
-      if ~isfield(Copt.arcsettings, 'K0') || isempty(Copt.arcsettings.K0)
-          Copt.arcsettings.K0 = sparse(diag(1./Copt.Dscale(1:end-1).^2));
-          
-          Copt.arcsettings.normc = (u0)'*Copt.arcsettings.K0*(u0);
-      end
-      
-      if ~isfield(Copt.arcsettings, 'normb') || isempty(Copt.arcsettings.normb)
-          Copt.arcsettings.normb = Copt.Dscale(end)^2;
-      end
-      
-      if ~isfield(Copt.arcsettings, 'b') || isempty(Copt.arcsettings.b)
-          Copt.arcsettings.b = 0.5;
-      end
-            
-  end
   
   %% Allocations
   U = zeros(length(u0)+1, Copt.Nmax);
@@ -135,8 +92,8 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     func = @(ul) REVRES(ul, ofunc, (lam1-lam0)/1e4);
   end
   
-  %% Extract gradient information 
-  [~, J0(1:end-1,1:end-1), J0(1:end-1,end)] = func(U(:, 1)); % (This could be eliminated by saving the Jacobian from NSOLVE)
+  %% Extract gradient information
+  [~, J0(1:end-1,1:end-1), J0(1:end-1,end)] = func(U(:, 1));
   J0 = J0*diag(Copt.opts.Dscale);
   dUdlam(:, 1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];  % Scaled Tangent
   
@@ -145,25 +102,10 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
       Scall{1} = Copt.callbackfun(U(:,1), J0, dUdlam);
   end
   
-  %% Initial tangent (scaled space)
+  %% Initial tangent (scaled spapce)
   dxn = Copt.startdir;
   z = dUdlam(1:end-1, 1);
-  
-  if isequal(Copt.arclengthparm, 'K0NormalizedArcLength')
-    b = Copt.arcsettings.b/Copt.arcsettings.normb;
-    c = (1-Copt.arcsettings.b)/Copt.arcsettings.normc;
-
-    % Change in L that exactly satisfies arc length constraint for initial guess
-    % Have to convert z from scaled to physical for the norm. This is 
-    % d(arc Length) / d (scaled space L).
-    dsdL = sqrt(c*((z.*Copt.opts.Dscale(1:end-1))'*Copt.arcsettings.K0*(z.*Copt.opts.Dscale(1:end-1)))...
-            +b*Copt.opts.Dscale(end).^2 );
-
-    al = dxn/dsdL;
-  else
-    al = dxn/sqrt(1+z'*z);
-  end
-  
+  al = dxn/sqrt(1+z'*z);
   alp = al;
   Ss = zeros(Copt.Nmax,2);
   
@@ -207,7 +149,7 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
         case 1
             [U(:, n+1), ~, eflag, its, J0, ~] = ELIMSEQSOLVE(func, u0, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.opts);
         case 2
-            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.Dscale, Copt.arcsettings), u0, Copt.opts);
+            [U(:, n+1), ~, eflag, its, J0] = NSOLVE(@(u) EXRES(func, u, U(:, n), al*dUdlam(:,n), ds, Copt.arclengthparm, Copt.Dscale), u0, Copt.opts);
         otherwise
             error('Unknown Solver choice')
     end
@@ -268,6 +210,8 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     
     J0 = J0*diag(Copt.opts.Dscale);
     dUdlam(:, n+1) = [-J0(1:end-1,1:end-1)\J0(1:end-1,end); 1];
+    dxn = sign(dxn*dUn'*dUdlam(:, n+1));
+%     dxn = sign((U(end,n+1)-U(end,n))*dUdlam(:, n)'*dUdlam(:, n+1));
     
     %% Callback Function
     if callback
@@ -279,44 +223,13 @@ function [U, dUdlam, Ss, flag, Scall] = CONTINUE(func, u0, lam0, lam1, ds, varar
     lam  = U(end, n+1);
     % tangent and predictor
     z = dUdlam(1:end-1, n+1);
-    
-    if isequal(Copt.arclengthparm, 'K0NormalizedArcLength')
-        b = Copt.arcsettings.b/Copt.arcsettings.normb;
-        c = (1-Copt.arcsettings.b)/Copt.arcsettings.normc;
-        
-        % Change in L that exactly satisfies arc length constraint for initial guess
-        % Have to convert z from scaled to physical for the norm. This is 
-        % d(arc Length) / d (scaled space L).
-        dsdL = sqrt(c*((z.*Copt.opts.Dscale(1:end-1))'*Copt.arcsettings.K0*(z.*Copt.opts.Dscale(1:end-1)))...
-                    +b*Copt.opts.Dscale(end).^2 );
-        
-        al = 1/dsdL;
-        
-        % Inner product using the norm that measures the arc length
-        % z is the current derivative
-        % dUn is the previous one
-        innerprod = al*alp*(c*((z.*Copt.opts.Dscale(1:end-1))'*Copt.arcsettings.K0*(dUn(1:end-1).*Copt.opts.Dscale(1:end-1))) ...
-                        + b*Copt.opts.Dscale(end).^2*1*1);
-        
-        dxn = sign(innerprod);
-        
-        al = dxn/dsdL;
-        
-        theta = acos(abs(innerprod)); 
-        
-    else
-    
-        dxn = sign(dxn*dUn'*dUdlam(:, n+1));
-%         dxn = sign((U(end,n+1)-U(end,n))*dUdlam(:, n)'*dUdlam(:, n+1));
-        al = dxn/sqrt(1+z'*z);
-
-        theta = acos(alp*al*dUn'*[z; 1]);
-    end
+    al = dxn/sqrt(1+z'*z);
     
     dUdlam(:, n+1) = Copt.opts.Dscale.*dUdlam(:, n+1);
     Ss(n+1,:) = [Ss(n)+ds al];
     
     %% Step size adaptation
+    theta = acos(alp*al*dUn'*[z; 1]);
     if Copt.Display
       fprintf('%d %f %f %e %d (%d)\n', n+1, U(end,n+1), ds, theta, its, eflag);
     end
@@ -626,10 +539,11 @@ function [Re, Je, l, dRe] = ELRES(func, u, ul0, ulp0, ds, parm)
 end
 
 %%
-function [Re, Je] = EXRES(func, u, u0, up0, ds, parm, Dscale, varargin)
+function [Re, Je] = EXRES(func, u, u0, up0, ds, parm, Dscale)
 %EXRES is the residual function along with the continuation constraint
 %(without elimination)
 
+  [Re0, dRdUe0, dRdLe0] = func(u0);
   [Re, dRdUe, dRdLe] = func(u);
   switch parm
     case {'orthogonal' , 'Orthogonal'}
@@ -638,23 +552,7 @@ function [Re, Je] = EXRES(func, u, u0, up0, ds, parm, Dscale, varargin)
     case {'arclength' , 'Arclength'}
       Re = [Re; ((u-u0)./Dscale.^2)'*(u-u0)-ds^2];
       Je = [dRdUe dRdLe; 2*(u-u0)./Dscale.^2'];
-            
-    case {'K0NormalizedArcLength'}
-
-        b = varargin{1}.b/varargin{1}.normb;
-        c = (1-varargin{1}.b)/varargin{1}.normc;
-
-        du = (u(1:end-1)-u0(1:end-1));
-        dL = (u(end)-u0(end));
-        Re = [Re; 
-            c*(du'*varargin{1}.K0*du)+b*dL^2-ds^2];
-        Je = [dRdUe dRdLe;
-            c*(2*du'*varargin{1}.K0), 2*b*dL];
-
     otherwise        
-        
-      [Re0, dRdUe0, dRdLe0] = func(u0);
-  
       b = 0.5;
       c = (1-b)/(dRdLe0'*dRdUe0*dRdLe0);
     
