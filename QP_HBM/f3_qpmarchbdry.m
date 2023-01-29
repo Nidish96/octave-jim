@@ -140,6 +140,9 @@ Nmat3 = sparse(repmat(bpisv, 1, 2^(Nc-1)), bpjsv, valsv);
 toc
 % note to self: Use Nmat as "Dm" is used in scheme 6 in "d_eldrfr1dmar.m"
 
+%% Scheme 4: Conduct march in staggered coordinates. 
+% Build interpolation matrix to relate staggered coordinate values to regular grid values.
+
 %% Choose Nmat
 switch Nmtype
     case 1

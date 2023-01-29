@@ -109,7 +109,7 @@ tic
 opt = struct('Display', true, 'ITMAX', 200);
 X = NSOLVE(@(U) GM.QPHBRESFUN([U; 1], ws, Fl, h, Nt, eps), X0, opt);
 toc
-
+ 
 % fopt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
 % X = fsolve(@(U) GM.QPHBRESFUN([U; 1], ws, Fl, h, Nt, eps), X0, fopt);
 

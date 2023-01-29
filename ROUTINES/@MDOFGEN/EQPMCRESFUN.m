@@ -98,27 +98,441 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
             if Nnlf>1 || size(unlt, 2)>1
                 error('Not implemented for multi-DOF dependent multi-force nonlinearities yet')
             end
-
-            % Construct Nmat
-            Nmat = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
-            ft = ones(Nt^Nc, Nnlf);
+            % CONSTRUCT AND STORE NMAT
+            switch qptype
+                case {1, 2, 3, 10, 20, 30}
+                    [Nmat, bpis, bpjs, Nmat_dw] = CONSTRUCTNMAT(ws, Nc, Nt, qptype);
+                    bpjs = cellfun(@(c) unique(c), bpjs, 'UniformOutput', false);
+                    wgt = Nmat(1,1);  % useful for case 1
+                    wgt_dw = cellfun(@(m) full(m(1,1)), Nmat_dw);
+        
+                    t = linspace(0, 2*pi, Nt+1); t = t(1:Nt);
+                    taus = cell(Nc, 1);
+                    [taus{:}] = ndgrid(t);
+                    Nst = QPTIMEINTERP(cell2mat(cellfun(@(c) c(:), taus, 'UniformOutput', false)'), h);
+                    Nsti = Nst'*2/(Nt^Nc);
+                    Nsti(1,:) = Nsti(1,:)/2;
+                case {4, 5}
+                    % Generate Regular Grid
+                    t = linspace(0, 2*pi, Nt+1); t = t(1:Nt);
+                    taus = cell(Nc, 1);
+                    [taus{:}] = ndgrid(t);
+                    taus_dw = repmat(taus, 1, Nc);
             
-            opt = struct('Display', false);
-            ft = NSOLVE(@(ft) QPMARCHRESFUN(ft, unlt, ...
-                @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-                Nmat), ft, opt);
-%             opt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'off');
-%             ft = fsolve(@(ft) QPMARCHRESFUN(ft, unlt, ...
-%                 @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-%                 Nmat), ft, opt);
-
-            [~, dresdf, dresdu] = QPMARCHRESFUN(ft, unlt, ...
-                @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-                Nmat);
-            dfdut = -dresdf\dresdu;
+                    % Stagger the Grid
+                    for ic=1:Nc-1
+                        taus_dw{ic,ic} = taus{end}/ws(end);
+                        for jc=setdiff(1:Nc-1,ic)
+                            taus_dw{ic,jc} = (zeros(repmat(Nt, 1, Nc)));
+                        end
+                        taus_dw{ic, Nc} = -ws(ic)/ws(end)^2*taus{end};
+        
+                        taus{ic} = taus{ic} + ws(ic)/ws(end)*taus{end};
+                    end
+                    for jc=1:Nc
+                        taus_dw{Nc, jc} = (zeros(repmat(Nt, 1, Nc)));
+                    end
+                    tstpts = cell2mat(cellfun(@(c) c(:), taus, 'UniformOutput', false)');  % All the time coordinates
+                    tstpts_dw = cell2mat(permute(cellfun(@(c) c(:), taus_dw, 'UniformOutput', false)', [3, 2, 1]));
+        
+                    [Nst, Nst_dw] = QPTIMEINTERP(tstpts, h, tstpts_dw);
+                    Nsti = Nst'*2/(Nt^Nc);
+                    Nsti(1,:) = Nsti(1,:)/2;
+        
+                    Nsti_dw = permute(Nst_dw, [2 1 3])*2/(Nt^Nc);
+                    Nsti_dw(1,:,:) = Nsti_dw(1,:,:)/2;
             
-            F = QPFOURIERCOEFF(ft, h);
-            J = QPFOURIERCOEFF(dfdut*cst, h);
+                    [Nmat, Nmat_dw] = CONSTRUCTNMAT(ws, Nc, Nt, 4);
+                    [Nmati, Nmati_dw] = CONSTRUCTNMAT(ws, Nc, Nt, 5);
+            end            
+
+            % EVALUATE NONLINEARITY
+            cst = Nst;
+            ut = Nst*Uh;            
+            % Trivial initial guess - works perfectly for all cases.
+            ft = zeros(Nt^Nc, 1);
+            dfdai = zeros(Nt^Nc, Nhc);
+            dfdw = zeros(Nt^Nc, Nc);
+            switch qptype
+              case 1  % Approach 1 (implicit interpolation).
+                x = ft(bpjs{1});  % First layer dependents
+                dxdai = dfdai(bpjs{1}, :);
+                dxdw = dfdw(bpjs{1}, :);
+
+                its = 0;
+                res = 0;
+                while its==0 || rms(res)/muN>tol 
+                    % Store first layer
+                    ft(bpjs{1}) = x; 
+                    dfdai(bpjs{1}, :) = dxdai; 
+                    dfdw(bpjs{1}, :) = dxdw; 
+
+                    dfpred = eye(length(x));  % Gradient wrt first layer dependents
+                    dfprev = dfpred;
+                    % March for one cycle
+                    for ti=1:Nt
+                        uc = ut(bpis{ti});
+                        up = ut(bpjs{ti});
+                        fc = ft(bpis{ti});
+                        fp = ft(bpjs{ti});
+                        cstc = cst(bpis{ti},:);
+                        cstp = cst(bpjs{ti},:);
+                        dfcdai = dfdai(bpis{ti},:);
+                        dfpdai = dfdai(bpjs{ti},:);
+                        dfcdw = dfdw(bpis{ti},:);
+                        dfpdw = dfdw(bpjs{ti},:);
+                        [fc, dfcdai, dfcdw, dfcdfp] = QPMARCHIT(fc, fp, uc, up, dfcdai, dfpdai, dfcdw, dfpdw, cstc, cstp, prm, ti);
+
+                        ft(bpis{ti}) = fc;
+                        dfdai(bpis{ti}, :) = dfcdai;
+                        dfdw(bpis{ti}, :) = dfcdw;
+
+                        tmp = dfcdfp*dfprev;
+                        [~, si1, si2] = intersect(bpjs{mod(ti+1-1,Nt)+1}, bpis{ti});
+                        [~, qi1, qi2] = intersect(bpjs{mod(ti+1-1,Nt)+1}, bpjs{ti});
+                        
+                        dfprev([si1;qi1],:) = [tmp(si2,:);dfprev(qi2,:)];
+                        
+                        [~, si1, si2] = intersect(bpjs{1}, bpjs{mod(ti+1-1,Nt)+1});
+                        dfpred(si1,:) = dfprev(si2,:);
+                    end
+                    % Construct residue & jacobian
+                    res = x-ft(bpjs{1});
+                    dresdx = eye(length(x))-dfpred;
+                    dresdai = dxdai - dfdai(bpjs{1},:);
+                    dresdw = dxdw - dfdw(bpjs{1},:);
+
+                    % Newton March update
+                    x = x - dresdx\res;
+                    dxdai = dxdai - dresdx\dresdai;
+                    dxdw = dxdw - dresdx\dresdw;
+                    % Regular march update if dresdx is noninvertible or so
+                    % (can happen if fully stuck)
+                    if ~isempty(find(isnan(x), 1))
+                        x = ft(bpjs{1});
+                        dxdai = dfdai(bpjs{1}, :);
+                        dxdw = dfdw(bpjs{1}, :);
+                    end
+                    its = its+1;
+                    if its>20
+                        break;
+                    end
+                end
+                %             fprintf('%d\n', its);
+              case 2  % Approaches 2 (finite difference)
+                x = ft(bpjs{1});
+                dxdai = dfdai(bpjs{1}, :);
+                dxdw = dfdw(bpjs{1}, :);
+                its = 0;
+                res = 0;
+                while its==0 || rms(res)/muN>tol 
+                    % Store first layer dependency
+                    ft(bpjs{1}) = x;
+                    dfdai(bpjs{1}, :) = dxdai;
+                    dfdw(bpjs{1}, :) = dxdw;
+                    
+                    %                 dfprvs = zeros(Nt^Nc, length(x));
+                    %                 dfprvs(bpjs{1}, :) = eye(length(x));
+                    dfpred = eye(length(x));
+                    dfprev = eye(length(x));
+                    % March for one cycle
+                    for ti=1:Nt
+                        uc = ut(bpis{ti});  % "current" u
+                        up = ut(bpjs{ti});  % "previous" u
+                        fp = ft(bpjs{ti});  % "previous" f
+
+                        fsp = kt*(uc-Nmat(bpis{ti},bpjs{ti})*up)+Nmat(bpis{ti},bpjs{ti})*fp;  % "stick prediction"
+                        dfsp = kt*(cst(bpis{ti},:)-Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:)) + ...
+                               Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:);
+                        dfspdw = cell2mat(arrayfun(@(a) kt*(-Nmat_dw{a}(bpis{ti},bpjs{ti})*up)+Nmat_dw{a}(bpis{ti},bpjs{ti})*fp, 1:Nc, 'UniformOutput', false)) + ...
+                                 Nmat(bpis{ti},bpjs{ti})*dfdw(bpjs{ti},:);
+                        
+                        dfsp(abs(fsp)>=muN, :) = 0;
+                        dfspdw(abs(fsp)>=muN, :) = 0;
+                        fsp(abs(fsp)>=muN) = muN*sign(fsp(abs(fsp)>=muN));
+
+                        ft(bpis{ti}) = fsp;
+                        dfdai(bpis{ti}, :) = dfsp;
+                        dfdw(bpis{ti}, :) = dfspdw;
+
+                        %                     tmp = Nmat(bpis{ti}, bpjs{ti});
+                        %                     tmp(abs(fsp)>=muN, :) = 0;
+                        %                     dfprvs(bpis{ti}, :) = tmp*dfprvs(bpjs{ti}, :);
+
+                        tmp = Nmat(bpis{ti}, bpjs{ti});
+                        tmp(abs(fsp)>=muN, :) = 0;
+                        tmp = tmp*dfprev;
+
+                        [~, si1, si2] = intersect(bpjs{1}, bpis{ti});
+                        dfpred(si1, :) = tmp(si2, :);
+
+                        [~, si1, si2] = intersect(bpjs{mod(ti+1-1,Nt)+1}, bpis{ti});
+                        dfprev = zeros(length(bpjs{mod(ti+1-1,Nt)+1}), length(bpjs{1}));
+                        dfprev(si1, :) = tmp(si2, :);
+                    end
+                    % Construct residue and jacobian
+                    res = x - ft(bpjs{1});
+                    dresdx = eye(length(x)) - dfpred;
+                    %                 dresdx = eye(length(x)) - dfprvs(bpjs{1},:);
+                    dresdai = dxdai - dfdai(bpjs{1}, :);
+                    dresdw = dxdw - dfdw(bpjs{1}, :);
+
+                    % Newton March update
+                    x = x - dresdx\res;
+                    dxdai = dxdai - dresdx\dresdai;
+                    dxdw = dxdw - dresdx\dresdw;
+                    % Regular march update if dresdx is noninvertible or so
+                    % (can happen if fully stuck)
+                    if ~isempty(find(isnan(x), 1))
+                        x = ft(bpjs{1});
+                        dxdai = dfdai(bpjs{1}, :);
+                        dxdw = dfdw(bpjs{1}, :);
+                    end
+                    its = its+1;
+                    if its>20
+                        break;
+                    end
+                end
+                %             fprintf('%d\n', its);
+              case 3  % Approaches 3 (front marching)
+                x = ft(bpjs{1});
+                dxdai = dfdai(bpjs{1}, :);
+                dxdw = dfdw(bpjs{1}, :);
+                its = 0;
+                res = 0;
+                while its==0 || rms(res)/muN>tol 
+                    % Store first layer dependency
+                    ft(bpjs{1}) = x;
+                    dfdai(bpjs{1}, :) = dxdai;
+                    dfdw(bpjs{1}, :) = dxdw;
+                    
+                    %                 dfprvs = zeros(Nt^Nc, length(x));
+                    %                 dfprvs(bpjs{1}, :) = eye(length(x));
+                    dfpred = eye(length(x));
+                    dfprev = eye(length(x));
+                    dfprevi = zeros(length(bpis{Nt}), length(x));
+                    [~, si1, si2] = intersect(bpis{Nt}, bpjs{1});
+                    dfprevi(si1, :) = dfprev(si2, :);
+                    % March for one cycle
+                    for ti=1:Nt
+                        uc = ut(bpis{ti});  % "current" u
+                        up = ut(bpjs{ti});  % "previous" u
+                        fp = ft(bpjs{ti});  % "previous" f
+
+                        fsp = kt*(uc-Nmat(bpis{ti},bpjs{ti})*up)+Nmat(bpis{ti},bpjs{ti})*fp;  % "stick prediction"
+                        dfsp = kt*(cst(bpis{ti},:)-Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:)) + ...
+                               Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:);
+                        dfspdw = cell2mat(arrayfun(@(a) kt*(-Nmat_dw{a}(bpis{ti},bpjs{ti})*up)+Nmat_dw{a}(bpis{ti},bpjs{ti})*fp, 1:Nc, 'UniformOutput', false)) + ...
+                                 Nmat(bpis{ti},bpjs{ti})*dfdw(bpjs{ti},:);
+                        
+                        dfsp(abs(fsp)>=muN, :) = 0;
+                        dfspdw(abs(fsp)>=muN, :) = 0;
+                        fsp(abs(fsp)>=muN) = muN*sign(fsp(abs(fsp)>=muN));
+
+                        ft(bpis{ti}) = fsp;
+                        dfdai(bpis{ti}, :) = dfsp;
+                        dfdw(bpis{ti}, :) = dfspdw;
+
+                        %                     tmp = Nmat(bpis{ti}, bpjs{ti});
+                        %                     tmp(abs(fsp)>=muN, :) = 0;
+                        %                     dfprvs(bpis{ti}, :) = tmp*dfprvs(bpjs{ti}, :);
+
+                        tmp = Nmat(bpis{ti}, bpjs{ti});
+                        tmp(abs(fsp)>=muN, :) = 0;
+                        tmp = tmp*dfprev; % der(i, j1)
+
+                        [~, si1, si2] = intersect(bpjs{1}, bpis{ti});
+                        dfpred(si1, :) = tmp(si2, :);
+
+                        [~, si1, si2] = intersect(bpjs{1}, bpjs{mod(ti+1-1,Nt)+1});
+                        [~, qi1, qi2] = intersect(bpis{ti}, bpjs{mod(ti+1-1,Nt)+1});
+                        [~, ri1, ri2] = intersect(bpis{mod(ti-1-1,Nt)+1}, bpjs{mod(ti+1-1,Nt)+1});
+
+                        dfprev = zeros(length(bpjs{mod(ti+1-1,Nt)+1}), length(bpjs{1}));
+                        dfprev(ri2, :) = dfprevi(ri1, :);
+                        dfprev(si2, :) = dfpred(si1, :);
+                        dfprev(qi2, :) = tmp(qi1, :);
+
+                        dfprevi = tmp;
+                    end
+                    % Construct residue and jacobian
+                    res = x - ft(bpjs{1});
+                    dresdx = eye(length(x)) - dfpred;
+                    %                 dresdx = eye(length(x)) - dfprvs(bpjs{1},:);
+                    dresdai = dxdai - dfdai(bpjs{1}, :);
+                    dresdw = dxdw - dfdw(bpjs{1}, :);
+
+                    % Newton March update
+                    x = x - dresdx\res;
+                    dxdai = dxdai - dresdx\dresdai;
+                    dxdw = dxdw - dresdx\dresdw;
+                    % Regular march update if dresdx is noninvertible or so
+                    % (can happen if fully stuck)
+                    if ~isempty(find(isnan(x), 1))
+                        x = ft(bpjs{1});
+                        dxdai = dfdai(bpjs{1}, :);
+                        dxdw = dfdw(bpjs{1}, :);
+                    end
+                    its = its+1;
+                    if its>20
+                        break;
+                    end
+                end
+                %             fprintf('%d\n', its);
+              case {4, 5}  % March on Stagger-Stretched Grid
+                ut_dw = cell2mat(arrayfun(@(a) Nst_dw(:,:,a)*Uh,1:Nc,'UniformOutput',false));
+                
+                ipr = (Nt-1)*(Nt^(Nc-1))+(1:Nt^(Nc-1));
+                x = ft(ipr);
+                dxdai = dfdai(ipr, :);
+                dxdw = dfdw(ipr, :);
+                
+                its = 0;
+                res = 0;
+                while its==0 || rms(res)/muN>tol
+                    % Store first layer dependents
+                    ipr = (Nt-1)*(Nt^(Nc-1))+(1:Nt^(Nc-1));
+                    icr = 1:Nt^(Nc-1);
+                    ft(ipr) = x;  % Original first layer
+                    dfdai(ipr, :) = dxdai;
+                    dfdw(ipr, :) = dxdw;
+
+                    % Update "initial plane"                    
+                    fsp = kt*(Nmat*ut(icr) - ut(ipr)) + ft(ipr);
+                    dfsp = kt*(Nmat*Nst(icr,:)-Nst(ipr,:)) + dfdai(ipr,:);
+                    dfspdw = cell2mat(arrayfun(@(a) kt*(Nmat_dw{a}*ut(icr)), 1:Nc, 'UniformOutput', false)) + ...
+                             kt*(Nmat*ut_dw(icr,:)-ut_dw(ipr,:)) + dfdw(ipr,:);
+                    
+                    dfsp(abs(fsp)>=muN, :) = 0;
+                    dfspdw(abs(fsp)>=muN, :) = 0;
+                    fsp(abs(fsp)>=muN) = muN*sign(fsp(abs(fsp)>=muN));
+                    
+                    ft(icr) = Nmati*fsp;
+                    dfdai(icr,:) = Nmati*dfsp;
+                    dfdw(icr,:) = Nmati*dfspdw + ...
+                        cell2mat(arrayfun(@(a) Nmati_dw{a}*fsp, 1:Nc, 'UniformOutput', false));
+                    
+                    dfpred = Nmati*diag(abs(fsp)<muN);
+                    % March over rest of the points for one cycle
+                    for ti=2:Nt
+                        ipr = icr;  % prev. pt indices
+                        icr = (ti-1)*(Nt^(Nc-1))+(1:Nt^(Nc-1));  % current pt indices
+
+                        fsp = kt*(ut(icr) - ut(ipr)) + ft(ipr);
+                        dfsp = kt*(Nst(icr,:)-Nst(ipr,:)) + dfdai(ipr,:);
+                        dfspdw = kt*(ut_dw(icr,:) - ut_dw(ipr,:)) + dfdw(ipr,:);
+
+                        dfsp(abs(fsp)>=muN,:) = 0;
+                        dfspdw(abs(fsp)>=muN,:) = 0;
+                        fsp(abs(fsp)>=muN) = muN*sign(fsp(abs(fsp)>=muN));
+
+                        ft(icr) = fsp;
+                        dfdai(icr,:) = dfsp;
+                        dfdw(icr,:) = dfspdw;
+
+                        dfpred = diag(abs(fsp)<muN)*dfpred;
+                    end
+                    % Construct residue
+                    ipr = icr;
+                    icr = 1:Nt^(Nc-1);
+
+                    res = x - ft(ipr);
+                    dresdx = eye(length(x)) - dfpred;     
+                    dresdai = dxdai - dfdai(ipr, :);
+                    dresdw = dxdw - dfdw(ipr, :);
+
+                    % Newton update march
+                    x = x - dresdx\res;
+                    dxdai = dxdai - dresdx\dresdai;
+                    dxdw = dxdw - dresdx\dresdw;
+                    % Regular march update if dresdx is noninvertible or so
+                    % (can happen if fully stuck)
+                    if ~isempty(find(isnan(x),1))
+                        x = ft(ipr);
+                        dxdai = dfdai(ipr, :);
+                        dxdw = dfdw(ipr, :);
+                    end
+                    its = its+1;
+                    if its>20
+                        break;
+                    end
+                end
+              case {10,20,30}  % Solve using fsolve. Versions of case 1, 2.
+                cst = QPAFT([eye(Nhc) Uh], h, Nt, 'f2t');
+                ut = cst(:, Nhc+1:end);
+                cst = cst(:, 1:Nhc);
+
+                opt = optimoptions('fsolve', 'specifyobjectivegradient', true, 'Display', 'iter');
+                ft = ones(Nt^Nc, 1);  % Better Initial guess?
+                ft = fsolve(@(ft) QPMARCHRESFUN(ft, ut, prm), ft, opt);
+
+                % Get Jacobians
+                [~, dresdf, dresdu, dresdw] = QPMARCHRESFUN(ft, ut, prm);
+                dfdai = (-dresdf\dresdu)*cst;
+                dfdw = -dresdf\dresdw;
+            end
+            
+            
+            switch m.NLTs(ni).qptype
+                case {1,2}  % Option 1: Solve using NSOLVE or fsolve
+                    % Construct Nmat
+                    ft = ones(Nt^Nc, Nnlf);
+                    
+                    opt = struct('Display', false);
+        %             tic
+                    ft = NSOLVE(@(ft) QPMARCHRESFUN(ft, unlt, ...
+                        @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
+                        Nmat), ft, opt);
+        %             toc
+        %             opt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'off');
+        %             ft = fsolve(@(ft) QPMARCHRESFUN(ft, unlt, ...
+        %                 @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
+        %                 Nmat), ft, opt);
+        
+                    % Get Jacobians
+                    [~, dresdf, dresdu] = QPMARCHRESFUN(ft, unlt, ...
+                        @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
+                        Nmat);
+                    dfdut = -dresdf\dresdu;
+                    
+                    F = QPFOURIERCOEFF(ft, h);
+                    J = QPFOURIERCOEFF(dfdut*cst, h);
+                case 3  % Option 2: Sequential Solution: Only possible for Nmtype=3
+                    [Nmat, bpis, bpjs] = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
+                    bpjs = cellfun(@(c) unique(c), bpjs, 'UniformOutput', false);
+        
+                    its = 0;
+                    ft = zeros(Nt^Nc, Nnlf);
+                    dfdai = zeros(Nt^Nc, Nhc);
+                    fprev = ft(bpis{1},:);
+        %             tic
+                    while its==0 || max(abs(ft(bpis{1})-fprev))>tol 
+                        fprev = ft(bpis{1},:);
+                        for ti=1:Nt
+                            % Only force estimation
+                            ft(bpis{ti}) = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
+        
+        %                     % Force & Jacobian estimation - Naive version
+        %                     [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},:)*unlt, Nmat(bpis{ti},:)*ft);
+        %                     dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},:)*dfdai + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},:)*cst;
+        
+        %                     % Force & Jacobian estimation - respectful of sparsity in Nmat
+        %                     [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
+        %                     dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:) + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:);
+                        end
+                        its = its+1;
+                    end
+                    % Iterate and just estimate the Jacobians
+                    for ti=1:Nt  % Run the iterations once more
+                        [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
+                        dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:) + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:);
+                    end
+%                     fprintf('%d\n',its)
+                    F = QPFOURIERCOEFF(ft, h);
+                    J = QPFOURIERCOEFF(dfdai, h);
+        %             toc
+            end
+            
 %             J = zeros(size(m.NLTs(ni).L,1)*Nhc, size(m.NLTs(ni).L,1)*Nhc);
 %             for di=1:Ndnl
 %                 for dj=1:Ndnl
