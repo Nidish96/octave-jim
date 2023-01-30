@@ -82,7 +82,7 @@ Nt = 64;
 % X = NSOLVE(@(U) GM.QPHBRESFUN([U; 1], ws, Fl, h, Nt, eps), X0, opt);
 
 fopt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
-X = fsolve(@(U) GM.QPHBRESFUN([U; 1], ws, Fl, h, Nt, eps), X0, fopt);
+X = fsolve(@(U) GM.QPHBRESFUN([U; ws(:)], Fl, h, Nt, eps), X0, fopt);
 
 Xd = D1*X;
 Xdd = D1^2*X;

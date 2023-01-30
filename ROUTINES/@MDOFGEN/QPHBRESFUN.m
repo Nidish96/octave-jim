@@ -1,4 +1,4 @@
-function [R, dRdU, FNL] = QPHBRESFUN(m, Up, ws, Fl, h, Nt, tol, varargin)
+function [R, dRdU, FNL] = QPHBRESFUN(m, Uws, Fl, h, Nt, tol, varargin)
 %QPHBRESFUN 
 %
 %   USAGE: 
@@ -20,140 +20,17 @@ function [R, dRdU, FNL] = QPHBRESFUN(m, Up, ws, Fl, h, Nt, tol, varargin)
     Nh = size(h,1);  % Number of harmonics
     Nhc = sum(all(h==0, 2)+2*any(h~=0, 2));  % Number of harmonic coefficients
     
-    Ws = Up(end)*ws;  % real frequency is ws scaled by Up(end)
+    ws = Uws(end-Nc+1:end);  % real frequency is ws scaled by Up(end)
 
-    E = QPHARMONICSTIFFNESS(m.M, m.C, m.K, Ws, h);  % Harmonic Stiffness
+    E = QPHARMONICSTIFFNESS(m.M, m.C, m.K, ws, h);  % Harmonic Stiffness
     
-    tau = linspace(0, 2*pi, Nt+1); tau(end) = [];
-    taus = cell(Nc, 1);
-    [taus{:}] = ndgrid(tau);
-    t = zeros(repmat(Nt, 1, Nc));
-    for ic=1:Nc
-        t = t+taus{ic}*Ws(ic);
-    end
-    
-    D1 = QPHARMONICSTIFFNESS(0, 1, 0, Ws, h);  % time derivative matrix
-    
-    cst = QPTIMETRANS(eye(Nhc), h, Nt);  % basis functions
-    sct = QPTIMETRANS(D1, h, Nt);  % basis function derivatives
-    
-    FNL = zeros(m.Ndofs*Nhc, 1);
-    dFNL = zeros(m.Ndofs*Nhc);
-    for ni=1:length(m.NLTs)
-        Unl = (m.NLTs(ni).L*reshape(Up(1:end-1), m.Ndofs, Nhc))';  % Nhc x Ndnl
-        Ndnl = size(m.NLTs(ni).L, 1);
-
-        unlt   = QPTIMETRANS(Unl, h, Nt);
-        unldot = QPTIMETRANS(D1*Unl, h, Nt);
-        
-        if mod(m.NLTs(ni).type, 2)==0  % INSTANTANEOUS FORCING
-            [ft, dfdu, dfdud] = m.NLTs(ni).func(taus, unlt, unldot);
-        
-            F = QPFOURIERCOEFF(ft, h);
-            J = zeros(size(m.NLTs(ni).L,1)*Nhc, size(m.NLTs(ni).L,1)*Nhc);
-            dFdU = reshape(QPFOURIERCOEFF(reshape(dfdu.*permute(cst, [1, 3, 2]), Nt^Nc, Ndnl*Nhc), h) + ...
-                QPFOURIERCOEFF(reshape(dfdud.*permute(sct, [1, 3, 2]), Nt^Nc, Ndnl*Nhc), h), ...
-                Nhc, Ndnl, Nhc);
-        
-            for di=1:Ndnl
-                J(di:Ndnl:end, di:Ndnl:end) = dFdU(:, di, :);
-            end
-        else % HYSTERETIC FORCING
-            Nnlf = size(m.NLTs(ni).L, 1);
-            if ~isempty(m.NLTs(ni).Lf)
-                Nnlf = size(m.NLTs(ni).Lf, 2);
-            end
-            if Nnlf>1 || size(unlt, 2)>1
-                error('Not implemented for multi-DOF dependent multi-force nonlinearities yet')
-            end
-
-            switch m.NLTs(ni).qptype
-                case {1,2}  % Option 1: Solve using NSOLVE or fsolve
-                    % Construct Nmat
-                    Nmat = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
-                    ft = ones(Nt^Nc, Nnlf);
-                    
-                    opt = struct('Display', false);
-        %             tic
-                    ft = NSOLVE(@(ft) QPMARCHRESFUN(ft, unlt, ...
-                        @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-                        Nmat), ft, opt);
-        %             toc
-        %             opt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'off');
-        %             ft = fsolve(@(ft) QPMARCHRESFUN(ft, unlt, ...
-        %                 @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-        %                 Nmat), ft, opt);
-        
-                    % Get Jacobians
-                    [~, dresdf, dresdu] = QPMARCHRESFUN(ft, unlt, ...
-                        @(u, up, fp) m.NLTs(ni).func(0, u, 0, 0, up, fp), ...
-                        Nmat);
-                    dfdut = -dresdf\dresdu;
-                    
-                    F = QPFOURIERCOEFF(ft, h);
-                    J = QPFOURIERCOEFF(dfdut*cst, h);
-                case 3  % Option 2: Sequential Solution: Only possible for Nmtype=3
-                    [Nmat, bpis, bpjs] = CONSTRUCTNMAT(Ws, Nc, Nt, m.NLTs(ni).qptype);
-                    bpjs = cellfun(@(c) unique(c), bpjs, 'UniformOutput', false);
-        
-                    its = 0;
-                    ft = zeros(Nt^Nc, Nnlf);
-                    dfdai = zeros(Nt^Nc, Nhc);
-                    fprev = ft(bpis{1},:);
-        %             tic
-                    while its==0 || max(abs(ft(bpis{1})-fprev))>tol 
-                        fprev = ft(bpis{1},:);
-                        for ti=1:Nt
-                            % Only force estimation
-                            ft(bpis{ti}) = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
-        
-        %                     % Force & Jacobian estimation - Naive version
-        %                     [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},:)*unlt, Nmat(bpis{ti},:)*ft);
-        %                     dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},:)*dfdai + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},:)*cst;
-        
-        %                     % Force & Jacobian estimation - respectful of sparsity in Nmat
-        %                     [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
-        %                     dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:) + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:);
-                        end
-                        its = its+1;
-                    end
-                    % Iterate and just estimate the Jacobians
-                    for ti=1:Nt  % Run the iterations once more
-                        [ft(bpis{ti}), ~, dfdfp, dfdu, dfdup] = m.NLTs(ni).func(0, unlt(bpis{ti}), 0, 0, Nmat(bpis{ti},bpjs{ti})*unlt(bpjs{ti}), Nmat(bpis{ti},bpjs{ti})*ft(bpjs{ti}));
-                        dfdai(bpis{ti},:) = diag(dfdfp)*Nmat(bpis{ti},bpjs{ti})*dfdai(bpjs{ti},:) + dfdu.*cst(bpis{ti},:) + diag(dfdup)*Nmat(bpis{ti},bpjs{ti})*cst(bpjs{ti},:);
-                    end
-%                     fprintf('%d\n',its)
-                    F = QPFOURIERCOEFF(ft, h);
-                    J = QPFOURIERCOEFF(dfdai, h);
-        %             toc
-            end
-            
-%             J = zeros(size(m.NLTs(ni).L,1)*Nhc, size(m.NLTs(ni).L,1)*Nhc);
-%             for di=1:Ndnl
-%                 for dj=1:Ndnl
-%                     tmp = squeeze(dfdu(:, di, dj, :));
-%                     if ~isempty(find(tmp~=0, 1))
-%                         J(di:Ndnl:end, dj:Ndnl:end) = ...
-%                             GETFOURIERCOEFF(h, tmp);
-%                     end
-%                 end
-%             end
-        end
-        
-        if m.NLTs(ni).type<=5  % Self adjoint forcing
-            FNL  = FNL + reshape(m.NLTs(ni).L'*F', Nhc*m.Ndofs, 1);
-            dFNL = dFNL + kron(eye(Nhc), m.NLTs(ni).L')*J*kron(eye(Nhc), m.NLTs(ni).L);
-        else  % Non-self adjoint forcing
-            FNL  = FNL + reshape(m.NLTs(ni).Lf*F', Nhc*m.Ndofs, 1);
-            dFNL = dFNL + kron(eye(Nhc), m.NLTs(ni).Lf)*J*kron(eye(Nhc), m.NLTs(ni).L);                
-        end
-    end
+    [FNL, dFNL] = m.QPNLEVAL(Uws, h, Nt, tol);
     
     % Residue
     if length(m.Rsc)~=length(Fl)
         m.Rsc = (1/max(abs(Fl)))*ones(length(Fl),1);
     end
-    R = [E*Up(1:end-1) + FNL - Fl].*m.Rsc;
+    R = [E*Uws(1:end-Nc) + FNL - Fl].*m.Rsc;
     dRdU = (E+dFNL).*m.Rsc;
 %     dRdw = (dEdw*Up(1:end-1)).*m.Rsc;
 

@@ -13,7 +13,7 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13);
 
 anim = false; 
-plotfigs = true;
+plotfigs = false;
 %%
 m = 1;
 % c = 0.5;
@@ -27,7 +27,7 @@ fnl = @(t, u, varargin) JENKNL(t, u, kt, muN, varargin{:});
 % fnl = @(t,u,ud) deal(bt*u.^3, 3*bt*u.^2, zeros(size(u)));
 % fnl = @(t,u,ud) deal(bt*u.^3 + c*ud, 3*bt*u.^2, c*ones(size(u)));
 
-Nmtype = 3;  % Type of previous point jacobian construction
+Nmtype = 4;  % Type of previous point jacobian construction
 
 Nc = 3;  % Number of components
 Nhmax = 7;  % Number of harmonics
@@ -107,7 +107,7 @@ Nt = 16;
 
 tic
 opt = struct('Display', true, 'ITMAX', 200);
-X = NSOLVE(@(U) GM.QPHBRESFUN([U; 1], ws, Fl, h, Nt, eps), X0, opt);
+X = NSOLVE(@(U) GM.QPHBRESFUN([U; ws(:)], Fl, h, Nt, eps), X0, opt);
 toc
  
 % fopt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
