@@ -1,4 +1,4 @@
-function [R, dRdU, FNL] = QPHBRESFUN(m, Uws, Fl, h, Nt, tol, varargin)
+function [R, dRdU, dRdws, FNL] = QPHBRESFUN(m, Uws, Fl, h, Nt, tol, varargin)
 %QPHBRESFUN 
 %
 %   USAGE: 
@@ -22,9 +22,9 @@ function [R, dRdU, FNL] = QPHBRESFUN(m, Uws, Fl, h, Nt, tol, varargin)
     
     ws = Uws(end-Nc+1:end);  % real frequency is ws scaled by Up(end)
 
-    E = QPHARMONICSTIFFNESS(m.M, m.C, m.K, ws, h);  % Harmonic Stiffness
+    [E, dEdws] = QPHARMONICSTIFFNESS(m.M, m.C, m.K, ws, h);  % Harmonic Stiffness
     
-    [FNL, dFNL] = m.QPNLEVAL(Uws, h, Nt, tol);
+    [FNL, dFNL, dFNLws] = m.QPNLEVAL(Uws, h, Nt, tol);
     
     % Residue
     if length(m.Rsc)~=length(Fl)
@@ -32,7 +32,7 @@ function [R, dRdU, FNL] = QPHBRESFUN(m, Uws, Fl, h, Nt, tol, varargin)
     end
     R = [E*Uws(1:end-Nc) + FNL - Fl].*m.Rsc;
     dRdU = (E+dFNL).*m.Rsc;
-%     dRdw = (dEdw*Up(1:end-1)).*m.Rsc;
+    dRdws = cell2mat(arrayfun(@(a) (dEdws(:,:,a)*Uws(1:end-Nc)+dFNLws(:,a)).*m.Rsc, 1:Nc, 'UniformOutput', false));
 
     % All Gradient terms in one matrix
 %     if ~isempty(varargin)

@@ -19,13 +19,15 @@ function [MATS] = CAUGHYMATS(m, num, typ)
     end
     switch typ
         case 0
+            MATS(:, :, 1) = m.M;
             tmp = m.M\m.K;
         case 1
+            MATS(:, :, 1) = m.K;
             tmp = m.K\m.M;
         otherwise
             error('Unknown Caughy Series type')
     end
-    for ni=3:num
+    for ni=2:num
         MATS(:, :, ni) = MATS(:, :, ni-1)*tmp;
     end
 end

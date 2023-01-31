@@ -1,5 +1,18 @@
 function [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol)
-%QPNLEVAL
+%QPNLEVAL evaluates nonlinear force in QP-frequency domain
+%
+%   USAGE:
+%       [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol);
+%   INPUTS:
+%       Uws         : (Nd*Nhc+Nc,1)
+%       h           : (Nh, Nc)
+%       Nt          : (1,1)
+%       tol         : (1,1)
+%   OUTPUTS:
+%       FNL         : (Nd*Nhc,1)
+%       dFNL        : (Nd*Nhc, Nd*Nhc)
+%       dFNLdw      : (Nd*Nhc, Nc)
+
 
     Nc = size(h,2);  % Number of components
     Nh = size(h,1);  % Number of harmonics
@@ -18,7 +31,7 @@ function [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol)
     
     cst = QPTIMETRANS(eye(Nhc), h, Nt);  % basis functions
     sct = QPTIMETRANS(D1, h, Nt);  % basis function derivatives
-    dsct_ws = QPTIMETRANS(reshape(dD1dws, Nhc, Nhc*Nc), h, Nt);  % Nt^Nc x Nhc*Nc ("pages" next to each other)
+    dsct_ws = cell2mat(permute(arrayfun(@(a) QPTIMETRANS(dD1dws(:,:,a), h, Nt), 1:Nc, 'UniformOutput', false), [1 3 2]));
 
     FNL = zeros(m.Ndofs*Nhc, 1);
     dFNL = zeros(m.Ndofs*Nhc);
@@ -38,13 +51,14 @@ function [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol)
             dFdU = reshape(QPFOURIERCOEFF(reshape(dfdu.*permute(cst, [1, 3, 2]), Nt^Nc, Ndnl*Nhc), h) + ...
                 QPFOURIERCOEFF(reshape(dfdud.*permute(sct, [1, 3, 2]), Nt^Nc, Ndnl*Nhc), h), ...
                 Nhc, Ndnl, Nhc);
-            dFdws = reshape(QPFOURIERCOEFF(reshape(dfdud.*permute(dsct_ws, [1, 3, 2]), Nt^Nc, Ndnl*Nhc*Nc), h), ...
-                Nhc, Ndnl, Nhc, Nc);
+            % Hasn't been generalized to mutliple DOFs yet
+            dFdws = reshape(cell2mat(arrayfun(@(a) QPFOURIERCOEFF(reshape(dfdud.*permute(dsct_ws(:,:,a), [1, 3, 2]), Nt^Nc, Ndnl*Nhc),h)*Unl, 1:Nc, 'UniformOutput', false)), ...
+                Nhc, Ndnl, Nc);
             
-            Jw = zeros([size(J) Nc]);
+            Jw = zeros(length(F), Nc);
             for di=1:Ndnl
                 J(di:Ndnl:end, di:Ndnl:end) = dFdU(:, di, :);
-                Jw(di:Ndnl:end, di:Ndnl:end, :) = dFdws(:, di, :, :);
+                Jw(di:Ndnl:end, :) = dFdws(:, di, :);
             end
         else % HYSTERETIC FORCING
             Nnlf = size(m.NLTs(ni).L, 1);
@@ -144,8 +158,12 @@ function [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol)
                                                      Nmati*(dfdfp.*dfdw(ipr,:) + ...
                                                      dfduc.*Nmat*ut_dw(icr,:) + ...
                                                      dfdup.*ut_dw(ipr,:));
-
-                    dfpred = Nmati*dfdfp;
+                    if any(dfdfp==0)
+                        mrflag=1;
+                    else
+                        mrflag=0;
+                    end
+                    dfpred = Nmati*diag(dfdfp);
                     % March over rest of the points for one cycle
                     for ti=2:Nt
                         ipr = icr;  % prev. pt indices
@@ -158,7 +176,14 @@ function [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol)
                         dfdw(icr, :) = dfduc.*ut_dw(icr, :) + dfdup.*ut_dw(ipr, :) + ...
                             dfdfp.*dfdw(ipr, :);
 
+                        if any(dfdfp==0)  % slip-like memory resetting event
+                            mrflag = 1;
+                        end
+
                         dfpred = dfdfp.*dfpred;
+                    end
+                    if mrflag==0  % No slip-like events. Fully stuck.
+                        break;
                     end
                     % Construct residue
                     ipr = icr;
@@ -176,6 +201,7 @@ function [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol)
                     % Regular march update if dresdx is noninvertible or so
                     % (can happen if fully stuck)
                     if ~isempty(find(isnan(x),1))
+                        warning('no slip');
                         x = ft(ipr);
                         dxdai = dfdai(ipr, :);
                         dxdw = dfdw(ipr, :);
@@ -205,17 +231,4 @@ function [FNL, dFNL, dFNLdw] = QPNLEVAL(m, Uws, h, Nt, tol)
             dFNLdw = dFNLdw + kron(eye(Nhc), m.NLTs(ni).Lf)*Jw;
         end
     end
-end
-
-%%
-function [res, dresdf, dresdu] = QPMARCHRESFUN(ft, unlt, func, Nmat)
-%Residue function for 
-    [fnl, ~, dfnldfp, dfnlduc, dfnldup] = func(unlt, Nmat*unlt, Nmat*ft);
-    
-    res = ft-fnl;
-    dresdf = sparse(eye(length(ft))-diag(dfnldfp)*Nmat);
-    dresdu = sparse(-diag(dfnlduc) - diag(dfnldup)*Nmat);
-%             [ft(ti,:), dfdu(ti,:,:,:)] = ...
-%                 m.NLTs(ni).func(t(ti), unlt(ti,:), h, t(tm1), ...
-%                 unlt(tm1,:), ft(tm1,:), dfdu(tm1,:,:,:));    
 end

@@ -24,7 +24,6 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     % Uwxia: [Uh; ws; xis; log(A)]
 
     Nc = size(h,2);  % Number of components
-    Nh = size(h,1);  % Number of harmonics
     Nhc = sum(all(h==0, 2)+2*any(h~=0, 2));  % Number of harmonic coefficients
     
     xis = UwxiA(end-Nc:end-1);
@@ -34,10 +33,12 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     A = 10^lA;
     dAdlA = A*log(10);
     
+    [rinds0,zinds,hinds,rinds,iinds] = HINDS(m.Ndofs, h);
+    Asc = ones(Nhc*m.Ndofs,1);  Asc([rinds; iinds]) = A;
+    dAscdA = zeros(Nhc*m.Ndofs,1); dAscdA([rinds; iinds]) = 1;
+
     h0 = double(all(h(1,:)==0));
-    Asc = kron([ones(h0,1); A*ones(Nhc-h0,1)], ones(m.Ndofs,1));
-    dAscdA = kron([zeros(h0,1); ones(Nhc-h0,1)], ones(m.Ndofs,1));
-    
+
     As = A*ash;  % List of modal amplitudes
     
     Uh = Asc.*UwxiA(1:end-2*Nc-1);  % Harmonic Coefficients of Mode Shape
@@ -47,7 +48,7 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     [E, dEdws] = QPHARMONICSTIFFNESS(m.M, m.C-xiM, m.K, ws, h);  % Harmonic Stiffness
     dEdxi = zeros(m.Ndofs*Nhc, m.Ndofs*Nhc, Nc);  % Maybe using cells of sparse matrices is better for storage
     for ci=1:Nc  % Can be replaced with pagefun
-        dEdxi(:, :, ci) = QPHARMONICSTIFFNESS(m.M*0, -Cg(:, :, ci), m.M*0, ws, h);
+        dEdxi(:, :, ci) = QPHARMONICSTIFFNESS(zeros(m.Ndofs), -Cg(:, :, ci), zeros(m.Ndofs), ws, h);
     end
     
     [FNL, dFNL, dFNLdw] = m.QPNLEVAL([Uh; ws(:)], h, Nt, tol);
@@ -71,22 +72,21 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     
         d_acons_ash(ci, ci) = 2*A^2*ash(ci);
     end
-    
+
     R = [E*Uh+FNL;    % balance equations     (Nhc*Nd)
         acons;          % amplitude constrains  (Nc)
         Fls'*(Uh./Asc)];      % phase constraints     (Nc)
     dRwx = zeros(Nhc*m.Ndofs, 2*Nc);
     for ci=1:Nc
-        dRwx(:, ci) = dEdws(:, :, ci)*Uh;  % Needs an additional dFNLdws term for velocity dependent nls
+        dRwx(:, ci) = dEdws(:, :, ci)*Uh + dFNLdw(:,ci);  % Needs an additional dFNLdws term for velocity dependent nls
         dRwx(:, Nc+ci) = dEdxi(:, :, ci)*Uh;
     end
-    dRwx(:, 1:Nc) = dRwx(:, 1:Nc) + dFNLdw;
     
     dRdUwxi = [(E+dFNL)*diag(Asc), dRwx;
         d_acons;
         Fls', zeros(Nc, 2*Nc)];
     
-    dRdlA = [(E+dFNL)*(Uh./Asc).*dAscdA*dAdlA;
+    dRdlA = [(E+dFNL)*(UwxiA(1:end-2*Nc-1).*dAscdA)*dAdlA;
         d_acons_lA;
         zeros(Nc, 1)];
     
