@@ -243,7 +243,11 @@ function [Nmat, varargout] = CONSTRUCTNMAT(ws, Nc, Nt, varargin)  % Need to thin
             
             % UNLIKE the Nmat in the other types, this only interpolates
             % the "next plane" using the "initial plane"
+            try
             Nmat = sparse( repmat((1:Nt^(Nc-1))', 1, 2^(Nc-1)), evns, repmat(Nsf, Nt^(Nc-1), 1) );
+            catch
+                keyboard
+            end
             if nargout==2
                 varargout{1} = arrayfun(@(a) sparse( repmat((1:Nt^(Nc-1))', 1, 2^(Nc-1)), evns, repmat(Nsf_dw(:, :, a), Nt^(Nc-1), 1) ), 1:Nc, 'UniformOutput', false);
             end

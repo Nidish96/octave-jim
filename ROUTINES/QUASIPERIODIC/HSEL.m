@@ -15,10 +15,10 @@ function [h] = HSEL(Nhmax, ws, varargin)
         case 1 % Criterion 1  - Abs Criterion
             h = hall(sum(abs(hall),2)<=Nhmax & sum(hall,2)>=0,:);
             
-            % Legacy
-            h(sum(h,2)==0 & h(:,1)<=0, :) = [];
-            h = [zeros(1,Nc); h];
-            % Remove when obsolete
+%             % Legacy
+%             h(sum(h,2)==0 & h(:,1)<=0, :) = [];
+%             h = [zeros(1,Nc); h];
+%             % Remove when obsolete
         case 2 % Criterion 2 - w-Criterion
             hpos = hall;
             hws = hpos*ws(:);
@@ -27,12 +27,12 @@ function [h] = HSEL(Nhmax, ws, varargin)
         otherwise
             error('hcr should be one of [1,2]. %d given.', hcr)
     end
-%     h(sum(h,2)==0 & h(:,1)<=0, :) = [];
-%     for ic=1:Nc
-%         id = find(all(h == [zeros(1,ic-1) 1 zeros(1, Nc-ic)], 2));
-%         if ~isempty(id)
-%             h(id,:) = [];
-%         end
-%     end
-%     h = [zeros(1,Nc); eye(Nc); h];
+    h(sum(h,2)==0 & h(:,1)<=0, :) = [];
+    for ic=1:Nc
+        id = find(all(h == [zeros(1,ic-1) 1 zeros(1, Nc-ic)], 2));
+        if ~isempty(id)
+            h(id,:) = [];
+        end
+    end
+    h = [zeros(1,Nc); eye(Nc); h];
 end

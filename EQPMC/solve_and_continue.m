@@ -547,7 +547,8 @@ function [Rext,dRextdX] = extended_residual(X,Xref,zref,...
 %% Evaluation of the residual function and its derivative
 switch Sopt.jac
     case {'full','on'}
-        [R,dRdX] = feval(fun_residual,diag(Sopt.Dscale)*X);
+        [R,dRdx,dRdlam] = feval(fun_residual,diag(Sopt.Dscale)*X);
+        dRdX = [dRdx dRdlam];
     case 'x'
         [R,dRdx] = feval(fun_residual,diag(Sopt.Dscale)*X);
         
