@@ -108,12 +108,18 @@ function [U, R, eflag, it, dRc, reu] = NSOLVE(func, U0, varargin)
       
     U  = U + dU;
     it = it+1;
-    
+    if any(isnan(dU))
+        keyboard
+    end
     [R, dRc] = func(opts.Dscale(1:Nu).*U);
 %     dU = (-Jc\R)./opts.Dscale(1:Nu);
     dRc = dRc*diag(opts.Dscale(1:Nu));
     dU = -dRc\R;
     
+    if any(isnan(dU))
+        keyboard
+    end
+
     e = abs(R'*dU);
     r = R'*R;
     u = dU'*dU;

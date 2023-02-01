@@ -12,7 +12,7 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 set(0,'defaultAxesFontSize',13);
 
 analyze = false;
-plotout = true;
+plotout = false;
 %% Parameters
 M = eye(2);
 K = [2 -1;-1 2];

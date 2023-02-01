@@ -29,10 +29,10 @@ K0 = K+kt*[1 0;0 0]; % Linearized stiffness
 V = V(:,si);
 
 Nc = 2;  % Number of components
-Nhmax = 3;  % Number of harmonics
+Nhmax = 1;  % Number of harmonics
 %% Harmonic Selection
 h = HSEL(Nhmax, [1 2]);
-h = h(2:end, :);
+% h = h(2:end, :);
 Nhc = sum(all(h==0,2) + 2*any(h~=0,2));
 
 %% Forcing
@@ -74,49 +74,23 @@ X0([rinds(1:2) iinds(1:2)]) = kron([0;1], V(:,1));
 X0([rinds(3:4) iinds(3:4)]) = kron([0;1], V(:,2));
 Xv = [X0; Wr; xis; -1];
 % [R, dRdU, dRdlA] = MDL.EQPMCRESFUN(Xv,  [1; 1], Fls, h, Nt, eps); 
-Uwx0 = NSOLVE(@(X) MDL.EQPMCRESFUN([X; Xv(end)],  [1; 1], Fls, h, Nt, eps), Xv(1:end-1), opt);
+% Uwx0 = NSOLVE(@(X) MDL.EQPMCRESFUN([X; Xv(end)],  [1; 1], Fls, h, Nt, eps), Xv(1:end-1), opt);
 
-% fopt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
-% Uwx = fsolve(@(X) MDL.EQPMCRESFUN([X; Xv(end)],  [1; 1], Fls, h, Nt, eps), Xv(1:end-1), fopt);
-
-%% Do only ti = 1
-Copt = struct('Nmax', 200, 'Display', 1, 'DynDscale', 0, 'solverchoice', 2, 'angopt', 1e2);
-% Copt.Dscale = [kron([1e-2; 1e-1*ones(Nhc-1,1)], ones(2,1)); Wr; 1e-1*ones(2,1); 1.0];
-% Copt.Dscale = [kron([1e-4; ones(Nhc-1,1)], ones(2,1)); 1e-2*ones(4,1); 1];
-
-Astart = -2;
-Aend = 1.35;  % 2
-da = 0.1;
-
-theta = pi/2/8;
-
-% UwxLs = CONTINUE(@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(theta); sin(theta)], Fls, h, Nt, eps), ...
-%     Uwx0, Astart, Aend, da, Copt);
-
-% Sopt = struct('stepmax', 100, 'dynamicDscale', 0);
-% UwxLs = solve_and_continue(Uwx0,@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(theta); sin(theta)], Fls, h, Nt, eps,1),...
-%     Astart, Aend, da,Sopt);
-
-% figure(2000)
-% clf()
-% % plot3((10.^UwxL{ti}(end,:))*cos(thetas(ti)), (10.^UwxL{ti}(end,:))*sin(thetas(ti)), UwxL{ti}(end-5+i,:), '.-', 'LineWidth', 2); hold on
-% semilogx((10.^UwxLs(end,:))*cos(theta), UwxLs(end-4,:), '.-', 'LineWidth', 1); hold on
-% grid on
-% xlabel('Modal Amp $Q_1$')
-% zlabel('Mode 1 Freq')
+fopt = optimoptions('fsolve', 'SpecifyObjectiveGradient', true, 'Display', 'iter');
+Uwx0 = fsolve(@(X) MDL.EQPMCRESFUN([X; Xv(end)],  [1; 1], Fls, h, Nt, eps), Xv(1:end-1), fopt);
 
 %% Continuation
 % Copt = struct('Nmax', 200, 'Display', 1, 'DynDscale', 0, 'solverchoice', 2, 'angopt', 5e-2);
 % Copt.Dscale = [kron([1e-2; 1e-1*ones(Nhc-1,1)], ones(2,1)); Wr; 1e-1*ones(2,1); 1.0];
 % Copt.Dscale = [kron([1e-4; ones(Nhc-1,1)], ones(2,1)); 1e-2*ones(4,1); 1];
 
-Copt = struct('Nmax', 500, 'Display', 1, 'DynDscale', 0);
+Copt = struct('Nmax', 500, 'Display', 1, 'DynDscale', 0, 'solverchoice', 3);
 % Copt.Dscale = [kron([1e-2; 1e-1*ones(Nhc-1,1)], ones(2,1)); Wr; 1e-1*ones(2,1); 1.0];
 Astart = -2;
 Aend = 2;  % 2
 da = 0.05;
-Copt.dsmax = 0.5;
-Copt.dsmin = 0.05;
+Copt.dsmax = 0.25;
+Copt.dsmin = 0.01;
 
 Sopt = struct('jac', 'full', 'stepmax', 2e3);
 da = 0.05;
@@ -129,16 +103,25 @@ if analyze
         try
 %             UwxL{ti} = CONTINUE(@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(thetas(ti)); sin(thetas(ti))], Fls, h, Nt, eps), ...
 %                 Uwx0, Astart, Aend, da, Copt);
-            UwxL{ti} = solve_and_continue(Uwx0, @(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(thetas(ti)); sin(thetas(ti))], Fls, h, Nt, eps), ...
-                Astart, Aend, da, Sopt);
-        catch
-            continue;
+        UwxL{ti} = solve_and_continue(Uwx0, @(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(thetas(ti)); sin(thetas(ti))], Fls, h, Nt, eps), ...
+            Astart, Aend, da, Sopt);
         end
+
+        if isempty(UwxL{ti}) || UwxL{ti}(end)<Aend
+%             Uwxlrev = CONTINUE(@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(thetas(ti)); sin(thetas(ti))], Fls, h, Nt, eps), ...
+%                 Uwx0, Aend, Astart, da, Copt);
+            Uwxlrev = solve_and_continue(Uwx0, @(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [cos(thetas(ti)); sin(thetas(ti))], Fls, h, Nt, eps), ...
+                Aend, Astart, da, Sopt);
+            if Uwxlrev(end)<Aend
+                UwxL{ti} = Uwxlrev(:, end:-1:1);
+            end
+        end
+
         fprintf('Done %d/%d\n', ti, length(thetas));
     end
-    save(sprintf('DATA/EQPSURFH%d_eldrfr.mat', Nhmax), 'thetas', 'UwxL')
+    save(sprintf('DATS/EQPSURFH%d_eldrfr.mat', Nhmax), 'thetas', 'UwxL')
 else
-    load(sprintf('DATA/EQPSURFH%d_eldrfr.mat', Nhmax), 'thetas', 'UwxL')
+    load(sprintf('DATS/EQPSURFH%d_eldrfr.mat', Nhmax), 'thetas', 'UwxL')
 end
 
 %% Plot 2D Surface

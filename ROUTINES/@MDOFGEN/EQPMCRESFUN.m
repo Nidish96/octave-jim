@@ -50,7 +50,9 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     for ci=1:Nc  % Can be replaced with pagefun
         dEdxi(:, :, ci) = QPHARMONICSTIFFNESS(zeros(m.Ndofs), -Cg(:, :, ci), zeros(m.Ndofs), ws, h);
     end
-    
+    if any(isnan(ws))
+        keyboard
+    end
     [FNL, dFNL, dFNLdw] = m.QPNLEVAL([Uh; ws(:)], h, Nt, tol);
     
     % Residue        
@@ -97,58 +99,5 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     % All Gradient terms in one matrix
     if ~isempty(varargin)
         dRdUwxi = [dRdUwxi dRdlA];
-    end
-end
-
-%%
-function [res, dresdf, dresdu] = QPMARCHRESFUN(ft, unlt, func, Nmat)
-%Residue function for 
-    [fnl, ~, dfnldfp, dfnlduc, dfnldup] = func(unlt, Nmat*unlt, Nmat*ft);
-    
-    res = ft-fnl;
-    dresdf = sparse(eye(length(ft))-diag(dfnldfp)*Nmat);
-    dresdu = sparse(-diag(dfnlduc) - diag(dfnldup)*Nmat);
-%             [ft(ti,:), dfdu(ti,:,:,:)] = ...
-%                 m.NLTs(ni).func(t(ti), unlt(ti,:), h, t(tm1), ...
-%                 unlt(tm1,:), ft(tm1,:), dfdu(tm1,:,:,:));    
-end
-%%
-function Nmat = CONSTRUCTNMAT(ws, Nc, Nt, varargin)  % Need to think about w-gradients
-    if nargin==3
-        Nmtype = 1;
-    else
-        Nmtype = varargin{1};
-    end
-    taus = cell(Nc, 1);
-    [taus{:}] = ndgrid(1:Nt);    
-    switch Nmtype
-        case 1
-            deltau = 2*pi/Nt; 
-            dt_vec = ws*deltau/vecnorm(ws);  % vector corresponding to deltatau amplitude in real time dxn
-
-            ptsb = cellfun(@(c) str2double(c), num2cell(dec2bin(0:(2^Nc-1))));  % using binary for the construction of points on a unit square
-            oppi = (2^Nc):-1:1;    % diagonally opposite points are retrieved using the binary inverses
-            xis = ptsb*(-deltau);  % coordinates in "tau" space relative to origin
-
-            Lm = deltau^Nc;                                 % Lebesgue Measure of each cell in tau space
-            Nsf = prod(abs(xis(oppi,:)-(-dt_vec)), 2)'/Lm;  % Lagrange Shape Functions to interpolate previous point in the cell diagonally behind (in tau space)
-
-            ijs = fix(cell2mat(cellfun(@(c) c(:), taus, 'UniformOutput', false)'));  % indices of all points
-            evijs = mod(repmat(ijs, 1, 1, 2^Nc) - permute(ptsb, [3 2 1])-1, Nt)+1;   % indices of points forming the cell that is diagonally behind
-            evns = squeeze(sum((Nt.^(0:Nc-1)).*(evijs(:, 1:end, :)-1),2)+1);         % vertex IDs (according to list in ijs) corresponding to points forming the cell that is diagonally behind
-
-            % Build sparse interpolation matrix
-            Nmat = sparse(repmat((1:Nt^Nc)', 1, 2^Nc), evns, repmat(Nsf, Nt^Nc, 1));
-        case 2
-            ptsb = eye(Nc);
-
-            Nsf = ws/sum(ws);  % Shape functions constructed using omegas
-
-            ijs = cell2mat(cellfun(@(c) c(:), taus, 'UniformOutput', false)');  % indices of all points
-            evijs = mod(repmat(ijs, 1, 1, Nc) - permute(ptsb, [3 2 1])-1, Nt)+1;  % indices of points forming the FD stencil
-            evns = squeeze(sum((Nt.^(0:Nc-1)).*(evijs(:, 1:end, :)-1),2)+1);  % vertex IDs (according to list in ijs) corresponding to points from the stencil
-
-            % Build sparse interpolation matrix
-            Nmat = sparse(repmat((1:Nt^Nc)', 1, Nc), evns, repmat(Nsf, Nt^Nc, 1));
     end
 end
