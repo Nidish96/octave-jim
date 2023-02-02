@@ -59,7 +59,7 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
     acons = zeros(Nc, 1);
     d_acons = zeros(Nc, Nhc*m.Ndofs+2*Nc);
     d_acons_lA = zeros(Nc, 1);
-    d_acons_lAs = zeros(Nc, Nc);  % A=As^2/ash^2
+%     d_acons_lAs = zeros(Nc, Nc);  % A=As^2/ash^2
     d_acons_ash = zeros(Nc, Nc);
     for ci=1:Nc
         inds = setxor(1:Nc, ci);
@@ -70,7 +70,10 @@ function [R, dRdUwxi, dRdlA, dRdash, FNL] = EQPMCRESFUN(m, UwxiA, ash, Fls, h, N
         acons(ci) = (Uh(ampis)'*m.M*Uh(ampis) + Uh(m.Ndofs+ampis)'*m.M*Uh(m.Ndofs+ampis)) - As(ci)^2;
         d_acons(ci, ampis) = 2*Uh(ampis)'*m.M*A;
         d_acons(ci, m.Ndofs+ampis) = 2*Uh(m.Ndofs+ampis)'*m.M*A;
-        d_acons_lA(ci) = (2*(Uh(ampis)'*m.M*Uh(ampis) + Uh(m.Ndofs+ampis)'*m.M*Uh(m.Ndofs+ampis))/A - 2*As(ci)*ash(ci)^2)*dAdlA;
+%         d_acons(ci, ampis) = 2*(Uh(ampis)'.*Asc(ampis)'*m.M);
+%         d_acons(ci, m.Ndofs+ampis) = 2*(Uh(m.Ndofs+ampis)'.*Asc(m.Ndofs+ampis)'*m.M);
+
+        d_acons_lA(ci) = (2*(Uh(ampis)'*m.M*Uh(ampis) + Uh(m.Ndofs+ampis)'*m.M*Uh(m.Ndofs+ampis))/A - 2*As(ci)*ash(ci))*dAdlA;
     
         d_acons_ash(ci, ci) = 2*A^2*ash(ci);
     end

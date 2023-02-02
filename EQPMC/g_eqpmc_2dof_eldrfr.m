@@ -16,11 +16,11 @@ plotout = false;
 %% Parameters
 M = eye(2);
 K = [2 -1;-1 2];
-C = 0.01*K;
+C = 0.5*M; % 0.01*K;
 
 MDL = MDOFGEN(M, K, C, eye(2));
 
-kt = 4;
+kt = 4;  % 4
 muN = 2;
 MDL = MDL.SETNLFUN(2+3, [1 0], @(t, u, varargin) JENKNL(t, u, kt, muN, varargin{:}), [], 4);
 K0 = K+kt*[1 0;0 0]; % Linearized stiffness
@@ -85,10 +85,14 @@ Uwx = fsolve(@(X) MDL.EQPMCRESFUN([X; Xv(end)],  [1; 1], Fls, h, Nt, eps), Xv(1:
 Copt = struct('Nmax', 1000, 'Display', 1);
 Astart = -2;
 Aend = 2;
-da = 0.1;
+da = 0.025;
+
+theta = pi/4;
+shp = [cos(theta); sin(theta)];
+shp = shp;
 
 Uwx0 = Xv(1:end-1);
-UwxL = CONTINUE(@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  [1; 1], Fls, h, Nt, eps), Uwx0, Astart, Aend, da, Copt);
+UwxL = CONTINUE(@(Uwxl) MDL.EQPMCRESFUN(Uwxl,  shp, Fls, h, Nt, eps), Uwx0, Astart, Aend, da, Copt);
 
 %% 
 figure(2)
@@ -107,21 +111,26 @@ semilogx(10.^UwxL(end,:), UwxL(end-2,:).*mamps+UwxL(end-1,:).*kamps, '.-')
 xlabel('Amplitude Scaling')
 ylabel('Damping Coefficients')
 
-% %% Check Gradients
-% rng(1);
-% Xv = [X; Wr; xis; -2];
-% Xv = rand(Nhc*2+2*Nc+1,1);
-% [R, dRdU, dRdlA] = MDL.EQPMCRESFUN(Xv,  [1; 1], Fls, h, Nt, eps); 
-% 
-% hm = 1e-9;
-% hv = zeros(Nhc*MDL.Ndofs+2*Nc+1, 1);
-% Jnum = zeros(Nhc*MDL.Ndofs+2*Nc, Nhc*MDL.Ndofs+2*Nc+1);
-% for hi=1:(Nhc*MDL.Ndofs+2*Nc+1)
-%     hv(hi) = hm;
-%     Rp = MDL.EQPMCRESFUN(Xv+hv,  [1; 1], Fls, h, Nt, eps); 
-%     Rm = MDL.EQPMCRESFUN(Xv-hv,  [1; 1], Fls, h, Nt, eps); 
-%     hv(hi) = 0;
-%     
-%     Jnum(:, hi) = (Rp-Rm)/2/hm;
-% end
-% disp([max(max(abs((Jnum(:,1:end-1)-dRdU)))) max(abs(Jnum(:,end)-dRdlA))])
+%% Check Gradients
+
+rng(1);
+theta = pi/6;
+shp = [cos(theta); sin(theta)];
+shp = shp;
+
+Xv = rand(Nhc*2+2*Nc+1,1);
+
+dR = zeros(Nhc*2+2*Nc, Nhc*2+2*Nc+1);
+[R, dR(:,1:end-1), dR(:,end)] = MDL.EQPMCRESFUN(Xv,  shp, Fls, h, Nt, eps);
+
+hv = zeros(Nhc*2+2*Nc+1,1); hm = 1e-6;
+dRnum = zeros(Nhc*2+2*Nc, Nhc*2+2*Nc+1);
+for hi=1:Nhc*2+2*Nc+1
+    hv(hi) = 1;
+    Rp = MDL.EQPMCRESFUN(Xv+hv*hm,  shp, Fls, h, Nt, eps);
+    Rm = MDL.EQPMCRESFUN(Xv-hv*hm,  shp, Fls, h, Nt, eps);
+    hv(hi) = 0;
+
+    dRnum(:, hi) = (Rp-Rm)/(2*hm);
+    fprintf('%d/%d\n', hi, Nhc*2+2*Nc+1);
+end
