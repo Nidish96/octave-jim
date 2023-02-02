@@ -15,20 +15,24 @@ analyze = true;
 plotout = true;
 %% Parameters
 M = eye(2);
-K = [2 -1;-1 2];
-C = 0.01*K;  % 0.01*K
+K = [1 -1;-1 2];
+W = sqrt(eig(K,M));
+
+kt = 1;  % 4
+muN = 1e-1;  % 2
+K0 = K+kt*[1 0;0 0]; % Linearized stiffness
+% C = 5e-3*K0;  % 0.01*K
+C = 1e-2*M;
 
 MDL = MDOFGEN(M, K, C, eye(2));
-
-kt = 4;  % 4
-muN = 2;  % 2
 MDL = MDL.SETNLFUN(2+3, [1 0], @(t, u, varargin) JENKNL(t, u, kt, muN, varargin{:}), [], 4);
-K0 = K+kt*[1 0;0 0]; % Linearized stiffness
 [V, Wr] = eig(K0, M);
 [Wr, si] = sort(sqrt(diag(Wr)));
 V = V(:,si);
 
-disp(diag(V'*C*V)./(2*Wr))
+zts = diag(V'*C*V)./(2*Wr);
+disp(zts)
+disp([W Wr])
 
 Nc = 2;  % Number of components
 Nhmax = 1;  % Number of harmonics
@@ -127,7 +131,6 @@ else
 end
 
 %% Plot 2D Surface
-
 for i=1:2
     figure(1000+i-1)
     clf()
@@ -144,8 +147,8 @@ for i=1:2
     grid on
     xlabel('Modal Amplitude $Q_1$')
     ylabel('Modal Amplitude $Q_2$')
-    xlim(10.^[Astart Aend])
-    ylim(10.^[Astart Aend])
+%     xlim(10.^[Astart Aend])
+%     ylim(10.^[Astart Aend])
     set(gca, 'View', [-10 30])
     zlabel(sprintf('Mode %d Natural Frequency (rad/s)', i))
 
@@ -232,11 +235,7 @@ for i=1:2
     colormap(jet);
     set(gca, 'XTick', [1e-2 1e0], 'YTick', [1e-2 1e0])
     zlabel(sprintf('Mode %d Frequency (rad/s)', i))
-    if i==1
-        zlim([0.95 1.45])
-    else
-        zlim([1 6])
-    end
+    set(gca, 'View', [120 20])
 
     if plotout
         set(gcf, 'Color', 'white')
@@ -244,105 +243,12 @@ for i=1:2
     end
 end
 
-%% Compare against analytical expressions
-falph = 0.5;
-for i=1:2
-    figure(100+i-1)
-    clf()
-    surf(Q1s, Q2s, WXs(:, :, i), 'EdgeColor', 'none','FaceAlpha',falph, 'FaceColor', 'b'); hold on
-    surf(Q1s, Q2s, Wr(i)+3*0.5/8*((Q1s/2).^2+2*(Q2s/2).^2), 'EdgeColor', 'none', 'FaceAlpha', falph, 'FaceColor', 'r')
-    set(gca, 'XScale', 'log', 'YScale', 'log')
-    xlabel('Mode 1 Amp')
-    ylabel('Mode 2 Amp')
-%     xlim([min(Q1s(:)) max(Q1s(:))])
-%     ylim([min(Q2s(:)) max(Q2s(:))])
-    colormap(jet);
-    set(gca, 'XTick', [1e-2 1e0], 'YTick', [1e-2 1e0])
-    zlabel(sprintf('Mode %d Frequency (rad/s)', i))
-    if i==1
-        zlim([0.95 1.45])
-    else
-        zlim([1 6])
-    end
-    set(gca, 'View', [30 35])
-    legend('Numerical', 'Analytical', 'Location', 'west')
-
-    if plotout
-        set(gcf, 'Color', 'white')
-        export_fig(sprintf('./FIGS/SURF_W%d_comp_eldrfr.png',i), '-dpng')
-    end    
-end
-
-%%
-for j=1:2
-    figure(12+j-1)
-    clf()
-%     surf(Q1s, Q2s, real(Zs(:, :, j, j)), imag(Zs(:, :, j, j)), 'EdgeColor', 'none'); hold on
-%     colormap(jet)
-%     yy = colorbar;
-%     ylabel(yy, sprintf('Damping Factor $\\Im{\\zeta_{%d,%d}}$', j, j), 'Interpreter','latex')
-    surf(Q1s, Q2s, real(Zs(:, :, j, j)), 'EdgeColor', 'none', 'FaceAlpha',falph); hold on
-    set(gca, 'XScale', 'log', 'YScale', 'log')
-    xlabel('Mode 1 Amp')
-    ylabel('Mode 2 Amp')
-    xlim([min(Q1s(:)) max(Q1s(:))])
-    ylim([min(Q2s(:)) max(Q2s(:))])
-    set(gca, 'XTick', [1e-2 1e0], 'YTick', [1e-2 1e0])
-    zlabel(sprintf('Damping Coefficient ${c_{%d,%d}}$', j, j))
-    if j==1
-        set(gca, 'View', [-60 25])
-    end
-    if plotout
-        set(gcf, 'Color', 'white')
-        export_fig(sprintf('./FIGS/SURF_Z%d%d_eldrfr.png',j,j), '-dpng')
-    end
-end
-
-figure(14)
-clf()
-% surf(Q1s, Q2s, real(Zs(:, :, 1, 2)), imag(Zs(:, :, 1, 2)), 'EdgeColor', 'none'); hold on
-% colormap(jet);
-% yy = colorbar;
-% ylabel(yy, sprintf('Damping Factor $\\Im{\\zeta_{%d,%d}}$', 1, 2), 'Interpreter','latex')
-surf(Q1s, Q2s, real(Zs(:, :, 1, 2)), 'EdgeColor', 'none','FaceAlpha',falph); hold on
-set(gca, 'XScale', 'log', 'YScale', 'log')
-xlabel('Mode 1 Amp')
-ylabel('Mode 2 Amp')
-xlim([min(Q1s(:)) max(Q1s(:))])
-ylim([min(Q2s(:)) max(Q2s(:))])
-set(gca, 'XTick', [1e-2 1e0], 'YTick', [1e-2 1e0])
-zlabel(sprintf('Damping Coefficient $c_{%d,%d}$', 1, 2))
-set(gca, 'View', [95 60])
-
-if plotout
-    set(gcf, 'Color', 'white')
-    export_fig(sprintf('./FIGS/SURF_Z%d%d_eldrfr.png',1,2), '-dpng')
-end
-
-figure(15)
-clf()
-% surf(Q1s, Q2s, real(Zs(:, :, 2, 1)), imag(Zs(:, :, 2, 1)), 'EdgeColor', 'none'); hold on
-% colormap(jet);
-% yy = colorbar;
-% ylabel(yy, sprintf('Damping Factor $\\Im{\\zeta_{%d,%d}}$', 1, 2), 'Interpreter','latex')
-surf(Q1s, Q2s, real(Zs(:, :, 2, 1)), 'EdgeColor', 'none','FaceAlpha',falph); hold on
-set(gca, 'XScale', 'log', 'YScale', 'log')
-xlabel('Mode 1 Amp')
-ylabel('Mode 2 Amp')
-xlim([min(Q1s(:)) max(Q1s(:))])
-ylim([min(Q2s(:)) max(Q2s(:))])
-set(gca, 'XTick', [1e-2 1e0], 'YTick', [1e-2 1e0])
-zlabel(sprintf('Damping Coefficient $c_{%d,%d}$', 1, 2))
-set(gca, 'View', [95 60])
-
-if plotout
-    set(gcf, 'Color', 'white')
-    export_fig(sprintf('./FIGS/SURF_Z%d%d_eldrfr.png',2,1), '-dpng')
-end
-
 %% Single Value (Contour) Plots
 pint = 15;
 colos = DISTINGUISHABLE_COLORS(Nlevs);
+
+load('./DATA/rdowndat_eldrfr.mat', 'tscale');
+dpr = load('./DATA/rdowndat_eldrfr_mode2.mat', 'Amp', 'Freq');
 
 figure(16)
 clf()
@@ -355,14 +261,12 @@ for i=1:length(li)
 
     q1 = Conts(1,1).Clevs(1,li(i)+(1:nis(i)));
     q2 = levs(i);
-    wan = Wr(1)+3*0.5/8*((q1/2).^2+2*(q2/2).^2);
-    semilogx(q1, wan, '-.', 'LineWidth', 2, 'Color', colos(i,:)); hold on
 end
-legend(aa, arrayfun(@(l) sprintf('$q_2=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northwest')
+legend(aa, arrayfun(@(l) sprintf('$q_2=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northeast')
 xlim(10.^[Astart Aend]);
 xlabel('Mode 1 Amplitude')
 ylabel('Mode 1 Frequency (rad/s)')
-ylim([0.95 1.45])
+% ylim([0.95 1.45])
 
 if plotout
     set(gcf, 'Color', 'white')
@@ -379,14 +283,12 @@ for i=1:length(li)
 
     q1 = levs(i);
     q2 = Conts(2,1).Clevs(1,li(i)+(1:nis(i)));
-    wan = Wr(1)+3*0.5/8*((q1/2).^2+2*(q2/2).^2);
-    semilogx(q2, wan, '-.', 'LineWidth', 2, 'Color', colos(i,:)); hold on
 end
-legend(aa, arrayfun(@(l) sprintf('$q_1=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northwest')
+legend(aa, arrayfun(@(l) sprintf('$q_1=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northeast')
 xlim(10.^[Astart Aend]);
 xlabel('Mode 2 Amplitude')
 ylabel('Mode 1 Frequency (rad/s)')
-ylim([0.95 1.45])
+% ylim([0.95 1.45])
 
 if plotout
     set(gcf, 'Color', 'white')
@@ -403,14 +305,12 @@ for i=1:length(li)
 
     q1 = Conts(1,2).Clevs(1,li(i)+(1:nis(i)));
     q2 = levs(i);
-    wan = Wr(2)+3*0.5/8*((q1/2).^2+2*(q2/2).^2);
-    semilogx(q1, wan, '-.', 'LineWidth', 2, 'Color', colos(i,:)); hold on
 end
-legend(aa, arrayfun(@(l) sprintf('$q_2=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northwest')
+legend(aa, arrayfun(@(l) sprintf('$q_2=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northeast')
 xlim(10.^[Astart Aend]);
 xlabel('Mode 1 Amplitude')
 ylabel('Mode 2 Frequency (rad/s)')
-ylim([1 6])
+% ylim([1 6])
 
 if plotout
     set(gcf, 'Color', 'white')
@@ -427,28 +327,24 @@ for i=1:length(li)
 
     q1 = levs(i);
     q2 = Conts(2,2).Clevs(1,li(i)+(1:nis(i)));
-    wan = Wr(2)+3*0.5/8*((q1/2).^2+2*(q2/2).^2);
-    semilogx(q2, wan, '-.', 'LineWidth', 2, 'Color', colos(i,:)); hold on        
 end
-legend(aa, arrayfun(@(l) sprintf('$q_1=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northwest')
+legend(aa, arrayfun(@(l) sprintf('$q_1=10^{%.2f}$', l), log10(levs(1:length(li))), 'UniformOutput', false), 'Location', 'northeast')
 xlim(10.^[Astart Aend]);
 xlabel('Mode 2 Amplitude')
 ylabel('Mode 2 Frequency (rad/s)')
-ylim([1 6])
 
 if plotout
     set(gcf, 'Color', 'white')
     export_fig(sprintf('./FIGS/SURF_WA%d%d_eldrfr.png',2,2), '-dpng')
 end
 
-%%
-ti = 1;
+bb = plot(abs(dpr.Amp./(2*pi*dpr.Freq/tscale).^2/V(1,2)), (2*pi*dpr.Freq/tscale), 'ko-', ...
+    'MarkerIndices', fix(logspace(0, log10(length(dpr.Amp)), 25)), ...
+    'LineWidth', 2, 'MarkerFaceColor', 'w');
+legend(bb, 'Transient');
+legend([aa;bb], 'Location', 'northeast')
 
-figure(2000)
-clf()
-% plot3((10.^UwxL{ti}(end,:))*cos(thetas(ti)), (10.^UwxL{ti}(end,:))*sin(thetas(ti)), UwxL{ti}(end-5+i,:), '.-', 'LineWidth', 2); hold on
-plot((10.^UwxL{ti}(end,:))*cos(thetas(ti)), UwxL{ti}(end-5+i,:), '.-', 'LineWidth', 2); hold on
-set(gca, 'XScale', 'log')
-grid on
-xlabel('Modal Amp $Q_1$')
-zlabel('Mode 1 Freq')
+if plotout
+    set(gcf, 'Color', 'white')
+    export_fig(sprintf('./FIGS/SURF_WA%d%d_eldrfr_wtr.png',2,2), '-dpng')
+end
